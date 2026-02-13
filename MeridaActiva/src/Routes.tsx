@@ -1,7 +1,7 @@
 import React from 'react';
 import { Routes, Route } from 'react-router-dom';
-import Home from './paginas/Home';
-import Login from './paginas/Login';
+import Home from './paginas/publicas/Home';
+import Login from './paginas/auth/Login';
 
 
 const AppRoutes: React.FC = () => {

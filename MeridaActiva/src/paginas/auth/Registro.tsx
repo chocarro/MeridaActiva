@@ -1,27 +1,32 @@
 import React, { useState } from 'react';
-import { supabase } from '../supabaseClient';
 import { useNavigate } from 'react-router-dom';
+import { supabase } from '../../supabaseClient';
 
-const Login: React.FC = () => {
+const Registro: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [nombre, setNombre] = useState(''); // Nuevo campo para el Trigger
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleRegistro = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
-    const { error } = await supabase.auth.signInWithPassword({
+    // Registramos en Supabase Auth y pasamos el nombre en metadata
+    const { error } = await supabase.auth.signUp({
       email,
       password,
+      options: {
+        data: { nombre: nombre } // Esto es lo que lee tu Trigger de SQL
+      }
     });
 
     if (error) {
-      alert('Error al acceder: ' + error.message);
+      alert('Error al registrarse: ' + error.message);
     } else {
-      alert('¡Bienvenido a MeridaActiva!');
-      navigate('/'); // Redirige a la Home tras el éxito
+      alert('¡Registro exitoso! Revisa tu email para confirmar.');
+      navigate('/login'); 
     }
     setLoading(false);
   };
@@ -31,8 +36,18 @@ const Login: React.FC = () => {
       <div className="col-md-4">
         <div className="card shadow border-0">
           <div className="card-body p-4">
-            <h2 className="text-center mb-4">Acceso</h2>
-            <form onSubmit={handleLogin}>
+            <h2 className="text-center mb-4">Crear Cuenta</h2>
+            <form onSubmit={handleRegistro}>
+              <div className="mb-3">
+                <label className="form-label">Nombre Completo</label>
+                <input 
+                  type="text" 
+                  className="form-control" 
+                  value={nombre}
+                  onChange={(e) => setNombre(e.target.value)}
+                  required 
+                />
+              </div>
               <div className="mb-3">
                 <label className="form-label">Email</label>
                 <input 
@@ -53,12 +68,8 @@ const Login: React.FC = () => {
                   required 
                 />
               </div>
-              <button 
-                type="submit" 
-                className="btn btn-primary w-100" 
-                disabled={loading}
-              >
-                {loading ? 'Cargando...' : 'Iniciar Sesión'}
+              <button type="submit" className="btn btn-primary w-100" disabled={loading}>
+                {loading ? 'Procesando...' : 'Registrarse'}
               </button>
             </form>
           </div>
@@ -68,4 +79,4 @@ const Login: React.FC = () => {
   );
 };
 
-export default Login;
+export default Registro;
