@@ -13,73 +13,66 @@ const Login: React.FC = () => {
     e.preventDefault();
     setLoading(true);
     setErrorMsg(null);
-
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) {
       setErrorMsg('Credenciales incorrectas o usuario no confirmado.');
       setLoading(false);
     } else {
-      // El estado de la sesión se actualizará automáticamente en App.tsx vía onAuthStateChange
       navigate('/');
     }
   };
 
   return (
-    <div className="row justify-content-center align-items-center" style={{ minHeight: '70vh' }}>
-      <div className="col-md-5 col-lg-4">
-        <div className="card shadow-lg border-0 rounded-4">
-          <div className="card-body p-5">
-            <h2 className="text-center fw-bold mb-4">¡Hola de nuevo!</h2>
-            <p className="text-muted text-center mb-4">Accede a tu cuenta de MeridaActiva</p>
+    <div className="min-h-screen bg-slate-50 flex items-center justify-center px-4">
+      <div className="max-w-md w-full">
+        <div className="bg-white rounded-[2.5rem] shadow-2xl p-10 border border-slate-100">
+          <div className="text-center mb-10">
+            <h2 className="text-3xl font-black text-slate-900 mb-2">¡Hola de nuevo!</h2>
+            <p className="text-slate-400 font-medium">Accede a MéridaActiva</p>
+          </div>
 
-            {errorMsg && (
-              <div className="alert alert-danger py-2 small" role="alert">
-                {errorMsg}
-              </div>
-            )}
-
-            <form onSubmit={handleLogin}>
-              <div className="mb-3">
-                <label className="form-label fw-semibold">Correo electrónico</label>
-                <input 
-                  type="email" 
-                  className="form-control form-control-lg" 
-                  placeholder="ejemplo@correo.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required 
-                />
-              </div>
-              <div className="mb-4">
-                <label className="form-label fw-semibold">Contraseña</label>
-                <input 
-                  type="password" 
-                  className="form-control form-control-lg" 
-                  placeholder="••••••••"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required 
-                />
-              </div>
-              <button 
-                type="submit" 
-                className="btn btn-primary btn-lg w-100 shadow-sm" 
-                disabled={loading}
-              >
-                {loading ? (
-                  <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
-                ) : 'Entrar'}
-              </button>
-            </form>
-
-            <div className="text-center mt-4">
-              <span className="text-muted small">¿No tienes cuenta? </span>
-              <Link to="/registro" className="text-primary small fw-bold text-decoration-none">Regístrate aquí</Link>
+          {errorMsg && (
+            <div className="bg-rose-50 text-rose-600 p-4 rounded-2xl text-sm font-bold mb-6 border border-rose-100">
+              {errorMsg}
             </div>
+          )}
+
+          <form onSubmit={handleLogin} className="space-y-6">
+            <div>
+              <label className="block text-xs font-black uppercase tracking-widest text-slate-400 mb-2 ml-1">Email</label>
+              <input 
+                type="email" 
+                className="w-full bg-slate-50 border-none rounded-2xl px-6 py-4 focus:ring-2 focus:ring-amber-500 transition-all outline-none" 
+                placeholder="tu@email.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required 
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-black uppercase tracking-widest text-slate-400 mb-2 ml-1">Contraseña</label>
+              <input 
+                type="password" 
+                className="w-full bg-slate-50 border-none rounded-2xl px-6 py-4 focus:ring-2 focus:ring-amber-500 transition-all outline-none" 
+                placeholder="••••••••"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required 
+              />
+            </div>
+            <button 
+              type="submit" 
+              className="w-full bg-slate-900 hover:bg-black text-white font-black py-4 rounded-2xl shadow-xl transition-all disabled:opacity-50"
+              disabled={loading}
+            >
+              {loading ? 'Cargando...' : 'ENTRAR'}
+            </button>
+          </form>
+
+          <div className="mt-8 text-center">
+            <p className="text-slate-400 text-sm font-medium">
+              ¿No tienes cuenta? <Link to="/registro" className="text-amber-600 font-bold hover:underline">Regístrate</Link>
+            </p>
           </div>
         </div>
       </div>

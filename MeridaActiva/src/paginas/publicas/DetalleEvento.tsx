@@ -1,89 +1,134 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { supabase } from '../../supabaseClient';
+import FormularioReseña from '../../componentes/FormularioReseña'; // Ruta corregida
 
 const DetalleEvento: React.FC = () => {
-  const { id } = useParams();
+  const { id } = useParams(); 
   const [evento, setEvento] = useState<any>(null);
-  const [nombre, setNombre] = useState('');
-  const [comentario, setComentario] = useState('');
-  const [puntuacion, setPuntuacion] = useState(5);
+  const [cargando, setCargando] = useState(true);
+  const [comentarios, setComentarios] = useState<any[]>([]);
 
-  useEffect(() => {
-    const fetchEvento = async () => {
-      const { data } = await supabase.from('eventos').select('*').eq('id', id).single();
-      if (data) setEvento(data);
-    };
-    fetchEvento();
-  }, [id]);
+  const fetchEventoData = async () => {
+    // 1. Cargar datos del evento
+    const { data: eventoData } = await supabase.from('eventos').select('*').eq('id', id).single();
+    if (eventoData) setEvento(eventoData);
 
-  const enviarReseña = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const { error } = await supabase.from('comentarios').insert([
-      {
-        evento_id: id,
-        nombre_usuario: nombre,
-        texto: comentario,
-        puntuacion: puntuacion
-      }
-    ]);
+    // 2. Cargar comentarios de este evento
+    const { data: comentariosData } = await supabase
+      .from('comentarios')
+      .select('*')
+      .eq('evento_id', id)
+      .order('created_at', { ascending: false });
 
-    if (!error) {
-      alert("¡Reseña enviada con éxito!");
-      setNombre('');
-      setComentario('');
-      window.location.reload(); // Recargamos para que veas que se ha guardado
-    }
+    if (comentariosData) setComentarios(comentariosData);
+    setCargando(false);
   };
 
-  if (!evento) return <div className="container mt-5 pt-5">Cargando...</div>;
+  useEffect(() => {
+    fetchEventoData();
+  }, [id]);
+
+  if (cargando) return <div className="min-h-screen flex items-center justify-center font-bold text-slate-400">Cargando...</div>;
+  if (!evento) return <div className="min-h-screen flex items-center justify-center font-black">Evento no encontrado</div>;
 
   return (
-    <div className="container py-5 mt-5">
-      <div className="row g-5">
-        <div className="col-lg-8">
-          <img src={evento.imagen_url} className="img-fluid rounded-4 mb-4" alt={evento.titulo} />
-          <h1 className="fw-bold">{evento.titulo}</h1>
-          <p className="lead text-muted">{evento.descripcion}</p>
+    <div className="min-h-screen bg-slate-50 pt-24 pb-20 font-sans text-slate-900">
+      <div className="max-w-7xl mx-auto px-4">
+        {/* Breadcrumb */}
+        <nav className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-slate-400 mb-8">
+          <Link to="/eventos" className="hover:text-amber-500 transition-colors">Eventos</Link>
+          <span>/</span>
+          <span className="text-slate-900">{evento.titulo}</span>
+        </nav>
 
-          {/* --- AQUÍ ESTÁ EL FORMULARIO QUE BUSCAS --- */}
-          <div className="card border-0 shadow-sm p-4 rounded-4 bg-light mt-5">
-            <h4 className="fw-bold mb-4">Escribe tu reseña sobre este evento</h4>
-            <form onSubmit={enviarReseña}>
-              <div className="row g-3">
-                <div className="col-md-6">
-                  <label className="form-label small fw-bold">Tu Nombre</label>
-                  <input type="text" className="form-control" value={nombre} onChange={e => setNombre(e.target.value)} required placeholder="Ej: Juan Pérez" />
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-start">
+          {/* Columna Izquierda */}
+          <div className="lg:col-span-8">
+            <div className="rounded-[3rem] overflow-hidden shadow-2xl mb-12 h-[500px]">
+              <img src={evento.imagen_url} className="w-full h-full object-cover" alt={evento.titulo} />
+            </div>
+
+            <h1 className="text-5xl font-black text-slate-900 mb-4 tracking-tighter leading-tight">{evento.titulo}</h1>
+            <p className="text-xl text-amber-600 font-bold mb-10 flex items-center gap-2">
+              📍 {evento.ubicacion}
+            </p>
+            
+            <div className="bg-white p-10 rounded-[2.5rem] border border-slate-100 shadow-sm mb-16">
+              <h5 className="text-xl font-black mb-6 border-b border-slate-50 pb-4 uppercase tracking-tight">Sobre este evento</h5>
+              <p className="text-slate-600 leading-relaxed text-lg whitespace-pre-line">
+                {evento.descripcion}
+              </p>
+            </div>
+
+            {/* SECCIÓN DE RESEÑAS */}
+            <section className="mt-16">
+              <h2 className="text-3xl font-black mb-10 tracking-tight uppercase">Opiniones</h2>
+              
+              <FormularioReseña 
+                eventoId={id || ''} 
+                onPublicado={fetchEventoData} 
+              />
+
+              <div className="space-y-6 mt-12">
+                {comentarios.length > 0 ? (
+                  comentarios.map((res) => (
+                    <div key={res.id} className="bg-white p-8 rounded-[2rem] border border-slate-100 shadow-sm">
+                      <div className="flex justify-between items-start mb-4">
+                        <div className="flex items-center gap-4">
+                          <div className="w-12 h-12 bg-slate-900 text-amber-500 rounded-2xl flex items-center justify-center font-black text-xl shadow-lg">
+                            {res.nombre_usuario?.charAt(0).toUpperCase() || 'U'}
+                          </div>
+                          <div>
+                            <h4 className="font-bold text-slate-900">{res.nombre_usuario}</h4>
+                            <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest">
+                              {new Date(res.created_at).toLocaleDateString()}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="text-amber-500 text-lg">
+                          {"★".repeat(res.puntuacion)}{"☆".repeat(5 - res.puntuacion)}
+                        </div>
+                      </div>
+                      <p className="text-slate-600 italic leading-relaxed text-lg">"{res.texto}"</p>
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-center py-16 bg-white rounded-[2.5rem] border-2 border-dashed border-slate-100">
+                    <p className="text-slate-400 font-bold uppercase tracking-widest text-sm">Sé el primero en opinar sobre este evento</p>
+                  </div>
+                )}
+              </div>
+            </section>
+          </div>
+
+          {/* Sidebar */}
+          <div className="lg:col-span-4 sticky top-24">
+            <div className="bg-slate-900 rounded-[2.5rem] p-10 text-white shadow-2xl border border-white/5">
+              <h4 className="text-amber-500 font-black uppercase tracking-widest text-[10px] mb-8">Información Útil</h4>
+              
+              <div className="space-y-8 mb-10">
+                <div className="flex items-center gap-5 border-b border-white/10 pb-6">
+                  <span className="text-3xl">📅</span>
+                  <div>
+                    <p className="text-slate-400 text-[10px] font-black uppercase tracking-widest mb-1">Fecha del evento</p>
+                    <p className="font-bold text-lg">{new Date(evento.fecha).toLocaleDateString()}</p>
+                  </div>
                 </div>
-                <div className="col-md-6">
-                  <label className="form-label small fw-bold">Puntuación</label>
-                  <select className="form-select" value={puntuacion} onChange={e => setPuntuacion(Number(e.target.value))}>
-                    <option value="5">⭐⭐⭐⭐⭐ Excelente</option>
-                    <option value="4">⭐⭐⭐⭐ Muy bueno</option>
-                    <option value="3">⭐⭐⭐ Normal</option>
-                    <option value="2">⭐⭐ Pobre</option>
-                    <option value="1">⭐ Malo</option>
-                  </select>
-                </div>
-                <div className="col-12">
-                  <label className="form-label small fw-bold">Comentario</label>
-                  <textarea className="form-control" rows={3} value={comentario} onChange={e => setComentario(e.target.value)} required placeholder="¿Qué te ha parecido?"></textarea>
-                </div>
-                <div className="col-12 text-end">
-                  <button type="submit" className="btn btn-primary rounded-pill px-5 fw-bold">Publicar Reseña</button>
+                <div className="flex items-center gap-5">
+                  <span className="text-3xl">🎟️</span>
+                  <div>
+                    <p className="text-slate-400 text-[10px] font-black uppercase tracking-widest mb-1">Inversión</p>
+                    <p className="text-4xl font-black text-amber-500">{evento.precio}€</p>
+                  </div>
                 </div>
               </div>
-            </form>
-          </div>
-          {/* ------------------------------------------ */}
-        </div>
 
-        <div className="col-lg-4">
-          <div className="card p-4 shadow-sm border-0 rounded-4 sticky-top" style={{top: '100px'}}>
-             <h5 className="fw-bold mb-3 text-primary">Detalles</h5>
-             <p className="mb-2"><strong>Fecha:</strong> {evento.fecha}</p>
-             <p className="mb-4"><strong>Lugar:</strong> {evento.ubicacion}</p>
-             <a href={evento.enlace_externo} target="_blank" className="btn btn-dark w-100 rounded-pill">Comprar Entradas</a>
+              <a href={evento.enlace_externo} target="_blank" rel="noreferrer" 
+                 className="block w-full text-center bg-white text-slate-900 py-5 rounded-2xl font-black shadow-xl hover:bg-amber-500 hover:scale-[1.02] transition-all uppercase tracking-widest text-sm">
+                Conseguir Entradas
+              </a>
+            </div>
           </div>
         </div>
       </div>

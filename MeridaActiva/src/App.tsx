@@ -1,20 +1,19 @@
 import React from 'react';
+import { AuthProvider } from './context/AuthContext';
+import Navbar from './componentes/Navbar';
 import AppRoutes from './Routes';
-// Aquí importarás tu componente Navbar desde la carpeta componentes más adelante
-// import Navbar from './componentes/Navbar';
 
-const App: React.FC = () => {
+function App() {
   return (
-    <div className="app-container">
-      {/* <Navbar /> */}
-      <main className="container mt-4">
-        <AppRoutes />
-      </main>
-      <footer className="text-center py-4 mt-5 border-top">
-        <p>&copy; 2025 MeridaActiva - Lucía Garrido Chocarro</p> [cite: 9, 21]
-      </footer>
-    </div>
+    <AuthProvider>
+      <div className="main-layout">
+        <Navbar />
+        <main className="content-area">
+          <AppRoutes />
+        </main>
+      </div>
+    </AuthProvider>
   );
-};
+}
 
 export default App;

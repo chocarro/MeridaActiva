@@ -6,62 +6,82 @@ const Footer: React.FC = () => {
   const { profile } = useAuth();
 
   return (
-    <footer className="bg-dark text-white pt-5 pb-4 mt-auto border-top border-secondary">
-      <div className="container">
-        <div className="row g-4">
-          <div className="col-lg-3 col-md-6">
-            <h4 className="fw-bold mb-3 text-warning">MéridaActiva</h4>
-            <p className="text-white-50 small mb-4">
-              La plataforma definitiva para descubrir la historia, cultura y eventos 
-              de la ciudad de Mérida.
+    <footer className="bg-slate-900 text-slate-300 border-t border-white/5 pt-16 pb-8 mt-auto">
+      <div className="max-w-7xl mx-auto px-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 mb-16">
+          
+          {/* Marca y Propósito */}
+          <div className="space-y-6">
+            <Link to="/" className="text-2xl font-black text-white tracking-tighter">
+              Mérida<span className="text-amber-500">Activa</span>
+            </Link>
+            <p className="text-sm leading-relaxed text-slate-400">
+              La plataforma inteligente para descubrir el legado de Augusta Emerita. 
+              Agenda cultural y monumentos en un solo lugar.
             </p>
+            <div className="flex gap-4">
+              {['facebook', 'instagram', 'twitter'].map((social) => (
+                <a key={social} href={`#${social}`} className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center hover:bg-amber-500 hover:text-slate-900 transition-all">
+                  <i className={`bi bi-${social}`}></i>
+                </a>
+              ))}
+            </div>
           </div>
 
-          <div className="col-lg-2 col-md-6">
-            <h6 className="fw-bold mb-3 text-uppercase small tracking-wider">Explorar</h6>
-            <ul className="list-unstyled small">
-              <li className="mb-2"><Link to="/eventos" className="text-white-50 text-decoration-none hover-white">Eventos</Link></li>
-              <li className="mb-2"><Link to="/lugares" className="text-white-50 text-decoration-none hover-white">Monumentos</Link></li>
-              <li className="mb-2"><Link to="/mapas" className="text-white-50 text-decoration-none hover-white">Mapas</Link></li>
+          {/* Navegación Rápida */}
+          <div>
+            <h4 className="text-white font-bold uppercase tracking-widest text-[10px] mb-6">Explorar</h4>
+            <ul className="space-y-4 text-sm font-medium">
+              <li><Link to="/eventos" className="hover:text-amber-500 transition-colors">Eventos</Link></li>
+              <li><Link to="/lugares" className="hover:text-amber-500 transition-colors">Monumentos</Link></li>
+              <li><Link to="/mapa" className="hover:text-amber-500 transition-colors">Mapas</Link></li>
+              {profile && <li><Link to="/perfil" className="hover:text-amber-500 transition-colors">Mi Perfil</Link></li>}
             </ul>
           </div>
 
-          <div className="col-lg-2 col-md-6">
-            <h6 className="fw-bold mb-3 text-uppercase small tracking-wider">Cuenta</h6>
-            <ul className="list-unstyled small">
-              <li className="mb-2"><Link to="/perfil" className="text-white-50 text-decoration-none hover-white">Mi Perfil</Link></li>
-              {['Administrador', 'Gestor (Editor)'].includes(profile?.roles?.nombre) && (
-                <li className="mb-2"><Link to="/admin" className="text-warning text-decoration-none fw-bold">Panel Admin</Link></li>
-              )}
+          {/* Legal */}
+          <div>
+            <h4 className="text-white font-bold uppercase tracking-widest text-[10px] mb-6">Información</h4>
+            <ul className="space-y-4 text-sm font-medium">
+              <li><Link to="/aviso-legal" className="hover:text-amber-500 transition-colors">Aviso Legal</Link></li>
+              <li><Link to="/privacidad" className="hover:text-amber-500 transition-colors">Privacidad</Link></li>
+              <li><Link to="/cookies" className="hover:text-amber-500 transition-colors">Cookies</Link></li>
+              <li><Link to="/terminos" className="hover:text-amber-500 transition-colors">Términos</Link></li>
             </ul>
           </div>
 
-          {/* NUEVA COLUMNA: LEGAL */}
-          <div className="col-lg-2 col-md-6">
-            <h6 className="fw-bold mb-3 text-uppercase small tracking-wider">Legal</h6>
-            <ul className="list-unstyled small">
-              <li className="mb-2"><Link to="/aviso-legal" className="text-white-50 text-decoration-none">Aviso Legal</Link></li>
-              <li className="mb-2"><Link to="/privacidad" className="text-white-50 text-decoration-none">Privacidad</Link></li>
-              <li className="mb-2"><Link to="/cookies" className="text-white-50 text-decoration-none">Cookies</Link></li>
-              <li className="mb-2"><Link to="/terminos" className="text-white-50 text-decoration-none">Términos</Link></li>
-            </ul>
-          </div>
-
-          <div className="col-lg-3 col-md-6">
-            <h6 className="fw-bold mb-3 text-uppercase small tracking-wider">Contacto</h6>
-            <p className="text-white-50 small mb-2"><i className="bi bi-geo-alt-fill text-warning me-2"></i> Plaza de España, Mérida</p>
-            <p className="text-white-50 small mb-2"><i className="bi bi-envelope-fill text-warning me-2"></i> info@meridaactiva.com</p>
+          {/* Newsletter / Administración */}
+          <div className="space-y-6">
+            <div className="bg-white/5 p-6 rounded-[2rem] border border-white/10">
+              <h4 className="text-white font-bold text-sm mb-4">No te pierdas nada</h4>
+              <form className="space-y-2" onSubmit={(e) => e.preventDefault()}>
+                <input 
+                  type="email" 
+                  placeholder="Tu email" 
+                  className="w-full bg-slate-800 border-none rounded-xl px-4 py-2.5 text-xs text-white outline-none focus:ring-1 focus:ring-amber-500 transition-all"
+                />
+                <button className="w-full bg-amber-500 hover:bg-amber-600 text-slate-900 text-xs font-black py-2.5 rounded-xl transition-all">
+                  SUSCRIBIRME
+                </button>
+              </form>
+            </div>
+            {['Administrador', 'Gestor (Editor)'].includes(profile?.roles?.nombre) && (
+              <Link to="/admin" className="block text-center bg-amber-500/10 text-amber-500 border border-amber-500/20 py-3 rounded-xl text-xs font-bold hover:bg-amber-500 hover:text-slate-900 transition-all">
+                PANEL DE GESTIÓN
+              </Link>
+            )}
           </div>
         </div>
 
-        <hr className="my-4 border-secondary opacity-25" />
-        
-        <div className="row align-items-center">
-          <div className="col-md-6 text-center text-md-start">
-            <p className="small text-white-50 mb-0">© 2026 MéridaActiva.</p>
-          </div>
-          <div className="col-md-6 text-center text-md-end mt-2 mt-md-0">
-            <span className="small text-white-50">Hecho con <i className="bi bi-heart-fill text-danger"></i> para Extremadura</span>
+        {/* Barra Inferior */}
+        <div className="pt-8 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-4 text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 text-center">
+          <p>© 2026 MÉRIDAACTIVA</p>
+          <div className="flex gap-8">
+            <span className="flex items-center gap-2">
+              <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span> 
+              Sistema Online
+            </span>
+            <span>v2.1.0</span>
           </div>
         </div>
       </div>

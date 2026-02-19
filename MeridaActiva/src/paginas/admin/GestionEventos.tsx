@@ -5,8 +5,6 @@ const GestionEventos: React.FC = () => {
   const [eventos, setEventos] = useState<any[]>([]);
   const [mostrarForm, setMostrarForm] = useState(false);
   const [editandoId, setEditandoId] = useState<string | null>(null);
-  
-  // NUEVO: Estado para el archivo local
   const [archivo, setArchivo] = useState<File | null>(null);
   const [subiendo, setSubiendo] = useState(false);
 
@@ -21,209 +19,139 @@ const GestionEventos: React.FC = () => {
     categoria: 'Cultural'
   });
 
-  useEffect(() => {
-    fetchEventos();
-  }, []);
+  useEffect(() => { fetchEventos(); }, []);
 
   const fetchEventos = async () => {
-    const { data } = await supabase
-      .from('eventos')
-      .select('*')
-      .order('created_at', { ascending: false });
+    const { data } = await supabase.from('eventos').select('*').order('created_at', { ascending: false });
     if (data) setEventos(data);
   };
 
-  // NUEVO: Función para subir la imagen al Storage de Supabase
   const manejarSubidaImagen = async (file: File) => {
     const fileExt = file.name.split('.').pop();
-    const fileName = `${Math.random()}.${fileExt}`; // Genera nombre único
-    const filePath = `${fileName}`;
-
-    const { data, error } = await supabase.storage
-      .from('imagenes-eventos') // Tu bucket
-      .upload(filePath, file);
-
+    const fileName = `${Math.random()}.${fileExt}`;
+    const { error } = await supabase.storage.from('imagenes-eventos').upload(fileName, file);
     if (error) throw error;
-
-    // Obtener la URL pública
-    const { data: { publicUrl } } = supabase.storage
-      .from('imagenes-eventos')
-      .getPublicUrl(filePath);
-
+    const { data: { publicUrl } } = supabase.storage.from('imagenes-eventos').getPublicUrl(fileName);
     return publicUrl;
-  };
-
-  const prepararEdicion = (ev: any) => {
-    setFormData({
-      titulo: ev.titulo || '',
-      descripcion: ev.descripcion || '',
-      fecha: ev.fecha || '',
-      ubicacion: ev.ubicacion || '',
-      precio: ev.precio || '',
-      imagen_url: ev.imagen_url || '',
-      enlace_externo: ev.enlace_externo || '',
-      categoria: ev.categoria || 'Cultural'
-    });
-    setEditandoId(ev.id);
-    setMostrarForm(true);
   };
 
   const guardarEvento = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubiendo(true);
-    
     try {
-      let urlFinal = formData.imagen_url;
+      let finalImageUrl = formData.imagen_url;
+      if (archivo) finalImageUrl = await manejarSubidaImagen(archivo);
 
-      // Si hay un archivo local seleccionado, lo subimos primero
-      if (archivo) {
-        urlFinal = await manejarSubidaImagen(archivo);
-      }
-
-      const datosAGuardar = { ...formData, imagen_url: urlFinal };
+      const payload = { ...formData, imagen_url: finalImageUrl, precio: parseFloat(formData.precio) || 0 };
 
       if (editandoId) {
-        await supabase.from('eventos').update(datosAGuardar).eq('id', editandoId);
-        alert("Evento modificado correctamente");
+        await supabase.from('eventos').update(payload).eq('id', editandoId);
       } else {
-        await supabase.from('eventos').insert([datosAGuardar]);
-        alert("Evento creado y publicado");
+        await supabase.from('eventos').insert([payload]);
       }
-
       limpiarFormulario();
       fetchEventos();
-    } catch (error: any) {
-      alert("Error al guardar: " + error.message);
+      setMostrarForm(false);
+    } catch (error) {
+      alert("Error al guardar");
     } finally {
       setSubiendo(false);
     }
   };
 
   const eliminarEvento = async (id: string) => {
-    if (window.confirm("¿Estás seguro de eliminar este evento?")) {
-      const { error } = await supabase.from('eventos').delete().eq('id', id);
-      if (!error) fetchEventos();
+    if (window.confirm("¿Eliminar este evento?")) {
+      await supabase.from('eventos').delete().eq('id', id);
+      fetchEventos();
     }
   };
 
-  const limpiarFormulario = () => {
-    setMostrarForm(false);
-    setEditandoId(null);
-    setArchivo(null); // Limpiamos el archivo
-    setFormData({ 
-      titulo: '', descripcion: '', fecha: '', ubicacion: '', 
-      precio: '', imagen_url: '', enlace_externo: '', categoria: 'Cultural' 
+  const prepararEdicion = (ev: any) => {
+    setEditandoId(ev.id);
+    setFormData({
+      titulo: ev.titulo,
+      descripcion: ev.descripcion,
+      fecha: ev.fecha,
+      ubicacion: ev.ubicacion,
+      precio: ev.precio.toString(),
+      imagen_url: ev.imagen_url,
+      enlace_externo: ev.enlace_externo || '',
+      categoria: ev.categoria
     });
+    setMostrarForm(true);
+  };
+
+  const limpiarFormulario = () => {
+    setEditandoId(null);
+    setArchivo(null);
+    setFormData({ titulo: '', descripcion: '', fecha: '', ubicacion: '', precio: '', imagen_url: '', enlace_externo: '', categoria: 'Cultural' });
   };
 
   return (
-    <div className="container py-5 mt-5">
-      <div className="d-flex justify-content-between align-items-center mb-4">
-        <h2 className="fw-bold">
-          <i className="bi bi-calendar-plus text-primary me-2"></i>
-          {editandoId ? 'Editando Evento' : 'Gestión de Contenidos'}
-        </h2>
-        <button 
-          onClick={() => { editandoId ? limpiarFormulario() : setMostrarForm(!mostrarForm) }} 
-          className={`btn rounded-pill px-4 ${mostrarForm ? 'btn-outline-danger' : 'btn-primary'}`}
-        >
-          {mostrarForm ? 'Cancelar' : '+ Publicar Evento'}
-        </button>
-      </div>
-
-      {mostrarForm && (
-        <div className="card border-0 shadow-sm p-4 mb-5 rounded-4 bg-light text-dark text-start">
-          <form onSubmit={guardarEvento} className="row g-3">
-            <div className="col-md-8">
-              <label className="form-label fw-bold">Título del Evento</label>
-              <input type="text" className="form-control" value={formData.titulo} onChange={e => setFormData({...formData, titulo: e.target.value})} required />
-            </div>
-            <div className="col-md-4">
-              <label className="form-label fw-bold">Categoría</label>
-              <select className="form-select" value={formData.categoria} onChange={e => setFormData({...formData, categoria: e.target.value})}>
-                <option value="Cultural">Cultural</option>
-                <option value="Música">Música</option>
-                <option value="Gastronomía">Gastronomía</option>
-                <option value="Deportes">Deportes</option>
-              </select>
-            </div>
-            <div className="col-md-4">
-              <label className="form-label fw-bold">Fecha</label>
-              <input type="date" className="form-control" value={formData.fecha} onChange={e => setFormData({...formData, fecha: e.target.value})} required />
-            </div>
-            <div className="col-md-4">
-              <label className="form-label fw-bold">Precio</label>
-              <input type="text" className="form-control" value={formData.precio} onChange={e => setFormData({...formData, precio: e.target.value})} placeholder="Ej: Gratis / 25€" />
-            </div>
-            <div className="col-md-4">
-              <label className="form-label fw-bold">Ubicación</label>
-              <input type="text" className="form-control" value={formData.ubicacion} onChange={e => setFormData({...formData, ubicacion: e.target.value})} placeholder="Mérida" />
-            </div>
-            <div className="col-12 text-start">
-              <label className="form-label fw-bold">Descripción Completa</label>
-              <textarea className="form-control" rows={3} value={formData.descripcion} onChange={e => setFormData({...formData, descripcion: e.target.value})}></textarea>
-            </div>
-
-            {/* SECCIÓN DE IMAGEN MEJORADA */}
-            <div className="col-md-6 text-start">
-              <label className="form-label fw-bold">Subir Foto Local</label>
-              <input 
-                type="file" 
-                className="form-control" 
-                accept="image/*" 
-                onChange={e => setArchivo(e.target.files ? e.target.files[0] : null)} 
-              />
-              <small className="text-muted">Selecciona una imagen de tu ordenador.</small>
-            </div>
-            <div className="col-md-6 text-start">
-              <label className="form-label fw-bold">O URL de Imagen</label>
-              <input type="text" className="form-control" value={formData.imagen_url} onChange={e => setFormData({...formData, imagen_url: e.target.value})} placeholder="https://..." />
-            </div>
-
-            <div className="col-12 text-end mt-4">
-              <button type="submit" className="btn btn-dark px-5 rounded-pill fw-bold shadow-sm" disabled={subiendo}>
-                {subiendo ? (
-                  <>
-                    <span className="spinner-border spinner-border-sm me-2"></span>
-                    Subiendo...
-                  </>
-                ) : (
-                  editandoId ? 'Guardar Cambios' : 'Publicar en la Web'
-                )}
-              </button>
-            </div>
-          </form>
+    <div className="min-h-screen bg-slate-50 pt-32 pb-20">
+      <div className="max-w-7xl mx-auto px-4">
+        <div className="flex justify-between items-end mb-12">
+          <div>
+            <h2 className="text-4xl font-black text-slate-900 tracking-tighter uppercase">Agenda</h2>
+            <p className="text-slate-500 font-medium">Control total de eventos y actividades</p>
+          </div>
+          <button 
+            onClick={() => { editandoId ? limpiarFormulario() : setMostrarForm(!mostrarForm) }}
+            className={`px-8 py-4 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all shadow-lg ${mostrarForm ? 'bg-rose-500 text-white' : 'bg-slate-900 text-white hover:bg-amber-500 hover:text-slate-900'}`}
+          >
+            {mostrarForm ? 'CANCELAR' : 'NUEVO EVENTO'}
+          </button>
         </div>
-      )}
 
-      {/* Lista de gestión */}
-      <div className="bg-white rounded-4 shadow-sm p-3 border">
-        <div className="table-responsive">
-          <table className="table align-middle text-start">
-            <thead className="table-light">
+        {mostrarForm && (
+          <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 p-8 md:p-12 mb-12 animate-fade-in">
+            <form onSubmit={guardarEvento} className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              <div className="space-y-6">
+                <input type="text" placeholder="Título" className="w-full bg-slate-100 border-none rounded-xl p-4" value={formData.titulo} onChange={e => setFormData({...formData, titulo: e.target.value})} required />
+                <textarea placeholder="Descripción" className="w-full bg-slate-100 border-none rounded-xl p-4" rows={4} value={formData.descripcion} onChange={e => setFormData({...formData, descripcion: e.target.value})}></textarea>
+                <div className="grid grid-cols-2 gap-4">
+                  <input type="date" className="bg-slate-100 border-none rounded-xl p-4" value={formData.fecha} onChange={e => setFormData({...formData, fecha: e.target.value})} required />
+                  <input type="number" placeholder="Precio €" className="bg-slate-100 border-none rounded-xl p-4" value={formData.precio} onChange={e => setFormData({...formData, precio: e.target.value})} />
+                </div>
+              </div>
+              <div className="space-y-6">
+                <input type="text" placeholder="Ubicación" className="w-full bg-slate-100 border-none rounded-xl p-4" value={formData.ubicacion} onChange={e => setFormData({...formData, ubicacion: e.target.value})} />
+                <select className="w-full bg-slate-100 border-none rounded-xl p-4" value={formData.categoria} onChange={e => setFormData({...formData, categoria: e.target.value})}>
+                  <option value="Cultural">Cultural</option>
+                  <option value="Música">Música</option>
+                  <option value="Deportes">Deportes</option>
+                </select>
+                <input type="file" className="block w-full text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:bg-slate-900 file:text-white" onChange={e => setArchivo(e.target.files ? e.target.files[0] : null)} />
+                <button type="submit" disabled={subiendo} className="w-full bg-amber-500 text-slate-900 py-4 rounded-xl font-black uppercase tracking-widest hover:bg-slate-900 hover:text-white transition-all">
+                  {subiendo ? 'PROCESANDO...' : (editandoId ? 'GUARDAR CAMBIOS' : 'PUBLICAR AHORA')}
+                </button>
+              </div>
+            </form>
+          </div>
+        )}
+
+        <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 overflow-hidden">
+          <table className="w-full text-left">
+            <thead className="bg-slate-900 text-white text-[10px] font-black uppercase tracking-widest">
               <tr>
-                <th>Evento</th>
-                <th>Categoría</th>
-                <th>Ubicación</th>
-                <th className="text-end">Acciones</th>
+                <th className="px-8 py-6">Evento</th>
+                <th className="px-8 py-6">Categoría</th>
+                <th className="px-8 py-6 text-right">Acciones</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody className="divide-y divide-slate-100">
               {eventos.map(ev => (
-                <tr key={ev.id}>
-                  <td>
-                    <strong>{ev.titulo}</strong><br/>
-                    <small className="text-muted"><i className="bi bi-calendar-event me-1"></i>{ev.fecha}</small>
+                <tr key={ev.id} className="hover:bg-slate-50">
+                  <td className="px-8 py-6">
+                    <p className="font-bold text-slate-900">{ev.titulo}</p>
+                    <p className="text-xs text-slate-400">{ev.fecha}</p>
                   </td>
-                  <td><span className="badge bg-light text-dark border">{ev.categoria}</span></td>
-                  <td className="small text-muted">{ev.ubicacion}</td>
-                  <td className="text-end">
-                    <button onClick={() => prepararEdicion(ev)} className="btn btn-sm btn-outline-primary border-0 me-2">
-                      <i className="bi bi-pencil-square"></i> Editar
-                    </button>
-                    <button onClick={() => eliminarEvento(ev.id)} className="btn btn-sm btn-outline-danger border-0">
-                      <i className="bi bi-trash"></i> Borrar
-                    </button>
+                  <td className="px-8 py-6">
+                    <span className="bg-slate-100 text-slate-500 text-[9px] font-black px-3 py-1 rounded-full uppercase tracking-tighter border border-slate-200">{ev.categoria}</span>
+                  </td>
+                  <td className="px-8 py-6 text-right space-x-2">
+                    <button onClick={() => prepararEdicion(ev)} className="p-2 text-slate-400 hover:text-amber-500"><i className="bi bi-pencil-fill"></i></button>
+                    <button onClick={() => eliminarEvento(ev.id)} className="p-2 text-slate-400 hover:text-rose-500"><i className="bi bi-trash-fill"></i></button>
                   </td>
                 </tr>
               ))}

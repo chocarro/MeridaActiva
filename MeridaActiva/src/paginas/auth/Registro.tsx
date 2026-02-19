@@ -5,74 +5,54 @@ import { supabase } from '../../supabaseClient';
 const Registro: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [nombre, setNombre] = useState(''); // Nuevo campo para el Trigger
+  const [nombre, setNombre] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
   const handleRegistro = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-
-    // Registramos en Supabase Auth y pasamos el nombre en metadata
     const { error } = await supabase.auth.signUp({
       email,
       password,
-      options: {
-        data: { nombre: nombre } // Esto es lo que lee tu Trigger de SQL
-      }
+      options: { data: { nombre: nombre } }
     });
 
     if (error) {
-      alert('Error al registrarse: ' + error.message);
+      alert('Error: ' + error.message);
     } else {
-      alert('¡Registro exitoso! Revisa tu email para confirmar.');
+      alert('¡Registro exitoso! Revisa tu email.');
       navigate('/login'); 
     }
     setLoading(false);
   };
 
   return (
-    <div className="row justify-content-center mt-5">
-      <div className="col-md-4">
-        <div className="card shadow border-0">
-          <div className="card-body p-4">
-            <h2 className="text-center mb-4">Crear Cuenta</h2>
-            <form onSubmit={handleRegistro}>
-              <div className="mb-3">
-                <label className="form-label">Nombre Completo</label>
-                <input 
-                  type="text" 
-                  className="form-control" 
-                  value={nombre}
-                  onChange={(e) => setNombre(e.target.value)}
-                  required 
-                />
-              </div>
-              <div className="mb-3">
-                <label className="form-label">Email</label>
-                <input 
-                  type="email" 
-                  className="form-control" 
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required 
-                />
-              </div>
-              <div className="mb-3">
-                <label className="form-label">Contraseña</label>
-                <input 
-                  type="password" 
-                  className="form-control" 
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required 
-                />
-              </div>
-              <button type="submit" className="btn btn-primary w-100" disabled={loading}>
-                {loading ? 'Procesando...' : 'Registrarse'}
-              </button>
-            </form>
+    <div className="min-h-screen bg-slate-50 flex items-center justify-center px-4 pt-20">
+      <div className="max-w-md w-full">
+        <div className="bg-white rounded-[2.5rem] shadow-2xl p-10 border border-slate-100">
+          <div className="text-center mb-10">
+            <h2 className="text-3xl font-black text-slate-900 mb-2">Crear Cuenta</h2>
+            <p className="text-slate-400 font-medium">Únete a la comunidad</p>
           </div>
+
+          <form onSubmit={handleRegistro} className="space-y-5">
+            <div>
+              <label className="block text-xs font-black uppercase tracking-widest text-slate-400 mb-2 ml-1">Nombre</label>
+              <input type="text" className="w-full bg-slate-50 border-none rounded-2xl px-6 py-4 outline-none focus:ring-2 focus:ring-amber-500" value={nombre} onChange={(e) => setNombre(e.target.value)} required />
+            </div>
+            <div>
+              <label className="block text-xs font-black uppercase tracking-widest text-slate-400 mb-2 ml-1">Email</label>
+              <input type="email" className="w-full bg-slate-50 border-none rounded-2xl px-6 py-4 outline-none focus:ring-2 focus:ring-amber-500" value={email} onChange={(e) => setEmail(e.target.value)} required />
+            </div>
+            <div>
+              <label className="block text-xs font-black uppercase tracking-widest text-slate-400 mb-2 ml-1">Contraseña</label>
+              <input type="password" className="w-full bg-slate-50 border-none rounded-2xl px-6 py-4 outline-none focus:ring-2 focus:ring-amber-500" value={password} onChange={(e) => setPassword(e.target.value)} required />
+            </div>
+            <button type="submit" className="w-full bg-amber-500 hover:bg-amber-600 text-slate-900 font-black py-4 rounded-2xl shadow-lg transition-all" disabled={loading}>
+              {loading ? 'Procesando...' : 'REGISTRARME'}
+            </button>
+          </form>
         </div>
       </div>
     </div>

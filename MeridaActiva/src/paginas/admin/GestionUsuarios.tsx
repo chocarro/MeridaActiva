@@ -6,134 +6,100 @@ const GestionUsuarios: React.FC = () => {
   const [busqueda, setBusqueda] = useState('');
   const [cargando, setCargando] = useState(true);
 
-  useEffect(() => {
-    fetchUsuarios();
-  }, []);
+  useEffect(() => { fetchUsuarios(); }, []);
 
   const fetchUsuarios = async () => {
-    // Obtenemos usuarios uniendo la tabla de roles para ver el nombre del rol
-    const { data, error } = await supabase
-      .from('usuarios')
-      .select('*, roles(nombre)')
-      .order('nombre', { ascending: true });
-    
+    const { data } = await supabase.from('usuarios').select('*, roles(nombre)').order('nombre', { ascending: true });
     if (data) setUsuarios(data);
     setCargando(false);
   };
 
   const cambiarRol = async (id: string, nuevoRolId: number) => {
-    const { error } = await supabase
-      .from('usuarios')
-      .update({ rol_id: nuevoRolId })
-      .eq('id', id);
-    
-    if (!error) fetchUsuarios(); // Recargamos para ver los cambios
+    await supabase.from('usuarios').update({ rol_id: nuevoRolId }).eq('id', id);
+    fetchUsuarios();
   };
 
   const eliminarUsuario = async (id: string, nombre: string) => {
-    if (window.confirm(`¿Estás seguro de eliminar a ${nombre}? Esta acción es irreversible.`)) {
-      const { error } = await supabase.from('usuarios').delete().eq('id', id);
-      if (!error) fetchUsuarios();
+    if (window.confirm(`¿Eliminar al usuario ${nombre}?`)) {
+      await supabase.from('usuarios').delete().eq('id', id);
+      fetchUsuarios();
     }
   };
 
-  // Filtro de búsqueda en tiempo real
-  const usuariosFiltrados = usuarios.filter(u => 
-    u.nombre?.toLowerCase().includes(busqueda.toLowerCase()) || 
-    u.email?.toLowerCase().includes(busqueda.toLowerCase())
-  );
+  const filtrados = usuarios.filter(u => u.nombre?.toLowerCase().includes(busqueda.toLowerCase()));
 
   return (
-    <div className="container py-5 mt-5">
-      <div className="d-flex justify-content-between align-items-center mb-4">
-        <h2 className="fw-bold"><i className="bi bi-people-fill text-warning me-2"></i>Control de Usuarios</h2>
-        <span className="badge bg-dark rounded-pill px-3 py-2">{usuarios.length} Registrados</span>
-      </div>
-
-      {/* BARRA DE BÚSQUEDA Y FILTROS */}
-      <div className="row mb-4 g-3">
-        <div className="col-md-8">
-          <div className="input-group shadow-sm rounded-4 overflow-hidden">
-            <span className="input-group-text bg-white border-0"><i className="bi bi-search"></i></span>
+    <div className="min-h-screen bg-slate-50 pt-32 pb-20">
+      <div className="max-w-7xl mx-auto px-4">
+        <div className="flex flex-col md:flex-row justify-between items-center mb-12 gap-6">
+          <div>
+            <h2 className="text-4xl font-black text-slate-900 tracking-tighter uppercase text-center md:text-left">Comunidad</h2>
+            <p className="text-slate-500 font-medium text-center md:text-left">Administración de perfiles y permisos</p>
+          </div>
+          <div className="relative w-full md:w-96">
+            <i className="bi bi-search absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"></i>
             <input 
               type="text" 
-              className="form-control border-0" 
-              placeholder="Buscar por nombre o correo..." 
+              placeholder="Buscar por nombre..." 
+              className="w-full bg-white border border-slate-200 rounded-2xl py-4 pl-12 pr-6 shadow-sm focus:ring-2 focus:ring-amber-500 outline-none transition-all font-medium"
               value={busqueda}
               onChange={(e) => setBusqueda(e.target.value)}
             />
           </div>
         </div>
-        <div className="col-md-4 text-end">
-          <button className="btn btn-outline-dark rounded-pill shadow-sm" onClick={fetchUsuarios}>
-            <i className="bi bi-arrow-clockwise me-2"></i>Actualizar
-          </button>
-        </div>
-      </div>
 
-      {/* TABLA DE USUARIOS */}
-      <div className="card border-0 shadow-sm rounded-4 overflow-hidden">
-        <div className="table-responsive">
-          <table className="table table-hover align-middle mb-0">
-            <thead className="table-light">
-              <tr>
-                <th className="ps-4">Usuario</th>
-                <th>Rol Actual</th>
-                <th>Cambiar Rango</th>
-                <th className="text-center">Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              {cargando ? (
-                <tr><td colSpan={4} className="text-center py-5">Cargando base de datos...</td></tr>
-              ) : usuariosFiltrados.map((user) => (
-                <tr key={user.id}>
-                  <td className="ps-4">
-                    <div className="d-flex align-items-center gap-3">
-                      <div className="bg-secondary-subtle rounded-circle d-flex align-items-center justify-content-center fw-bold" style={{width: '40px', height: '40px'}}>
-                        {user.nombre?.charAt(0).toUpperCase()}
-                      </div>
-                      <div>
-                        <p className="mb-0 fw-bold">{user.nombre}</p>
-                        <small className="text-muted">{user.email}</small>
-                      </div>
-                    </div>
-                  </td>
-                  <td>
-                    <span className={`badge rounded-pill ${
-                      user.roles?.nombre === 'Administrador' ? 'bg-danger' : 
-                      user.roles?.nombre === 'Gestor (Editor)' ? 'bg-primary' : 'bg-secondary'
-                    }`}>
-                      {user.roles?.nombre}
-                    </span>
-                  </td>
-                  <td>
-                    {/* Select dinámico para cambiar roles */}
-                    <select 
-                      className="form-select form-select-sm rounded-pill w-auto"
-                      value={user.rol_id}
-                      onChange={(e) => cambiarRol(user.id, parseInt(e.target.value))}
-                    >
-                      <option value={1}>Administrador</option>
-                      <option value={2}>Usuario Registrado</option>
-                      <option value={3}>Invitado / Gestor</option>
-                      <option value={5}>Administrador (Alt)</option>
-                      <option value={6}>Usuario Registrado (Alt)</option>
-                    </select>
-                  </td>
-                  <td className="text-center">
-                    <button 
-                      onClick={() => eliminarUsuario(user.id, user.nombre)}
-                      className="btn btn-sm btn-outline-danger border-0 rounded-circle"
-                      title="Eliminar usuario"
-                    >
-                      <i className="bi bi-trash3"></i>
-                    </button>
-                  </td>
+        <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 overflow-hidden">
+          {cargando ? (
+            <div className="p-20 text-center text-slate-400 font-bold uppercase tracking-widest animate-pulse">Cargando base de datos...</div>
+          ) : (
+            <table className="w-full text-left">
+              <thead className="bg-slate-900 text-white text-[10px] font-black uppercase tracking-widest">
+                <tr>
+                  <th className="px-8 py-6">Usuario</th>
+                  <th className="px-8 py-6">Rango Actual</th>
+                  <th className="px-8 py-6">Cambiar Rol</th>
+                  <th className="px-8 py-6 text-center">Borrar</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {filtrados.map(user => (
+                  <tr key={user.id} className="hover:bg-slate-50 transition-colors">
+                    <td className="px-8 py-6">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-slate-100 rounded-xl flex items-center justify-center font-black text-slate-400">
+                          {user.nombre?.charAt(0)}
+                        </div>
+                        <span className="font-bold text-slate-900">{user.nombre}</span>
+                      </div>
+                    </td>
+                    <td className="px-8 py-6">
+                      <span className={`text-[9px] font-black px-3 py-1 rounded-full uppercase tracking-tighter border ${
+                        user.roles?.nombre === 'Administrador' ? 'bg-amber-100 text-amber-700 border-amber-200' : 'bg-slate-100 text-slate-500 border-slate-200'
+                      }`}>
+                        {user.roles?.nombre}
+                      </span>
+                    </td>
+                    <td className="px-8 py-6">
+                      <select 
+                        className="bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-xs font-bold focus:ring-2 focus:ring-amber-500 outline-none"
+                        value={user.rol_id}
+                        onChange={(e) => cambiarRol(user.id, parseInt(e.target.value))}
+                      >
+                        <option value={1}>Administrador</option>
+                        <option value={2}>Usuario</option>
+                        <option value={3}>Gestor</option>
+                      </select>
+                    </td>
+                    <td className="px-8 py-6 text-center">
+                      <button onClick={() => eliminarUsuario(user.id, user.nombre)} className="p-2 text-slate-300 hover:text-rose-500 transition-colors">
+                        <i className="bi bi-trash3-fill"></i>
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </div>
       </div>
     </div>

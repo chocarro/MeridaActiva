@@ -1,133 +1,94 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { Link } from 'react-router-dom'; // Quitamos useNavigate, usaremos window.location
+import { Link } from 'react-router-dom';
 import { supabase } from '../../supabaseClient';
 
 const MiPerfil: React.FC = () => {
   const { profile, session, loading } = useAuth();
   const [seccionActiva, setSeccionActiva] = useState<'perfil' | 'favoritos' | 'alertas'>('perfil');
 
-  // --- FUNCIÓN BLINDADA TAMBIÉN AQUÍ ---
   const handleLogout = async () => {
-    try {
-      await supabase.auth.signOut();
-    } catch (error) {
-      console.warn("Error al salir:", error);
-    } finally {
-      localStorage.clear();
-      window.location.href = '/';
-    }
+    try { await supabase.auth.signOut(); } catch (error) { console.warn(error); }
+    finally { localStorage.clear(); window.location.href = '/'; }
   };
 
-  if (loading) {
-    return (
-      <div className="container py-5 mt-5 text-center">
-        <div className="spinner-border text-primary" role="status"></div>
-        <p className="mt-2 text-muted">Cargando perfil...</p>
-      </div>
-    );
-  }
-
-  // Si falla la carga del perfil, ofrecemos botón de salida de emergencia
-  if (!profile) {
-    return (
-      <div className="container py-5 mt-5 text-center">
-        <div className="alert alert-warning">
-          No se pudo cargar la información. Intenta acceder de nuevo.
-          <br/>
-          <button onClick={handleLogout} className="btn btn-sm btn-danger mt-3">
-            Forzar Cierre de Sesión
-          </button>
-        </div>
-      </div>
-    );
-  }
+  if (loading) return <div className="min-h-screen flex items-center justify-center bg-slate-50"><div className="animate-spin rounded-full h-10 w-10 border-t-2 border-amber-500"></div></div>;
 
   return (
-    <div className="container py-5 mt-5 text-start">
-      <div className="row g-4">
-        <div className="col-lg-4">
-          <div className="card border-0 shadow-sm rounded-4 p-4 text-center mb-4">
-            <div className="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center mx-auto mb-3" 
-                 style={{ width: '80px', height: '80px', fontSize: '2rem' }}>
-              {profile.nombre?.charAt(0).toUpperCase() || 'U'}
+    <div className="min-h-screen bg-slate-50 pt-32 pb-20">
+      <div className="max-w-6xl mx-auto px-4">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+          
+          {/* Sidebar de Perfil */}
+          <div className="lg:col-span-4 space-y-6 text-start">
+            <div className="bg-white rounded-[2.5rem] p-10 shadow-sm border border-slate-100 text-center">
+              <div className="w-24 h-24 bg-slate-900 text-amber-500 rounded-[2rem] flex items-center justify-center mx-auto mb-6 text-4xl font-black shadow-xl">
+                {profile?.nombre?.charAt(0).toUpperCase() || 'U'}
+              </div>
+              <h4 className="text-2xl font-black text-slate-900 mb-1 tracking-tighter">{profile?.nombre || 'Explorador'}</h4>
+              <p className="text-slate-400 text-sm font-medium mb-6">{session?.user.email}</p>
+              <span className="inline-block bg-slate-100 text-slate-600 text-[10px] font-black uppercase tracking-widest px-4 py-2 rounded-full border border-slate-200">
+                Rango: {profile?.roles?.nombre || 'Usuario'}
+              </span>
+              
+              {(profile?.roles?.nombre === 'Administrador' || profile?.roles?.nombre === 'Gestor (Editor)') && (
+                <Link to="/admin" className="block mt-8 bg-amber-500 text-slate-900 py-4 rounded-xl font-black text-xs uppercase tracking-widest hover:bg-slate-900 hover:text-white transition-all shadow-lg">
+                  Panel de Gestión
+                </Link>
+              )}
             </div>
-            <h4 className="fw-bold mb-1">{profile.nombre || 'Usuario'}</h4>
-            <p className="small text-muted mb-3">{session?.user.email}</p>
-            <span className="badge bg-light text-dark border rounded-pill px-3 py-2 mb-3">
-              Rol: {profile.roles?.nombre || 'Usuario'}
-            </span>
 
-            {(profile.roles?.nombre === 'Administrador' || profile.roles?.nombre === 'Gestor (Editor)') && (
-              <Link to="/admin" className="btn btn-warning w-100 rounded-pill fw-bold mb-2">
-                Panel de Administración
-              </Link>
-            )}
+            <nav className="bg-white rounded-[2rem] overflow-hidden shadow-sm border border-slate-100">
+              {[
+                { id: 'perfil', label: 'Mis Datos', icon: 'bi-person' },
+                { id: 'favoritos', label: 'Favoritos', icon: 'bi-heart' },
+                { id: 'alertas', label: 'Alertas', icon: 'bi-bell' }
+              ].map((item) => (
+                <button
+                  key={item.id}
+                  onClick={() => setSeccionActiva(item.id as any)}
+                  className={`w-full flex items-center gap-4 px-8 py-5 text-sm font-bold transition-all border-b border-slate-50 last:border-0 ${seccionActiva === item.id ? 'bg-slate-900 text-white' : 'text-slate-500 hover:bg-slate-50'}`}
+                >
+                  <i className={`bi ${item.icon} text-lg`}></i> {item.label}
+                </button>
+              ))}
+              <button onClick={handleLogout} className="w-full flex items-center gap-4 px-8 py-5 text-sm font-bold text-rose-500 hover:bg-rose-50 transition-all">
+                <i className="bi bi-box-arrow-right text-lg"></i> Cerrar Sesión
+              </button>
+            </nav>
           </div>
 
-          <div className="list-group shadow-sm rounded-4 overflow-hidden border-0">
-            <button 
-              onClick={() => setSeccionActiva('perfil')}
-              className={`list-group-item list-group-item-action py-3 border-0 ${seccionActiva === 'perfil' ? 'active text-white' : ''}`}
-            >
-              <i className="bi bi-person me-3"></i> Mis Datos
-            </button>
-            <button 
-              onClick={() => setSeccionActiva('favoritos')}
-              className={`list-group-item list-group-item-action py-3 border-0 ${seccionActiva === 'favoritos' ? 'active text-white' : ''}`}
-            >
-              <i className="bi bi-heart me-3"></i> Mis Favoritos
-            </button>
-            <button 
-              onClick={() => setSeccionActiva('alertas')}
-              className={`list-group-item list-group-item-action py-3 border-0 ${seccionActiva === 'alertas' ? 'active text-white' : ''}`}
-            >
-              <i className="bi bi-bell me-3"></i> Mis Alertas
-            </button>
-            
-            <button 
-              className="list-group-item list-group-item-action py-3 text-danger border-0" 
-              onClick={handleLogout}
-            >
-              <i className="bi bi-box-arrow-right me-3"></i> Cerrar Sesión
-            </button>
-          </div>
-        </div>
-
-        <div className="col-lg-8">
-          <div className="card border-0 shadow-sm rounded-4 p-4 h-100">
-            {seccionActiva === 'perfil' && (
-              <div>
-                <h3 className="fw-bold mb-4">Información de la Cuenta</h3>
-                <div className="row g-3">
-                  <div className="col-md-6">
-                    <label className="form-label small fw-bold">Nombre Completo</label>
-                    <input type="text" className="form-control bg-light" value={profile.nombre || ''} readOnly />
-                  </div>
-                  <div className="col-md-6">
-                    <label className="form-label small fw-bold">Correo Electrónico</label>
-                    <input type="text" className="form-control bg-light" value={session?.user.email || ''} readOnly />
+          {/* Contenido Principal */}
+          <div className="lg:col-span-8 text-start">
+            <div className="bg-white rounded-[2.5rem] p-10 md:p-12 shadow-sm border border-slate-100 h-full">
+              {seccionActiva === 'perfil' && (
+                <div className="animate-fade-in">
+                  <h3 className="text-2xl font-black text-slate-900 mb-8 tracking-tight">Detalles de Cuenta</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div>
+                      <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-3">Nombre Completo</label>
+                      <div className="bg-slate-50 px-6 py-4 rounded-xl font-bold text-slate-700 border border-slate-100">{profile?.nombre}</div>
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-3">Email Registrado</label>
+                      <div className="bg-slate-50 px-6 py-4 rounded-xl font-bold text-slate-700 border border-slate-100">{session?.user.email}</div>
+                    </div>
                   </div>
                 </div>
-              </div>
-            )}
-            
-            {seccionActiva === 'favoritos' && (
-               <div className="text-center p-5">
-                 <i className="bi bi-heart text-muted display-4 mb-3"></i>
-                 <p className="text-muted">No tienes favoritos guardados todavía.</p>
-               </div>
-            )}
-
-            {seccionActiva === 'alertas' && (
-               <div className="p-3">
-                 <p className="text-muted">Configuración de alertas próximamente...</p>
-               </div>
-            )}
+              )}
+              {seccionActiva === 'favoritos' && (
+                <div className="text-center py-20 animate-fade-in">
+                  <div className="text-5xl mb-6"></div>
+                  <h4 className="text-xl font-bold text-slate-900 mb-2">Aún no hay favoritos</h4>
+                  <p className="text-slate-400">Guarda eventos o monumentos para verlos aquí.</p>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>
     </div>
+    
   );
 };
 

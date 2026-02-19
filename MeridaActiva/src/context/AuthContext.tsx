@@ -46,24 +46,26 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     return () => subscription.unsubscribe();
   }, []);
 
-  const fetchProfile = async (userId: string) => {
-    try {
-      const { data, error } = await supabase
-        .from('usuarios')
-        .select(`*, roles (nombre)`) 
-        .eq('id', userId)
-        .maybeSingle(); 
+const fetchProfile = async (userId: string) => {
+  try {
+    const { data, error } = await supabase
+      .from('usuarios')
+      .select(`*, roles (nombre)`) 
+      .eq('id', userId)
+      .maybeSingle(); 
 
-      if (error) {
-        console.warn("Error leyendo perfil (pero continuamos):", error.message);
-      }
-      
-      setProfile(data || null); 
-      console.error("Error crítico en perfil:", err);
-    } finally {
-      setLoading(false); 
+    if (error) {
+      console.warn("Error leyendo perfil:", error.message);
     }
-  };
+    
+    setProfile(data || null); 
+    // console.error("Error crítico en perfil:", err); // <-- BORRA ESTA LÍNEA (causa el error)
+  } catch (error) {
+    console.error("Error en fetchProfile:", error);
+  } finally {
+    setLoading(false); 
+  }
+};
 
   return (
     <AuthContext.Provider value={{ session, profile, loading }}>
