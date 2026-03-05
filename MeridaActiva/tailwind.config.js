@@ -7,28 +7,17 @@ export default {
   theme: {
     extend: {
       colors: {
-        "merida-gold": "#ffc107",
-        "merida-dark": "#0f172a", 
+        "brand-dark": "#032B43",
+        "brand-gold": "#FFBA08",
+        "brand-blue": "#3F88C5",
+        "brand-green": "#136F63",
+        "brand-red": "#D00000",
+        "brand-bg": "#F8F9FA",
       },
       borderRadius: {
         '4xl': '2rem',
         '5xl': '2.5rem',
       },
-      boxShadow: {
-        'soft': '0 20px 50px -12px rgba(0, 0, 0, 0.05)',
-        'premium': '0 30px 60px -12px rgba(15, 23, 42, 0.08)',
-      },
-  
-      animation: {
-        'fade-in-up': 'fadeInUp 0.6s ease-out forwards',
-        'subtle-zoom': 'slow-zoom 20s ease-in-out infinite alternate',
-      },
-      keyframes: {
-        fadeInUp: {
-          '0%': { opacity: '0', transform: 'translateY(20px)' },
-          '100%': { opacity: '1', transform: 'translateY(0)' },
-        }
-      }
     },
   },
   plugins: [],

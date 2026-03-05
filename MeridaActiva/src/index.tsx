@@ -7,9 +7,13 @@ import './styles/index.css';
 
 const root = ReactDOM.createRoot(document.getElementById('root') as HTMLElement);
 root.render(
-  <React.StrictMode>
-    <BrowserRouter>
-      <App />
-    </BrowserRouter>
-  </React.StrictMode>
+
+<BrowserRouter 
+  future={{ 
+    v7_startTransition: true, 
+    v7_relativeSplatPath: true 
+  }}
+>
+  <App />
+</BrowserRouter>
 );

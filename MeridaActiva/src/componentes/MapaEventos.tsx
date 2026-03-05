@@ -1,21 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
-import { Link } from 'react-router-dom'; // Asegúrate de importar Link
+import { Link } from 'react-router-dom';
 import 'leaflet/dist/leaflet.css';
 import { supabase } from '../supabaseClient';
 import L from 'leaflet';
 
-// Corregir iconos de Leaflet en React
-import icon from 'leaflet/dist/images/marker-icon.png';
-import iconShadow from 'leaflet/dist/images/marker-shadow.png';
-
-let DefaultIcon = L.icon({
-    iconUrl: icon,
-    shadowUrl: iconShadow,
-    iconSize: [25, 41],
-    iconAnchor: [12, 41]
-});
-L.Marker.prototype.options.icon = DefaultIcon;
+// ... (Icon setup queda igual)
 
 const MapaEventos: React.FC = () => {
   const [eventos, setEventos] = useState<any[]>([]);
@@ -23,52 +13,41 @@ const MapaEventos: React.FC = () => {
   useEffect(() => {
     const fetchEventos = async () => {
       const { data } = await supabase.from('eventos').select('*');
-      // Filtramos solo los que tienen coordenadas
       if (data) setEventos(data.filter(ev => ev.latitud && ev.longitud));
     };
     fetchEventos();
   }, []);
 
   return (
-    <div className="min-h-screen bg-slate-50 pt-24 pb-20">
-      <div className="max-w-7xl mx-auto px-4">
+    <div className="min-h-screen bg-brand-bg pt-28 pb-20 px-4">
+      <div className="max-w-7xl mx-auto">
         
-        {/* Cabecera del Mapa */}
-        <div className="mb-10 text-center">
-          <h1 className="text-4xl font-black text-slate-900 mb-4 tracking-tight">Mapa Interactivo</h1>
-          <p className="text-slate-500 font-medium">Encuentra tus eventos favoritos distribuidos por toda la ciudad de Mérida.</p>
+        <div className="mb-12 text-center">
+          <h2 className="text-5xl font-[900] text-brand-dark mb-4 italic uppercase tracking-tighter">
+            Mérida en el <span className="text-brand-blue">Mapa</span>
+          </h2>
+          <p className="text-slate-400 font-bold uppercase text-[10px] tracking-[0.3em]">Explora la ciudad en tiempo real</p>
         </div>
 
-        {/* Contenedor del Mapa con Estilo Tailwind */}
-        <div className="relative w-full h-[650px] rounded-[3rem] overflow-hidden shadow-2xl border-8 border-white">
-          <MapContainer 
-            center={[38.9161, -6.3433]}
-            zoom={14} 
-            className="w-full h-full z-10"
-          >
-            <TileLayer
-              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-              attribution='&copy; OpenStreetMap contributors'
-            />
+        <div className="relative h-[600px] rounded-[3rem] overflow-hidden shadow-2xl border-8 border-white">
+          <MapContainer center={[38.9161, -6.3437]} zoom={14} style={{ height: '100%', width: '100%' }}>
+            <TileLayer url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png" />
             
-            {eventos.map(ev => (
+            {eventos.map((ev) => (
               <Marker key={ev.id} position={[ev.latitud, ev.longitud]}>
-                <Popup className="custom-popup">
-                  <div className="w-48 p-1 text-center font-sans">
-                    <img 
-                      src={ev.imagen_url || "/imagenes/placeholder.jpg"} 
-                      alt={ev.titulo} 
-                      className="w-full h-24 object-cover rounded-xl mb-3 shadow-sm" 
-                    />
-                    <h6 className="font-bold text-slate-900 text-sm mb-1 leading-tight">{ev.titulo}</h6>
-                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-3">
-                      📍 {ev.ubicacion}
+                <Popup>
+                  <div className="p-3 font-sauce text-center">
+                    <h3 className="text-sm font-[900] text-brand-dark uppercase italic mb-2 leading-tight">
+                      {ev.titulo}
+                    </h3>
+                    <p className="text-[9px] font-black text-brand-blue uppercase tracking-widest mb-3">
+                      <i className="bi bi-geo-alt-fill"></i> {ev.ubicacion}
                     </p>
                     <Link 
                       to={`/eventos/${ev.id}`} 
-                      className="inline-block w-full bg-slate-900 text-white text-[10px] font-black py-2 rounded-lg hover:bg-amber-500 hover:text-slate-900 transition-all no-underline"
+                      className="block bg-brand-dark text-white text-[9px] font-black py-2 rounded-xl hover:bg-brand-gold hover:text-brand-dark transition-all no-underline tracking-widest uppercase"
                     >
-                      VER DETALLES
+                      Ver detalles
                     </Link>
                   </div>
                 </Popup>
@@ -76,28 +55,21 @@ const MapaEventos: React.FC = () => {
             ))}
           </MapContainer>
 
-          {/* Badge flotante sobre el mapa */}
-          <div className="absolute bottom-8 left-8 z-20 bg-white/90 backdrop-blur px-6 py-3 rounded-2xl shadow-xl border border-slate-100 hidden md:block">
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Total Eventos</p>
-            <p className="text-2xl font-black text-slate-900">{eventos.length} Localizaciones</p>
+          {/* Badge flotante Premium */}
+          <div className="absolute bottom-10 left-10 z-[1000] bg-brand-dark text-white px-8 py-5 rounded-[2rem] shadow-2xl border border-white/10 hidden md:block">
+            <p className="text-[9px] font-black text-brand-gold uppercase tracking-[0.2em] mb-1">Radar Activo</p>
+            <p className="text-xl font-[900] italic uppercase tracking-tighter">{eventos.length} Eventos <span className="text-brand-blue">Hoy</span></p>
           </div>
         </div>
-
       </div>
 
-      {/* Estilos específicos para limpiar el diseño de los Popups de Leaflet */}
       <style>{`
         .leaflet-popup-content-wrapper {
-          border-radius: 1.5rem !important;
-          padding: 8px !important;
-          box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1) !important;
+          border-radius: 2rem !important;
+          padding: 10px !important;
+          border: 1px solid #f1f5f9;
         }
-        .leaflet-popup-tip {
-          display: none;
-        }
-        .leaflet-container {
-          font-family: inherit;
-        }
+        .leaflet-container { font-family: inherit; }
       `}</style>
     </div>
   );

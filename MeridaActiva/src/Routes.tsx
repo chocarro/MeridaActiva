@@ -6,6 +6,7 @@ import { useAuth } from './context/AuthContext';
 import Home from './paginas/publicas/Home';
 import Eventos from './paginas/publicas/Eventos';
 import Lugares from './paginas/publicas/Lugares';
+import LugaresDetalle from './paginas/publicas/LugaresDetalle';
 import DetalleEvento from './paginas/publicas/DetalleEvento';
 import Login from './paginas/auth/Login';
 import Registro from './paginas/auth/Registro';
@@ -18,6 +19,8 @@ import AvisoLegal from './legales/AvisoLegal';
 import Privacidad from './legales/Privacidad';
 import Cookies from './legales/Cookies';
 import Terminos from './legales/Terminos';
+import Calendario from './paginas/privadas/Calendario';
+import Dashboard from './paginas/admin/Dashboard';
 
 // COMPONENTE DE PROTECCIÓN DE RUTAS
 const ProtectedRoute = ({ children, allowedRoles }: { children: React.ReactNode, allowedRoles?: string[] }) => {
@@ -25,7 +28,7 @@ const ProtectedRoute = ({ children, allowedRoles }: { children: React.ReactNode,
 
   if (loading) return <div className="p-5 text-center">Verificando acceso...</div>;
   if (!session) return <Navigate to="/login" />;
-  
+
   if (allowedRoles && profile && !allowedRoles.includes(profile.roles?.nombre || '')) {
     return <Navigate to="/" />;
   }
@@ -43,22 +46,36 @@ const AppRoutes = () => {
       <Route path="/mapa" element={<MapaEventos />} />
       <Route path="/login" element={<Login />} />
       <Route path="/registro" element={<Registro />} />
+<Route path="/lugares/:id" element={<LugaresDetalle />} />
 
       {/* Rutas Legales */}
       <Route path="/aviso-legal" element={<AvisoLegal />} />
-      <Route path="/privacidad" element={<Privacidad />} /> 
+      <Route path="/privacidad" element={<Privacidad />} />
       <Route path="/cookies" element={<Cookies />} />
       <Route path="/terminos" element={<Terminos />} />
+
+      <Route
+        path="/calendario"
+        element={
+          <ProtectedRoute>
+            <Calendario />
+          </ProtectedRoute>
+        }
+      />
 
       {/* Rutas Privadas */}
       <Route path="/perfil" element={<ProtectedRoute><MiPerfil /></ProtectedRoute>} />
 
+
       {/* Rutas Admin */}
-      <Route path="/admin" element={
-        <ProtectedRoute allowedRoles={['Administrador', 'Gestor (Editor)']}>
-          <DashboardAdmin />
-        </ProtectedRoute>
-      } />
+     <Route 
+  path="/dashboard" 
+  element={
+    <ProtectedRoute allowedRoles={['Administrador', 'Gestor (Editor)']}>
+      <Dashboard />
+    </ProtectedRoute>
+  } 
+/>
       <Route path="/admin/eventos" element={
         <ProtectedRoute allowedRoles={['Administrador', 'Gestor (Editor)']}>
           <GestionEventos />

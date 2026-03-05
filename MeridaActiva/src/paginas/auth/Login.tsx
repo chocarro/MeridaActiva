@@ -23,26 +23,29 @@ const Login: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex items-center justify-center px-4">
+    <div className="min-h-screen bg-brand-bg flex items-center justify-center px-4">
       <div className="max-w-md w-full">
-        <div className="bg-white rounded-[2.5rem] shadow-2xl p-10 border border-slate-100">
-          <div className="text-center mb-10">
-            <h2 className="text-3xl font-black text-slate-900 mb-2">¡Hola de nuevo!</h2>
-            <p className="text-slate-400 font-medium">Accede a MéridaActiva</p>
+        {/* Usamos la clase bento-card-light definida en el CSS */}
+        <div className="bg-white rounded-[3rem] shadow-2xl p-12 border border-slate-100 relative overflow-hidden">
+          <div className="text-center mb-12">
+            <h2 className="text-4xl font-[900] text-brand-dark mb-3 uppercase italic tracking-tighter">
+              ¡Hola de <span className="text-brand-gold">nuevo</span>!
+            </h2>
+            <p className="text-slate-400 font-black uppercase text-[10px] tracking-[0.2em]">Accede a tu cuenta MéridaActiva</p>
           </div>
 
           {errorMsg && (
-            <div className="bg-rose-50 text-rose-600 p-4 rounded-2xl text-sm font-bold mb-6 border border-rose-100">
+            <div className="bg-brand-red/10 text-brand-red p-4 rounded-2xl text-[10px] font-black uppercase tracking-widest text-center mb-8 border border-brand-red/20">
               {errorMsg}
             </div>
           )}
 
           <form onSubmit={handleLogin} className="space-y-6">
             <div>
-              <label className="block text-xs font-black uppercase tracking-widest text-slate-400 mb-2 ml-1">Email</label>
+              <label className="block text-[9px] font-[900] uppercase tracking-[0.2em] text-slate-400 mb-2 ml-2">Email</label>
               <input 
                 type="email" 
-                className="w-full bg-slate-50 border-none rounded-2xl px-6 py-4 focus:ring-2 focus:ring-amber-500 transition-all outline-none" 
+                className="w-full bg-brand-bg border-none rounded-2xl px-6 py-4 focus:ring-2 focus:ring-brand-blue transition-all outline-none font-bold text-brand-dark" 
                 placeholder="tu@email.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
@@ -50,10 +53,10 @@ const Login: React.FC = () => {
               />
             </div>
             <div>
-              <label className="block text-xs font-black uppercase tracking-widest text-slate-400 mb-2 ml-1">Contraseña</label>
+              <label className="block text-[9px] font-[900] uppercase tracking-[0.2em] text-slate-400 mb-2 ml-2">Contraseña</label>
               <input 
                 type="password" 
-                className="w-full bg-slate-50 border-none rounded-2xl px-6 py-4 focus:ring-2 focus:ring-amber-500 transition-all outline-none" 
+                className="w-full bg-brand-bg border-none rounded-2xl px-6 py-4 focus:ring-2 focus:ring-brand-blue transition-all outline-none font-bold text-brand-dark" 
                 placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
@@ -62,18 +65,21 @@ const Login: React.FC = () => {
             </div>
             <button 
               type="submit" 
-              className="w-full bg-slate-900 hover:bg-black text-white font-black py-4 rounded-2xl shadow-xl transition-all disabled:opacity-50"
+              className="w-full btn-dark py-5 text-xs"
               disabled={loading}
             >
-              {loading ? 'Cargando...' : 'ENTRAR'}
+              {loading ? 'Validando...' : 'Entrar ahora'}
             </button>
           </form>
 
-          <div className="mt-8 text-center">
-            <p className="text-slate-400 text-sm font-medium">
-              ¿No tienes cuenta? <Link to="/registro" className="text-amber-600 font-bold hover:underline">Regístrate</Link>
+          <div className="mt-10 text-center">
+            <p className="text-slate-400 text-[10px] font-[900] uppercase tracking-widest">
+              ¿No tienes cuenta? <Link to="/registro" className="text-brand-blue hover:text-brand-gold transition-colors">Crea una aquí</Link>
             </p>
           </div>
+          
+          {/* Decoración sutil */}
+          <div className="absolute -bottom-6 -right-6 w-24 h-24 bg-brand-gold/10 rounded-full blur-2xl"></div>
         </div>
       </div>
     </div>

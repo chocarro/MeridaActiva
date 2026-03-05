@@ -4,14 +4,13 @@ import { supabase } from '../../supabaseClient';
 const GestionUsuarios: React.FC = () => {
   const [usuarios, setUsuarios] = useState<any[]>([]);
   const [busqueda, setBusqueda] = useState('');
-  const [cargando, setCargando] = useState(true);
 
   useEffect(() => { fetchUsuarios(); }, []);
 
   const fetchUsuarios = async () => {
+    // Tabla correcta: 'usuarios'
     const { data } = await supabase.from('usuarios').select('*, roles(nombre)').order('nombre', { ascending: true });
     if (data) setUsuarios(data);
-    setCargando(false);
   };
 
   const cambiarRol = async (id: string, nuevoRolId: number) => {
@@ -20,85 +19,98 @@ const GestionUsuarios: React.FC = () => {
   };
 
   const eliminarUsuario = async (id: string, nombre: string) => {
-    if (window.confirm(`¿Eliminar al usuario ${nombre}?`)) {
+    if (window.confirm(`¿Eliminar permanentemente el perfil de ${nombre}?`)) {
       await supabase.from('usuarios').delete().eq('id', id);
       fetchUsuarios();
     }
   };
 
-  const filtrados = usuarios.filter(u => u.nombre?.toLowerCase().includes(busqueda.toLowerCase()));
+  const filtrados = usuarios.filter(u => u.nombre?.toLowerCase().includes(busqueda.toLowerCase()) || u.email?.toLowerCase().includes(busqueda.toLowerCase()));
 
   return (
-    <div className="min-h-screen bg-slate-50 pt-32 pb-20">
-      <div className="max-w-7xl mx-auto px-4">
-        <div className="flex flex-col md:flex-row justify-between items-center mb-12 gap-6">
+    <div className="min-h-screen bg-brand-dark pt-32 pb-20 px-6">
+      <div className="max-w-7xl mx-auto">
+
+        <header className="mb-16 flex flex-col md:flex-row justify-between items-end gap-10">
           <div>
-            <h2 className="text-4xl font-black text-slate-900 tracking-tighter uppercase text-center md:text-left">Comunidad</h2>
-            <p className="text-slate-500 font-medium text-center md:text-left">Administración de perfiles y permisos</p>
+            <h2 className="text-6xl font-[900] text-white italic uppercase tracking-tighter leading-none">
+              Control de <span className="text-brand-gold">Seguridad</span>
+            </h2>
+            <p className="text-white/30 font-black uppercase text-[10px] tracking-[0.3em] mt-4 ml-1">Administración de perfiles y roles críticos</p>
           </div>
-          <div className="relative w-full md:w-96">
-            <i className="bi bi-search absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"></i>
-            <input 
-              type="text" 
-              placeholder="Buscar por nombre..." 
-              className="w-full bg-white border border-slate-200 rounded-2xl py-4 pl-12 pr-6 shadow-sm focus:ring-2 focus:ring-amber-500 outline-none transition-all font-medium"
+
+          <div className="relative w-full md:w-96 group">
+            <i className="bi bi-search absolute left-6 top-1/2 -translate-y-1/2 text-white/20 group-focus-within:text-brand-gold transition-colors"></i>
+            <input
+              type="text"
+              placeholder="BUSCAR POR NOMBRE O EMAIL..."
+              className="w-full bg-white/5 border border-white/10 rounded-2xl py-5 pl-14 pr-6 text-[10px] font-black uppercase tracking-widest text-white outline-none focus:border-brand-gold/50 transition-all"
               value={busqueda}
-              onChange={(e) => setBusqueda(e.target.value)}
+              onChange={e => setBusqueda(e.target.value)}
             />
           </div>
-        </div>
+        </header>
 
-        <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 overflow-hidden">
-          {cargando ? (
-            <div className="p-20 text-center text-slate-400 font-bold uppercase tracking-widest animate-pulse">Cargando base de datos...</div>
-          ) : (
-            <table className="w-full text-left">
-              <thead className="bg-slate-900 text-white text-[10px] font-black uppercase tracking-widest">
-                <tr>
-                  <th className="px-8 py-6">Usuario</th>
-                  <th className="px-8 py-6">Rango Actual</th>
-                  <th className="px-8 py-6">Cambiar Rol</th>
-                  <th className="px-8 py-6 text-center">Borrar</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {filtrados.map(user => (
-                  <tr key={user.id} className="hover:bg-slate-50 transition-colors">
-                    <td className="px-8 py-6">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-slate-100 rounded-xl flex items-center justify-center font-black text-slate-400">
-                          {user.nombre?.charAt(0)}
-                        </div>
-                        <span className="font-bold text-slate-900">{user.nombre}</span>
+        {/* LISTADO USUARIOS ESTILO DARK BENTO */}
+        <div className="bg-white/5 rounded-[4rem] border border-white/5 shadow-2xl overflow-hidden backdrop-blur-sm">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="border-b border-white/5 text-[10px] font-black text-white/30 uppercase tracking-[0.2em]">
+                <th className="px-12 py-10">Identidad Digital</th>
+                <th className="px-8 py-10">Nivel de Acceso</th>
+                <th className="px-8 py-10">Asignar Rol</th>
+                <th className="px-12 py-10 text-center">Acciones</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-white/5">
+              {filtrados.map(user => (
+                <tr key={user.id} className="group hover:bg-white/[0.02] transition-colors">
+                  <td className="px-12 py-8">
+                    <div className="flex items-center gap-5">
+                      <div className="w-14 h-14 rounded-2xl bg-brand-gold/10 flex items-center justify-center text-brand-gold font-[900] italic text-xl shadow-inner">
+                        {user.nombre?.charAt(0)}
                       </div>
-                    </td>
-                    <td className="px-8 py-6">
-                      <span className={`text-[9px] font-black px-3 py-1 rounded-full uppercase tracking-tighter border ${
-                        user.roles?.nombre === 'Administrador' ? 'bg-amber-100 text-amber-700 border-amber-200' : 'bg-slate-100 text-slate-500 border-slate-200'
+                      <div>
+                        <p className="font-[900] text-white uppercase italic text-lg leading-none mb-1">{user.nombre}</p>
+                        <p className="text-[10px] text-white/40 font-bold uppercase tracking-tighter italic">{user.id.substring(0, 20)}...</p>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-8 py-8">
+                    <span className={`px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest border ${user.roles?.nombre === 'Administrador' ? 'bg-brand-gold text-brand-dark border-brand-gold' : 'bg-white/5 text-white/60 border-white/10'
                       }`}>
-                        {user.roles?.nombre}
-                      </span>
-                    </td>
-                    <td className="px-8 py-6">
-                      <select 
-                        className="bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-xs font-bold focus:ring-2 focus:ring-amber-500 outline-none"
-                        value={user.rol_id}
-                        onChange={(e) => cambiarRol(user.id, parseInt(e.target.value))}
-                      >
-                        <option value={1}>Administrador</option>
-                        <option value={2}>Usuario</option>
-                        <option value={3}>Gestor</option>
-                      </select>
-                    </td>
-                    <td className="px-8 py-6 text-center">
-                      <button onClick={() => eliminarUsuario(user.id, user.nombre)} className="p-2 text-slate-300 hover:text-rose-500 transition-colors">
-                        <i className="bi bi-trash3-fill"></i>
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                      {user.roles?.nombre || 'Usuario'}
+                    </span>
+                  </td>
+                  <td className="px-8 py-8">
+                    <select
+                      className="bg-brand-dark border border-white/10 rounded-xl px-4 py-3 text-[10px] font-black text-white uppercase tracking-widest outline-none focus:border-brand-gold transition-all"
+                      value={user.rol_id}
+                      onChange={(e) => cambiarRol(user.id, parseInt(e.target.value))}
+                    >
+                      <option value={1}>Administrador</option>
+                      <option value={2}>Usuario Estándar</option>
+                      <option value={3}>Gestor (Editor)</option>
+                    </select>
+                  </td>
+                  <td className="px-12 py-8 text-center">
+                    <button
+                      onClick={() => eliminarUsuario(user.id, user.nombre)}
+                      className="w-12 h-12 rounded-2xl bg-white/5 text-white/20 hover:bg-brand-red hover:text-white transition-all shadow-lg active:scale-90"
+                    >
+                      <i className="bi bi-trash3-fill"></i>
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+
+          {filtrados.length === 0 && (
+            <div className="py-20 text-center">
+              <i className="bi bi-person-exclamation text-5xl text-white/10 mb-4 block"></i>
+              <p className="text-white/20 font-black uppercase tracking-widest text-xs">No se han encontrado perfiles</p>
+            </div>
           )}
         </div>
       </div>
