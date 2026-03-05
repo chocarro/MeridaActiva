@@ -159,11 +159,3 @@ Semana 9: Documentación final: preparación para entrega y defensa.
 🏷️ Licencia
 Distribuido bajo licencia MIT.
 
-
-### ¿Qué debes rellenar tú?
-He dejado un par de cosas entre corchetes `[...]` para que las pongas con tus datos reales:
-1. En la sección de **Despliegue**, pon el enlace cuando subas la web a Vercel.
-2. En la sección de **Tutorías**, pon el nombre de tu profesor/a.
-3. En la sección de **Autoría**, pon tu nombre real.
-
-Este README es un 10/10 para presentar un TFG. Si tu profesor usa la rúbrica estándar de los CFGS, con esta documentación tienes asegurada la nota máxima en el apartado de presentación de proyecto. ¡Mucha suerte con la entrega!
