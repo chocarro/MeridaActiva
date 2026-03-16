@@ -4,6 +4,7 @@ import { supabase } from '../../supabaseClient';
 import BotonFavorito from '../../componentes/BotonFavorito';
 import { toastError } from '../../utils/toast';
 import { useSeoMeta } from '../../hooks/useSeoMeta';
+import SelectCustom from '../../componentes/SelectCustom';
 
 // ── Tipo local (mueve esto a src/types.ts cuando puedas) ─────────
 interface Evento {
@@ -191,15 +192,16 @@ const Eventos: React.FC = () => {
             ))}
           </div>
 
-          <select
+          <SelectCustom
             value={orden}
-            onChange={(e) => setOrden(e.target.value as typeof orden)}
-            className="select-field"
-          >
-            <option value="reciente">Próximos eventos</option>
-            <option value="asc">A - Z</option>
-            <option value="desc">Z - A</option>
-          </select>
+            onChange={(v) => setOrden(v as typeof orden)}
+            icon="bi-sort-down"
+            options={[
+              { value: 'reciente', label: 'Próximos eventos' },
+              { value: 'asc',     label: 'A — Z' },
+              { value: 'desc',    label: 'Z — A' },
+            ]}
+          />
         </div>
 
         {/* Contador de resultados */}

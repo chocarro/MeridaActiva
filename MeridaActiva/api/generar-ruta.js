@@ -6,11 +6,6 @@ import { Redis } from '@upstash/redis';
 const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
 const MODEL = 'google/gemini-2.5-flash';
 
-// ── BUG FIX: Inicialización LAZY del rate limiter ─────────────────────────
-// ANTES: Redis.fromEnv() se ejecutaba al IMPORTAR el módulo. Si las variables
-// de entorno de Upstash no están definidas, lanza un error que impide cargar
-// el módulo entero → ambos endpoints fallaban con error 500 siempre.
-// AHORA: se instancia solo la primera vez que se usa y solo si hay credenciales.
 let _ratelimit = null;
 function getRatelimit() {
     if (!process.env.UPSTASH_REDIS_REST_URL || !process.env.UPSTASH_REDIS_REST_TOKEN) {
