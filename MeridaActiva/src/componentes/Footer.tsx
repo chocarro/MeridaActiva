@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import Logo from './Logo';
 
 const Footer: React.FC = () => {
   const { profile } = useAuth();
@@ -25,9 +26,7 @@ const Footer: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-16 mb-20">
 
           <div className="space-y-8">
-            <Link to="/" className="text-3xl font-[900] text-white italic uppercase tracking-tighter">
-              Mérida<span className="text-brand-gold">Activa</span>
-            </Link>
+            <Logo isScrolled={true} className="!text-3xl" />
             <p className="text-slate-400 text-sm font-medium leading-relaxed">
               Explora el legado de Augusta Emerita con la plataforma inteligente de gestión cultural de Extremadura.
             </p>
@@ -58,11 +57,9 @@ const Footer: React.FC = () => {
           <div>
             <h4 className="text-brand-gold text-[10px] font-black uppercase tracking-[0.3em] mb-10">Ayuda</h4>
             <ul className="space-y-4">
-              {['Contacto', 'Privacidad', 'Términos de Uso'].map((item) => (
-                <li key={item}>
-                  <Link to="#" className="text-slate-400 hover:text-white transition-colors font-bold text-sm">{item}</Link>
-                </li>
-              ))}
+              <li><Link to="/contacto" className="text-slate-400 hover:text-white transition-colors font-bold text-sm">Contacto</Link></li>
+              <li><Link to="/privacidad" className="text-slate-400 hover:text-white transition-colors font-bold text-sm">Privacidad</Link></li>
+              <li><Link to="/terminos" className="text-slate-400 hover:text-white transition-colors font-bold text-sm">Términos de Uso</Link></li>
             </ul>
           </div>
 
@@ -106,9 +103,24 @@ const Footer: React.FC = () => {
           <p className="text-[9px] font-black text-slate-500 uppercase tracking-[0.3em]">
             © 2026 MÉRIDAACTIVA. HECHO EN EXTREMADURA.
           </p>
-          <div className="flex gap-8">
-            <span className="flex items-center gap-2 text-[9px] font-black text-slate-500 uppercase tracking-widest">
-              <span className="w-2 h-2 bg-brand-green rounded-full animate-pulse"></span> Sistema Online
+          <div className="flex items-center gap-6 flex-wrap justify-center">
+            <a
+              href="/faq"
+              className="text-[9px] font-black text-slate-500 uppercase tracking-widest hover:text-brand-gold transition-colors"
+            >
+              Preguntas frecuentes
+            </a>
+            <span className="text-white/10">|</span>
+            <a
+              href="/contacto"
+              className="text-[9px] font-black text-slate-500 uppercase tracking-widest hover:text-brand-gold transition-colors"
+            >
+              Contacto
+            </a>
+            <span className="text-white/10">|</span>
+            <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">
+              <i className="bi bi-award-fill text-brand-gold mr-1" />
+              Mérida, Patrimonio UNESCO
             </span>
           </div>
         </div>

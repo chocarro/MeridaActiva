@@ -8,10 +8,11 @@ import Eventos from './paginas/publicas/Eventos';
 import Lugares from './paginas/publicas/Lugares';
 import LugaresDetalle from './paginas/publicas/LugaresDetalle';
 import DetalleEvento from './paginas/publicas/DetalleEvento';
+import Contacto from './paginas/publicas/Contacto';
 import Login from './paginas/auth/Login';
 import Registro from './paginas/auth/Registro';
+import ResetPassword from './paginas/auth/ResetPassword';
 import MiPerfil from './paginas/privadas/MiPerfil';
-import DashboardAdmin from './paginas/admin/Dashboard';
 import GestionEventos from './paginas/admin/GestionEventos';
 import GestionUsuarios from './paginas/admin/GestionUsuarios';
 import MapaEventos from './componentes/MapaEventos';
@@ -21,6 +22,8 @@ import Cookies from './legales/Cookies';
 import Terminos from './legales/Terminos';
 import Calendario from './paginas/privadas/Calendario';
 import Dashboard from './paginas/admin/Dashboard';
+import FAQPage from './paginas/publicas/FAQ';
+import RutaInteligente from './paginas/privadas/RutaInteligente';
 
 // COMPONENTE DE PROTECCIÓN DE RUTAS
 const ProtectedRoute = ({ children, allowedRoles }: { children: React.ReactNode, allowedRoles?: string[] }) => {
@@ -46,7 +49,10 @@ const AppRoutes = () => {
       <Route path="/mapa" element={<MapaEventos />} />
       <Route path="/login" element={<Login />} />
       <Route path="/registro" element={<Registro />} />
-<Route path="/lugares/:id" element={<LugaresDetalle />} />
+      <Route path="/reset-password" element={<ResetPassword />} />
+      <Route path="/lugares/:id" element={<LugaresDetalle />} />
+      <Route path="/contacto" element={<Contacto />} />
+      <Route path="/faq" element={<FAQPage />} />
 
       {/* Rutas Legales */}
       <Route path="/aviso-legal" element={<AvisoLegal />} />
@@ -62,20 +68,28 @@ const AppRoutes = () => {
           </ProtectedRoute>
         }
       />
+      <Route
+        path="/rutas"
+        element={
+          <ProtectedRoute>
+            <RutaInteligente />
+          </ProtectedRoute>
+        }
+      />
 
       {/* Rutas Privadas */}
       <Route path="/perfil" element={<ProtectedRoute><MiPerfil /></ProtectedRoute>} />
 
 
       {/* Rutas Admin */}
-     <Route 
-  path="/dashboard" 
-  element={
-    <ProtectedRoute allowedRoles={['Administrador', 'Gestor (Editor)']}>
-      <Dashboard />
-    </ProtectedRoute>
-  } 
-/>
+      <Route
+        path="/dashboard"
+        element={
+          <ProtectedRoute allowedRoles={['Administrador', 'Gestor (Editor)']}>
+            <Dashboard />
+          </ProtectedRoute>
+        }
+      />
       <Route path="/admin/eventos" element={
         <ProtectedRoute allowedRoles={['Administrador', 'Gestor (Editor)']}>
           <GestionEventos />

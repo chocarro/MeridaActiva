@@ -1,0 +1,12 @@
+User-agent: *
+Allow: /
+
+# Bloquear paneles administrativos y rutas privadas
+Disallow: /dashboard
+Disallow: /admin/
+Disallow: /perfil
+Disallow: /calendario
+Disallow: /reset-password
+
+# Sitemap
+Sitemap: https://meridaactiva.es/sitemap.xml

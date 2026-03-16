@@ -37,11 +37,29 @@ const MiPerfil: React.FC = () => {
 
   const fetchContenido = useCallback(async () => {
     if (!session?.user?.id) return;
-    const { data: favs } = await supabase
+    // Fetch all favorites (both events and places)
+    const { data: favsData } = await supabase
       .from('favoritos')
-      .select('id, elemento_id, tipo_elemento, eventos(id, titulo, imagen_url)')
+      .select('id, elemento_id, tipo_elemento')
       .eq('usuario_id', session.user.id);
-    if (favs) setFavoritos(favs.filter((f: any) => f.eventos));
+
+    if (favsData && favsData.length > 0) {
+      // Resolve each favorite's detail from the correct table
+      const detallesPromesas = favsData.map(async (fav: any) => {
+        const tabla = fav.tipo_elemento === 'evento' ? 'eventos' : 'lugares';
+        const campos = fav.tipo_elemento === 'evento' ? 'id, titulo, imagen_url' : 'id, nombre, nombre_es, imagen_url';
+        const { data: detalle } = await supabase
+          .from(tabla)
+          .select(campos)
+          .eq('id', fav.elemento_id)
+          .maybeSingle();
+        return { ...fav, detalle };
+      });
+      const resultados = await Promise.all(detallesPromesas);
+      setFavoritos(resultados.filter((f: any) => f.detalle));
+    } else {
+      setFavoritos([]);
+    }
 
     const { data: comms } = await supabase
       .from('comentarios')
@@ -340,21 +358,29 @@ const MiPerfil: React.FC = () => {
                 Mis <span className="text-brand-blue">Favoritos</span>
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {favoritos.length > 0 ? favoritos.map(fav => (
-                  <Link
-                    key={fav.id}
-                    to={`/eventos/${fav.eventos.id}`}
-                    className="group bg-brand-bg rounded-[2rem] overflow-hidden border border-slate-100 hover:shadow-xl hover:border-brand-blue/20 transition-all"
-                  >
-                    <div className="relative h-40 overflow-hidden">
-                      <img src={fav.eventos.imagen_url} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" alt="" />
-                      <div className="absolute inset-0 bg-gradient-to-t from-brand-dark/50 to-transparent"></div>
-                    </div>
-                    <div className="p-6">
-                      <h4 className="font-black text-brand-dark uppercase italic text-sm group-hover:text-brand-blue transition-colors">{fav.eventos.titulo}</h4>
-                    </div>
-                  </Link>
-                )) : (
+                {favoritos.length > 0 ? favoritos.map((fav: any) => {
+                  const titulo = fav.detalle?.titulo || fav.detalle?.nombre || fav.detalle?.nombre_es || 'Sin título';
+                  const imagenUrl = fav.detalle?.imagen_url;
+                  const ruta = fav.tipo_elemento === 'evento' ? `/eventos/${fav.elemento_id}` : `/lugares/${fav.elemento_id}`;
+                  return (
+                    <Link
+                      key={fav.id}
+                      to={ruta}
+                      className="group bg-brand-bg rounded-[2rem] overflow-hidden border border-slate-100 hover:shadow-xl hover:border-brand-blue/20 transition-all"
+                    >
+                      <div className="relative h-40 overflow-hidden">
+                        {imagenUrl && <img src={imagenUrl} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" alt="" />}
+                        <div className="absolute inset-0 bg-gradient-to-t from-brand-dark/50 to-transparent"></div>
+                        <span className="absolute bottom-3 left-3 bg-brand-dark/80 text-white text-[8px] font-black px-3 py-1 rounded-full uppercase tracking-widest backdrop-blur-sm">
+                          {fav.tipo_elemento}
+                        </span>
+                      </div>
+                      <div className="p-6">
+                        <h4 className="font-black text-brand-dark uppercase italic text-sm group-hover:text-brand-blue transition-colors">{titulo}</h4>
+                      </div>
+                    </Link>
+                  );
+                }) : (
                   <div className="col-span-full py-20 text-center bg-brand-bg rounded-[2rem] border-2 border-dashed border-slate-200">
                     <i className="bi bi-heart text-4xl text-slate-200 block mb-4"></i>
                     <p className="text-slate-400 font-bold uppercase tracking-widest text-[10px]">No tienes favoritos guardados</p>

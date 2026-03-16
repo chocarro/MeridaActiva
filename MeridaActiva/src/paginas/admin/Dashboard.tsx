@@ -102,7 +102,6 @@ const DashboardAdmin: React.FC = () => {
               </Link>
               <div className="absolute top-0 right-0 w-full h-full opacity-10 pointer-events-none">
                 <div className="absolute top-10 right-10 w-32 h-32 border border-white rounded-full"></div>
-                <div className="absolute bottom-10 left-10 w-20 h-20 border border-brand-gold rounded-full"></div>
               </div>
             </div>
           )}

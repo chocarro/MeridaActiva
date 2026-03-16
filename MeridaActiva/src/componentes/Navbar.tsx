@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../supabaseClient';
+import Logo from './Logo';
 
 const Navbar: React.FC = () => {
   const { session, profile } = useAuth();
@@ -17,15 +18,21 @@ const Navbar: React.FC = () => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  // Cerrar menú al hacer clic fuera
+  // Close mobile menu on route change
+  useEffect(() => {
+    setMobileMenuOpen(false);
+    setUserMenuOpen(false);
+  }, [location.pathname]);
+
+  // Close user dropdown on click outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
         setUserMenuOpen(false);
       }
     };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
   const handleLogout = async () => {
@@ -34,143 +41,302 @@ const Navbar: React.FC = () => {
   };
 
   const navLinks = [
-    { name: 'Eventos', path: '/eventos' },
-    { name: 'Patrimonio', path: '/lugares' },
-    { name: 'Mapa', path: '/mapa' },
+    { name: 'Eventos', path: '/eventos', icon: 'bi-calendar-event' },
+    { name: 'Patrimonio', path: '/lugares', icon: 'bi-bank2' },
+    { name: 'Mapa', path: '/mapa', icon: 'bi-map' },
+    { name: 'Contacto', path: '/contacto', icon: 'bi-envelope' },
   ];
 
-  // Colores adaptativos según el scroll
-  const navBg = isScrolled ? 'bg-brand-dark/95 backdrop-blur-md py-4 shadow-2xl' : 'bg-transparent py-8';
-  const textColor = isScrolled ? 'text-white' : 'text-brand-dark';
-  const logoColor = isScrolled ? 'text-white' : 'text-brand-dark';
-
-  // Verificación de permisos para el Dashboard
   const esAdmin = profile?.roles?.nombre === 'Administrador' || profile?.roles?.nombre === 'Gestor (Editor)';
+  const userInitial = profile?.nombre?.charAt(0).toUpperCase() || session?.user?.email?.charAt(0).toUpperCase() || 'U';
+  const userName = profile?.nombre?.split(' ')[0] || 'Usuario';
 
   return (
-    <nav className={`fixed top-0 left-0 right-0 z-[100] transition-all duration-500 ${navBg}`}>
-      <div className="max-w-7xl mx-auto px-6 flex justify-between items-center h-[72px]">
+    <>
+      <nav
+        className={`fixed top-0 left-0 right-0 z-[100] transition-all duration-500 ${isScrolled ? 'py-4 shadow-2xl' : 'py-6'
+          }`}
+        style={{
+          backgroundColor: isScrolled ? 'rgba(3,43,67,0.97)' : 'transparent',
+          backdropFilter: isScrolled ? 'blur(20px)' : 'none',
+        }}
+      >
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="flex justify-between items-center">
 
-        {/* LOGO */}
-        <Link to="/" className={`text-2xl font-[900] uppercase italic tracking-tighter transition-colors ${logoColor}`}>
-          Mérida<span className="text-brand-blue">Activa</span>
-        </Link>
+            {/* LOGO */}
+            <Logo isScrolled={isScrolled || mobileMenuOpen} />
 
-        {/* DESKTOP NAV */}
-        <div className="hidden md:flex items-center gap-12">
-          <div className="flex gap-8">
-            {navLinks.map((link) => (
-              <Link
-                key={link.path}
-                to={link.path}
-                className={`text-[10px] font-black uppercase tracking-[0.2em] hover:text-brand-blue transition-colors ${location.pathname === link.path ? 'text-brand-blue' : textColor
-                  }`}
-              >
-                {link.name}
-              </Link>
-            ))}
-          </div>
+            {/* DESKTOP NAV */}
+            <div className="hidden md:flex items-center gap-8">
+              {navLinks.map((link) => {
+                const isActive = location.pathname === link.path || location.pathname.startsWith(link.path + '/');
+                return (
+                  <Link
+                    key={link.path}
+                    to={link.path}
+                    className="relative text-[10px] font-black uppercase tracking-[0.2em] transition-colors duration-200 group"
+                    style={{
+                      color: isActive
+                        ? '#FFBA08'
+                        : isScrolled ? 'rgba(250,250,250,0.8)' : '#032B43',
+                    }}
+                  >
+                    {link.name}
+                    {/* Active indicator */}
+                    <span
+                      className="absolute -bottom-1 left-0 h-0.5 rounded-full transition-all duration-300"
+                      style={{
+                        backgroundColor: '#FFBA08',
+                        width: isActive ? '100%' : '0%',
+                      }}
+                    />
+                  </Link>
+                );
+              })}
+            </div>
 
-          {/* ÁREA DE USUARIO */}
-          <div className="flex items-center gap-4 border-l border-white/10 pl-12">
-            {!session ? (
-              <Link to="/login" className="btn-primary py-3 px-8 text-[10px]">
-                Acceder
-              </Link>
-            ) : (
-              <div className="relative" ref={menuRef}>
-                <button
-                  onClick={() => setUserMenuOpen(!userMenuOpen)}
-                  className="flex items-center gap-3 group focus:outline-none"
-                >
-                  <div className="w-10 h-10 rounded-2xl bg-brand-blue flex items-center justify-center text-white font-black italic shadow-lg shadow-brand-blue/20 group-hover:scale-110 transition-transform">
-                    {profile?.nombre?.charAt(0).toUpperCase() || 'U'}
-                  </div>
-                  <span className={`text-[10px] font-black uppercase tracking-widest hidden lg:block ${textColor}`}>
-                    {profile?.nombre?.split(' ')[0]}
-                  </span>
-                </button>
-
-                {/* DROPDOWN MENU */}
-                {userMenuOpen && (
-                  <div className="absolute right-0 mt-4 w-64 bg-white rounded-[2.5rem] shadow-2xl py-6 border border-slate-100 overflow-hidden animate-in fade-in zoom-in duration-200">
-                    <div className="px-8 pb-4 border-b border-slate-50 mb-2">
-                      <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Conectado como</p>
-                      <p className="text-xs font-black text-brand-dark uppercase italic truncate">{profile?.nombre}</p>
-                    </div>
-
-                    <Link to="/perfil" onClick={() => setUserMenuOpen(false)} className="block px-8 py-3 text-[10px] font-black text-brand-dark uppercase tracking-widest hover:bg-brand-bg transition-colors">
-                      <i className="bi bi-person-circle mr-3 text-brand-blue"></i> Mi Perfil
-                    </Link>
-
-                    <Link to="/calendario" onClick={() => setUserMenuOpen(false)} className="block px-8 py-3 text-[10px] font-black text-brand-dark uppercase tracking-widest hover:bg-brand-bg transition-colors">
-                      <i className="bi bi-calendar-week mr-3 text-brand-blue"></i> Mi Agenda
-                    </Link>
-
-                    {/* SECCIÓN DASHBOARD (SOLO ADMIN) */}
-                    {esAdmin && (
-                      <>
-                        <div className="h-[1px] bg-slate-100 my-2 mx-6"></div>
-                        <Link to="/dashboard" onClick={() => setUserMenuOpen(false)} className="block px-8 py-3 text-[10px] font-black text-brand-blue uppercase tracking-widest hover:bg-brand-blue/5 transition-colors">
-                          <i className="bi bi-speedometer2 mr-3"></i> Dashboard
-                        </Link>
-                      </>
-                    )}
-
-                    <div className="h-[1px] bg-slate-100 my-2 mx-6"></div>
-
-                    <button
-                      onClick={handleLogout}
-                      className="w-full text-left px-8 py-3 text-[10px] font-black text-brand-red uppercase tracking-widest hover:bg-brand-red/5 transition-colors"
+            {/* USER AREA */}
+            <div className="hidden md:flex items-center gap-4">
+              {!session ? (
+                <div className="flex items-center gap-3">
+                  <Link
+                    to="/registro"
+                    className="text-[10px] font-black uppercase tracking-widest transition-colors hover:opacity-70"
+                    style={{ color: isScrolled ? 'rgba(250,250,250,0.7)' : '#64748b' }}
+                  >
+                    Registrarse
+                  </Link>
+                  <Link
+                    to="/login"
+                    className="px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all hover:scale-105 shadow-lg"
+                    style={{
+                      backgroundColor: '#FFBA08',
+                      color: '#032B43',
+                      boxShadow: '0 4px 16px rgba(255,186,8,0.3)',
+                    }}
+                  >
+                    Acceder
+                  </Link>
+                </div>
+              ) : (
+                <div className="relative" ref={menuRef}>
+                  <button
+                    onClick={() => setUserMenuOpen(!userMenuOpen)}
+                    className="flex items-center gap-3 group focus:outline-none"
+                    aria-expanded={userMenuOpen}
+                    aria-haspopup="true"
+                  >
+                    {/* Avatar */}
+                    <div
+                      className="w-10 h-10 rounded-2xl flex items-center justify-center font-black italic text-sm shadow-lg transition-transform group-hover:scale-110"
+                      style={{ backgroundColor: '#FFBA08', color: '#032B43' }}
                     >
-                      <i className="bi bi-power mr-3"></i> Cerrar Sesión
-                    </button>
-                  </div>
-                )}
-              </div>
-            )}
+                      {profile?.avatar_url ? (
+                        <img src={profile.avatar_url} alt="" className="w-full h-full object-cover rounded-2xl" />
+                      ) : userInitial}
+                    </div>
+                    {/* Name */}
+                    <span
+                      className="text-[10px] font-black uppercase tracking-widest hidden lg:block transition-colors"
+                      style={{ color: isScrolled ? 'rgba(250,250,250,0.9)' : '#032B43' }}
+                    >
+                      {userName}
+                    </span>
+                    <i
+                      className={`bi bi-chevron-${userMenuOpen ? 'up' : 'down'} text-xs transition-transform`}
+                      style={{ color: isScrolled ? 'rgba(250,250,250,0.5)' : '#94a3b8' }}
+                    />
+                  </button>
+
+                  {/* DROPDOWN */}
+                  {userMenuOpen && (
+                    <div
+                      className="absolute right-0 mt-4 w-72 rounded-[2rem] shadow-2xl py-4 overflow-hidden"
+                      style={{
+                        backgroundColor: '#FAFAFA',
+                        border: '1px solid rgba(0,0,0,0.06)',
+                        boxShadow: '0 24px 80px rgba(3,43,67,0.18)',
+                      }}
+                    >
+                      {/* User info header */}
+                      <div className="px-6 pb-4 mb-2" style={{ borderBottom: '1px solid #f0f2f5' }}>
+                        <div className="flex items-center gap-3">
+                          <div
+                            className="w-10 h-10 rounded-xl flex items-center justify-center font-black italic text-sm flex-shrink-0"
+                            style={{ backgroundColor: '#FFBA08', color: '#032B43' }}
+                          >
+                            {profile?.avatar_url ? (
+                              <img src={profile.avatar_url} alt="" className="w-full h-full object-cover rounded-xl" />
+                            ) : userInitial}
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-xs font-black uppercase italic truncate" style={{ color: '#032B43' }}>
+                              {profile?.nombre || 'Usuario'}
+                            </p>
+                            <p className="text-[9px] font-medium truncate" style={{ color: '#94a3b8' }}>
+                              {session.user.email}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Links */}
+                      {[
+                        { to: '/perfil', icon: 'bi-person-circle', label: 'Mi Perfil', color: '#3F88C5' },
+                        { to: '/calendario', icon: 'bi-calendar-week', label: 'Mi Agenda', color: '#3F88C5' },
+                      ].map(item => (
+                        <Link
+                          key={item.to}
+                          to={item.to}
+                          onClick={() => setUserMenuOpen(false)}
+                          className="flex items-center gap-3 px-6 py-3 text-[10px] font-black uppercase tracking-widest transition-all hover:pl-8"
+                          style={{ color: '#032B43' }}
+                          onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#F0F2F5')}
+                          onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
+                        >
+                          <i className={`bi ${item.icon} text-sm`} style={{ color: item.color }} />
+                          {item.label}
+                        </Link>
+                      ))}
+
+                      {esAdmin && (
+                        <>
+                          <div className="h-px my-2 mx-6" style={{ backgroundColor: '#f0f2f5' }} />
+                          <Link
+                            to="/dashboard"
+                            onClick={() => setUserMenuOpen(false)}
+                            className="flex items-center gap-3 px-6 py-3 text-[10px] font-black uppercase tracking-widest transition-all"
+                            style={{ color: '#FFBA08' }}
+                            onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'rgba(255,186,8,0.08)')}
+                            onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
+                          >
+                            <i className="bi bi-speedometer2 text-sm" />
+                            Dashboard Admin
+                          </Link>
+                        </>
+                      )}
+
+                      <div className="h-px my-2 mx-6" style={{ backgroundColor: '#f0f2f5' }} />
+
+                      <button
+                        onClick={handleLogout}
+                        className="w-full flex items-center gap-3 px-6 py-3 text-[10px] font-black uppercase tracking-widest transition-all"
+                        style={{ color: '#D00000' }}
+                        onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'rgba(208,0,0,0.05)')}
+                        onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
+                      >
+                        <i className="bi bi-power text-sm" />
+                        Cerrar Sesión
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            <div className="md:hidden flex items-center gap-3">              
+              {/* MOBILE TOGGLE (Menu) */}
+              <button
+                className="w-10 h-10 rounded-2xl flex items-center justify-center transition-all"
+                style={{
+                  backgroundColor: mobileMenuOpen ? '#032B43' : isScrolled ? 'rgba(255,255,255,0.1)' : 'rgba(3,43,67,0.08)',
+                  color: mobileMenuOpen ? '#FFBA08' : isScrolled ? '#FAFAFA' : '#032B43',
+                }}
+                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                aria-label="Menú de navegación"
+              >
+                <i className={`bi bi-${mobileMenuOpen ? 'x-lg' : 'list'} text-xl`} />
+              </button>
+            </div>
           </div>
         </div>
+      </nav>
 
-        {/* MOBILE TOGGLE */}
-        <button className={`md:hidden transition-colors ${textColor}`} onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
-          <i className={`bi bi-${mobileMenuOpen ? 'x-lg' : 'list'} text-3xl`}></i>
-        </button>
-      </div>
-
-      {/* MOBILE MENU */}
+      {/* MOBILE MENU OVERLAY */}
       {mobileMenuOpen && (
-        <div className="md:hidden fixed inset-0 top-[72px] bg-brand-dark z-[90] p-10 animate-in slide-in-from-right duration-300">
-          <div className="flex flex-col gap-8">
-            {navLinks.map((link) => (
-              <Link
-                key={link.path}
-                to={link.path}
-                onClick={() => setMobileMenuOpen(false)}
-                className="text-4xl font-[900] text-white uppercase italic tracking-tighter"
-              >
-                {link.name}
-              </Link>
-            ))}
+        <div
+          className="md:hidden fixed inset-0 z-[90] flex flex-col pt-24"
+          style={{ backgroundColor: '#032B43' }}
+        >
+          {/* Nav links */}
+          <div className="flex-1 overflow-y-auto px-6 space-y-1">
+            {navLinks.map(link => {
+              const isActive = location.pathname === link.path;
+              return (
+                <Link
+                  key={link.path}
+                  to={link.path}
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="flex items-center gap-4 px-5 py-5 rounded-2xl transition-all"
+                  style={{
+                    backgroundColor: isActive ? 'rgba(255,186,8,0.12)' : 'transparent',
+                    color: isActive ? '#FFBA08' : 'rgba(250,250,250,0.8)',
+                  }}
+                >
+                  <i className={`bi ${link.icon} text-xl flex-shrink-0`} />
+                  <span className="text-2xl font-black uppercase italic tracking-tighter">{link.name}</span>
+                </Link>
+              );
+            })}
+          </div>
 
-            <div className="h-[1px] bg-white/10 my-4"></div>
-
+          {/* Bottom user actions */}
+          <div className="px-6 pb-10 space-y-3" style={{ borderTop: '1px solid rgba(255,255,255,0.07)', paddingTop: '1.5rem' }}>
             {session ? (
               <>
-                <Link to="/perfil" onClick={() => setMobileMenuOpen(false)} className="text-xl font-black text-brand-blue uppercase italic">Mi Perfil</Link>
-                <Link to="/calendario" onClick={() => setMobileMenuOpen(false)} className="text-xl font-black text-brand-blue uppercase italic">Mi Agenda</Link>
+                <div className="flex items-center gap-3 px-5 py-3 rounded-2xl mb-4"
+                  style={{ backgroundColor: 'rgba(255,186,8,0.08)' }}>
+                  <div className="w-9 h-9 rounded-xl flex items-center justify-center font-black italic text-sm"
+                    style={{ backgroundColor: '#FFBA08', color: '#032B43' }}>
+                    {userInitial}
+                  </div>
+                  <div>
+                    <p className="text-xs font-black uppercase italic" style={{ color: '#FAFAFA' }}>{userName}</p>
+                    <p className="text-[9px]" style={{ color: 'rgba(250,250,250,0.4)' }}>{session.user.email}</p>
+                  </div>
+                </div>
+                <Link to="/perfil" onClick={() => setMobileMenuOpen(false)}
+                  className="flex items-center gap-3 px-5 py-4 rounded-2xl text-sm font-black uppercase italic transition-all"
+                  style={{ color: '#FAFAFA', backgroundColor: 'rgba(255,255,255,0.05)' }}>
+                  <i className="bi bi-person-circle text-brand-gold" /> Mi Perfil
+                </Link>
+                <Link to="/calendario" onClick={() => setMobileMenuOpen(false)}
+                  className="flex items-center gap-3 px-5 py-4 rounded-2xl text-sm font-black uppercase italic"
+                  style={{ color: '#FAFAFA', backgroundColor: 'rgba(255,255,255,0.05)' }}>
+                  <i className="bi bi-calendar-week text-brand-gold" /> Mi Agenda
+                </Link>
                 {esAdmin && (
-                  <Link to="/dashboard" onClick={() => setMobileMenuOpen(false)} className="text-xl font-black text-brand-gold uppercase italic">Dashboard Admin</Link>
+                  <Link to="/dashboard" onClick={() => setMobileMenuOpen(false)}
+                    className="flex items-center gap-3 px-5 py-4 rounded-2xl text-sm font-black uppercase italic"
+                    style={{ color: '#FFBA08', backgroundColor: 'rgba(255,186,8,0.08)' }}>
+                    <i className="bi bi-speedometer2" /> Dashboard
+                  </Link>
                 )}
-                <button onClick={handleLogout} className="text-left text-xl font-black text-brand-red uppercase italic">Cerrar Sesión</button>
+                <button onClick={handleLogout}
+                  className="w-full flex items-center gap-3 px-5 py-4 rounded-2xl text-sm font-black uppercase italic"
+                  style={{ color: '#D00000', backgroundColor: 'rgba(208,0,0,0.06)' }}>
+                  <i className="bi bi-power" /> Cerrar Sesión
+                </button>
               </>
             ) : (
-              <Link to="/login" onClick={() => setMobileMenuOpen(false)} className="btn-primary py-5 text-center">Acceder</Link>
+              <>
+                <Link to="/login" onClick={() => setMobileMenuOpen(false)}
+                  className="block w-full text-center px-6 py-4 rounded-2xl text-sm font-black uppercase italic tracking-widest transition-all"
+                  style={{ backgroundColor: '#FFBA08', color: '#032B43' }}>
+                  Iniciar Sesión
+                </Link>
+                <Link to="/registro" onClick={() => setMobileMenuOpen(false)}
+                  className="block w-full text-center px-6 py-4 rounded-2xl text-sm font-black uppercase italic tracking-widest"
+                  style={{ backgroundColor: 'rgba(255,255,255,0.07)', color: '#FAFAFA' }}>
+                  Crear Cuenta
+                </Link>
+              </>
             )}
           </div>
         </div>
       )}
-    </nav>
+    </>
   );
 };
 

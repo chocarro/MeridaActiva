@@ -179,7 +179,7 @@ const GestionEventos: React.FC = () => {
                     </div>
                   </td>
                   <td className="px-8 py-6 text-[10px] font-black text-brand-blue uppercase italic">{ev.categoria}</td>
-                  <td className="px-8 py-6 font-black text-brand-dark">{ev.precio}€</td>
+                  <td className="px-8 py-6 font-black text-brand-dark">{ev.precio}</td>
                   <td className="px-12 py-6 text-right">
                     <button onClick={() => prepararEdicion(ev)} className="w-10 h-10 rounded-xl bg-slate-50 text-slate-400 hover:bg-brand-blue hover:text-white transition-all mr-2"><i className="bi bi-pencil-square"></i></button>
                     <button onClick={() => eliminarEvento(ev.id)} className="w-10 h-10 rounded-xl bg-slate-50 text-slate-400 hover:bg-brand-red hover:text-white transition-all"><i className="bi bi-trash3"></i></button>

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
 import { useAuth } from '../context/AuthContext';
+import toast from 'react-hot-toast';
 
 interface Props {
   eventoId?: string;
@@ -40,7 +41,7 @@ const BotonFavorito = ({ eventoId, lugarId, tipo = 'evento' }: Props) => {
     e.stopPropagation();
 
     if (!session) {
-      alert('¡Inicia sesión para guardar tus favoritos!');
+      toast.error('¡Inicia sesión para guardar tus favoritos!');
       return;
     }
 
@@ -56,15 +57,22 @@ const BotonFavorito = ({ eventoId, lugarId, tipo = 'evento' }: Props) => {
           .eq('usuario_id', session.user.id)
           .eq('elemento_id', elementoId)
           .eq('tipo_elemento', tipo);
-        if (!error) setIsFav(false);
+        if (!error) {
+          setIsFav(false);
+          toast.success('Eliminado de favoritos');
+        }
       } else {
         const { error } = await supabase
           .from('favoritos')
           .insert({ usuario_id: session.user.id, elemento_id: elementoId, tipo_elemento: tipo });
-        if (!error) setIsFav(true);
+        if (!error) {
+          setIsFav(true);
+          toast.success('¡Añadido a favoritos! ❤️');
+        }
       }
     } catch (error) {
       console.error('Error en favorito:', error);
+      toast.error('Error al actualizar favorito');
     } finally {
       setLoading(false);
     }
@@ -76,23 +84,22 @@ const BotonFavorito = ({ eventoId, lugarId, tipo = 'evento' }: Props) => {
       disabled={loading}
       aria-label={isFav ? 'Quitar de favoritos' : 'Añadir a favoritos'}
       className={`
-        relative w-14 h-14 rounded-full flex items-center justify-center
+        relative flex-shrink-0 w-12 h-12 aspect-square rounded-full flex items-center justify-center
         transition-all duration-300 shadow-xl
         ${isFav
-          ? 'bg-brand-red text-white scale-110 shadow-brand-red/40'
+          ? 'bg-brand-red text-white shadow-brand-red/40'
           : 'bg-white/20 backdrop-blur-md text-white hover:bg-white hover:text-brand-red hover:scale-105'
         }
-        ${pulse ? 'scale-125' : ''}
+        ${pulse ? 'scale-125' : 'scale-100'}
         disabled:opacity-60
       `}
     >
       <i
         className={`
           bi bi-heart${isFav ? '-fill' : ''}
-          text-2xl transition-all duration-300
-          ${pulse ? 'scale-125' : ''}
+          text-xl transition-all duration-300
         `}
-      ></i>
+      />
     </button>
   );
 };

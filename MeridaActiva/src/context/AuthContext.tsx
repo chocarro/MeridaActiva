@@ -18,7 +18,15 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   useEffect(() => {
     const initSession = async () => {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
+        const { data: { session }, error } = await supabase.auth.getSession();
+        // Si el refresh token es inválido (sesión caducada), limpiar y continuar como no autenticado
+        if (error && (error.message?.includes('Refresh Token') || error.message?.includes('refresh_token'))) {
+          console.warn('Sesión expirada o inválida — cerrando sesión automáticamente.');
+          await supabase.auth.signOut();
+          setSession(null);
+          setLoading(false);
+          return;
+        }
         setSession(session);
         if (session) {
           await fetchProfile(session.user.id);
@@ -27,6 +35,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         }
       } catch (error) {
         console.error("Error inicializando sesión:", error);
+        await supabase.auth.signOut().catch(() => {});
+        setSession(null);
         setLoading(false);
       }
     };
