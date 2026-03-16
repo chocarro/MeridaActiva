@@ -11,7 +11,7 @@ import { Ratelimit } from '@upstash/ratelimit';
 import { Redis } from '@upstash/redis';
 
 const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
-const MODEL = 'google/gemma-2-9b-it:free';
+const MODEL = 'google/gemini-2.5-flash';
 
 // ── Rate Limiting con Upstash Redis ──────────────────────────────
 // 10 peticiones por hora por IP
@@ -40,10 +40,12 @@ const ALLOWED_ORIGIN = process.env.ALLOWED_ORIGIN ?? 'https://meridaactiva.verce
 
 function checkCors(req, res) {
     const origin = req.headers.origin ?? '';
-    const isLocal = origin.includes('localhost') || origin.includes('127.0.0.1');
+    // Permitir cualquier localhost (ej: 5173, 3000) o llamadas sin origin (Postman/Curl)
+    const isLocal = !origin || origin.includes('localhost') || origin.includes('127.0.0.1');
     const isAllowed = origin === ALLOWED_ORIGIN || isLocal;
 
     if (!isAllowed) {
+        console.error(`[chat CORS] Acceso denegado al origen: ${origin}`);
         res.status(403).json({ error: 'Acceso denegado.' });
         return false;
     }
@@ -96,6 +98,8 @@ Ejemplos del espíritu correcto:
 - Monumentos: entrada conjunta. Primer domingo: gratis para ciudadanos UE.`;
 
 export default async function handler(req, res) {
+    console.log(">>> [chat.js] Petición recibida en el servidor local");
+
     // Preflight CORS (OPTIONS)
     if (req.method === 'OPTIONS') {
         if (!checkCors(req, res)) return;
@@ -112,6 +116,7 @@ export default async function handler(req, res) {
 
     const apiKey = process.env.API_KEY_IA;
     if (!apiKey) {
+        console.error("¡ERROR: Falta la API KEY!");
         console.error('[chat] Falta la variable de entorno API_KEY_IA.');
         return res.status(500).json({ error: 'Configuración del servidor incompleta: falta la API_KEY_IA para OpenRouter.' });
     }
@@ -159,6 +164,7 @@ export default async function handler(req, res) {
     ];
 
     try {
+        console.log(">>> [chat.js] Iniciando petición a OpenRouter...");
         const openRouterRes = await fetch(OPENROUTER_URL, {
             method: 'POST',
             headers: {
@@ -177,10 +183,10 @@ export default async function handler(req, res) {
         });
 
         if (!openRouterRes.ok) {
-            const err = await openRouterRes.json().catch(() => ({}));
-            console.error('[chat] Error OpenRouter:', openRouterRes.status, err);
-            return res.status(502).json({
-                error: `Error de la IA (${openRouterRes.status}). Inténtalo de nuevo.`,
+            const errorText = await openRouterRes.text();
+            console.error('[chat] Error OpenRouter:', openRouterRes.status, errorText);
+            return res.status(500).json({
+                error: `Error de la IA (${openRouterRes.status}): ${errorText}`,
             });
         }
 
@@ -234,10 +240,10 @@ export default async function handler(req, res) {
         console.error('[chat] Excepción inesperada:', err);
         // Si aún no enviamos cabeceras, podemos devolver JSON de error
         if (!res.headersSent) {
-            return res.status(500).json({ error: 'Error interno del servidor.' });
+            return res.status(500).json({ error: err.message || 'Error interno del servidor.' });
         }
         // Si ya comenzamos el stream, enviamos el error como evento SSE
-        res.write(`data: ${JSON.stringify({ error: 'Error interno del servidor.' })}\n\n`);
+        res.write(`data: ${JSON.stringify({ error: err.message || 'Error interno del servidor.' })}\n\n`);
         res.end();
     }
 }

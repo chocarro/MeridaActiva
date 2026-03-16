@@ -16,47 +16,63 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let isMounted = true;
+
     const initSession = async () => {
       try {
         const { data: { session }, error } = await supabase.auth.getSession();
+        if (!isMounted) return;
+
         // Si el refresh token es inválido (sesión caducada), limpiar y continuar como no autenticado
         if (error && (error.message?.includes('Refresh Token') || error.message?.includes('refresh_token'))) {
           console.warn('Sesión expirada o inválida — cerrando sesión automáticamente.');
           await supabase.auth.signOut();
-          setSession(null);
-          setLoading(false);
+          if (isMounted) {
+            setSession(null);
+            setLoading(false);
+          }
           return;
         }
-        setSession(session);
-        if (session) {
-          await fetchProfile(session.user.id);
-        } else {
-          setLoading(false); 
+
+        if (isMounted) {
+          setSession(session);
+          if (session) {
+            await fetchProfile(session.user.id, true);
+          } else {
+            setLoading(false); 
+          }
         }
       } catch (error) {
+        if (!isMounted) return;
         console.error("Error inicializando sesión:", error);
         await supabase.auth.signOut().catch(() => {});
-        setSession(null);
-        setLoading(false);
+        if (isMounted) {
+          setSession(null);
+          setLoading(false);
+        }
       }
     };
 
     initSession();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      if (!isMounted) return;
       setSession(session);
       if (session) {
-        await fetchProfile(session.user.id);
+        await fetchProfile(session.user.id, true);
       } else {
         setProfile(null);
         setLoading(false);
       }
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      isMounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
-const fetchProfile = async (userId: string) => {
+const fetchProfile = async (userId: string, isMounted: boolean = true) => {
   try {
     const { data, error } = await supabase
       .from('usuarios')
@@ -68,12 +84,11 @@ const fetchProfile = async (userId: string) => {
       console.warn("Error leyendo perfil:", error.message);
     }
     
-    setProfile(data || null); 
-    // console.error("Error crítico en perfil:", err); // <-- BORRA ESTA LÍNEA (causa el error)
+    if (isMounted) setProfile(data || null); 
   } catch (error) {
     console.error("Error en fetchProfile:", error);
   } finally {
-    setLoading(false); 
+    if (isMounted) setLoading(false); 
   }
 };
 
