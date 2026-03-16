@@ -1,17 +1,4 @@
 // src/pages/Calendario.tsx
-// ─────────────────────────────────────────────────────────────────
-// MEJORAS APLICADAS:
-//  ✅ Tipos TypeScript (adiós any)
-//  ✅ Skeleton Loader en lugar de texto pulsante
-//  ✅ Toasts en lugar de alert() en guardar y eliminar
-//  ✅ Confirmación de borrado sin window.confirm (inline)
-//  ✅ Spinner en botón "Guardar" mientras se envía
-//  ✅ Estado vacío mejorado en vista lista
-//  ✅ Highlight de eventos del día en cuadrícula con tooltip accesible
-//  ✅ Botón "Hoy" para volver al mes actual
-//  ✅ Sin sesión → pantalla de login amigable en lugar de carga vacía
-// ─────────────────────────────────────────────────────────────────
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '../../supabaseClient';
@@ -107,25 +94,40 @@ const Calendario: React.FC = () => {
   const [pendienteEliminar, setPendienteEliminar] = useState<string | null>(null);
 
   // ── Fetch ──────────────────────────────────────────────────────
+  // BUG FIX: La tabla 'favoritos' usa 'elemento_id' (genérico para eventos
+  // y lugares), NO 'evento_id'. No existe foreign key directa a 'eventos',
+  // por eso el join .select('eventos(...)') devolvía 400.
+  // Solución: consulta en dos pasos — primero los IDs, luego los eventos.
   const fetchData = useCallback(async () => {
     if (!session?.user?.id) { setLoading(false); return; }
     setLoading(true);
     try {
+      // Paso 1: obtener los elemento_id de favoritos de tipo 'evento'
       const { data: favs, error: favErr } = await supabase
         .from('favoritos')
-        .select('eventos(id, titulo, fecha, imagen_url, categoria, ubicacion, precio)')
+        .select('elemento_id')
         .eq('usuario_id', session.user.id)
         .eq('tipo_elemento', 'evento');
 
       if (favErr) throw favErr;
 
-      if (favs) {
-        const evs = (favs as unknown as { eventos: Evento | null }[])
-          .map(f => f.eventos)
-          .filter((ev): ev is Evento => ev !== null);
-        setEventosPlataforma(evs);
+      // Paso 2: si hay favoritos, cargar los eventos correspondientes
+      if (favs && favs.length > 0) {
+        const ids = favs.map((f: { elemento_id: string }) => f.elemento_id).filter(Boolean);
+        if (ids.length > 0) {
+          const { data: evs, error: evsErr } = await supabase
+            .from('eventos')
+            .select('id, titulo, fecha, imagen_url, categoria, lugar, precio')
+            .in('id', ids);
+
+          if (evsErr) throw evsErr;
+          if (evs) setEventosPlataforma(evs as Evento[]);
+        }
+      } else {
+        setEventosPlataforma([]);
       }
 
+      // Agenda personal (sin cambios)
       const { data: ag, error: agErr } = await supabase
         .from('agenda_personal')
         .select('*')
@@ -135,7 +137,8 @@ const Calendario: React.FC = () => {
       if (agErr) throw agErr;
       if (ag) setAgendaPersonal(ag as AgendaPersonal[]);
 
-    } catch {
+    } catch (err) {
+      console.error('[Calendario] Error cargando agenda:', err);
       toastError('No se pudo cargar tu agenda. Inténtalo de nuevo.');
     } finally {
       setLoading(false);
@@ -368,7 +371,6 @@ const Calendario: React.FC = () => {
                   <h3 className="font-black text-brand-dark uppercase italic tracking-tighter text-xl capitalize">
                     {mesNombre}
                   </h3>
-                  {/* Botón "Hoy" — solo si no estamos en el mes actual */}
                   {!esHoyMes && (
                     <button
                       onClick={() => setMesActual(new Date())}

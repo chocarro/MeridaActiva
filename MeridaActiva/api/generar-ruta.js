@@ -1,11 +1,4 @@
-// api/generar-ruta.js
-// ─────────────────────────────────────────────────────────────────
-// Vercel Serverless Function — Endpoint del Generador de Rutas IA
-
-// ⏱️ Extiende el timeout máximo a 60s (Vercel Hobby permite hasta 60s)
 export const maxDuration = 60;
-// La API Key NUNCA llega al navegador: vive solo en el servidor.
-// ─────────────────────────────────────────────────────────────────
 
 import { Ratelimit } from '@upstash/ratelimit';
 import { Redis } from '@upstash/redis';
@@ -13,21 +6,30 @@ import { Redis } from '@upstash/redis';
 const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
 const MODEL = 'google/gemini-2.5-flash';
 
-// ── Rate Limiting con Upstash Redis ──────────────────────────────
-// 10 peticiones por hora por IP
-const ratelimit = new Ratelimit({
-    redis: Redis.fromEnv(),
-    limiter: Ratelimit.slidingWindow(10, '1 h'),
-    analytics: true,
-    prefix: 'meridaactiva:ratelimit:generar-ruta',
-});
+// ── BUG FIX: Inicialización LAZY del rate limiter ─────────────────────────
+// ANTES: Redis.fromEnv() se ejecutaba al IMPORTAR el módulo. Si las variables
+// de entorno de Upstash no están definidas, lanza un error que impide cargar
+// el módulo entero → ambos endpoints fallaban con error 500 siempre.
+// AHORA: se instancia solo la primera vez que se usa y solo si hay credenciales.
+let _ratelimit = null;
+function getRatelimit() {
+    if (!process.env.UPSTASH_REDIS_REST_URL || !process.env.UPSTASH_REDIS_REST_TOKEN) {
+        return null;
+    }
+    if (!_ratelimit) {
+        _ratelimit = new Ratelimit({
+            redis: Redis.fromEnv(),
+            limiter: Ratelimit.slidingWindow(10, '1 h'),
+            analytics: true,
+            prefix: 'meridaactiva:ratelimit:generar-ruta',
+        });
+    }
+    return _ratelimit;
+}
 
-// ── Función para extraer la IP del cliente ────────────────────────
 function getClientIP(req) {
-    // En Vercel, la IP viene en x-forwarded-for
     const forwarded = req.headers['x-forwarded-for'];
     if (typeof forwarded === 'string') {
-        // Puede ser "IP1, IP2, IP3" - tomar la primera
         return forwarded.split(',')[0].trim();
     }
     return req.headers['x-real-ip'] ?? 'unknown';
@@ -61,12 +63,10 @@ Reglas:
 - Responde ÚNICAMENTE con el array JSON válido, sin texto adicional antes ni después.`;
 }
 
-// ── Lista blanca de orígenes permitidos ──────────────────────────
 const ALLOWED_ORIGIN = process.env.ALLOWED_ORIGIN ?? 'https://meridaactiva.vercel.app';
 
 function checkCors(req, res) {
     const origin = req.headers.origin ?? '';
-    // Permitir cualquier localhost (ej: 5173, 3000) o llamadas sin origin (Postman/Curl)
     const isLocal = !origin || origin.includes('localhost') || origin.includes('127.0.0.1');
     const isAllowed = origin === ALLOWED_ORIGIN || isLocal;
 
@@ -75,7 +75,6 @@ function checkCors(req, res) {
         res.status(403).json({ error: 'Acceso denegado.' });
         return false;
     }
-    // Cabeceras CORS para el origen autorizado
     res.setHeader('Access-Control-Allow-Origin', origin);
     res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
@@ -85,34 +84,29 @@ function checkCors(req, res) {
 export default async function handler(req, res) {
     console.log(">>> [generar-ruta.js] Petición recibida en el servidor local");
 
-    // Preflight CORS (OPTIONS)
     if (req.method === 'OPTIONS') {
         if (!checkCors(req, res)) return;
         return res.status(204).end();
     }
 
-    // Solo aceptamos POST
     if (req.method !== 'POST') {
         return res.status(405).json({ error: 'Método no permitido. Usa POST.' });
     }
 
-    // 🔒 Validación CORS
     if (!checkCors(req, res)) return;
 
     const apiKey = process.env.API_KEY_IA;
-
     if (!apiKey) {
-        console.error("¡ERROR: Falta la API KEY!");
         console.error('[generar-ruta] Falta la variable de entorno API_KEY_IA.');
         return res.status(500).json({ error: 'Configuración del servidor incompleta: falta la API_KEY_IA para OpenRouter.' });
     }
 
-    // ⏱️ RATE LIMITING por IP ──────────────────────────────────────
+    // ── Rate limiting SOLO si Upstash está configurado ─────────────
     const clientIP = getClientIP(req);
-    if (process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN) {
+    const rl = getRatelimit(); // null si no hay credenciales → se salta el rate limit
+    if (rl) {
         try {
-            const { success, limit, reset, remaining, pending } = await ratelimit.limit(clientIP);
-
+            const { success, limit, reset } = await rl.limit(clientIP);
             if (!success) {
                 const resetTime = new Date(reset).toLocaleTimeString('es-ES');
                 return res.status(429).json({
@@ -124,11 +118,10 @@ export default async function handler(req, res) {
                 });
             }
         } catch (rateLimitError) {
-            // Si falla Redis, permitir la petición pero loguear el error
             console.warn('[generar-ruta] Error en rate limit (continuando):', rateLimitError);
         }
     } else {
-        console.warn('[generar-ruta] Aviso: Upstash Redis no configurado, omitiendo rate limiting');
+        console.warn('[generar-ruta] Upstash Redis no configurado, omitiendo rate limiting');
     }
 
     const { duracion, compania, ritmo } = req.body ?? {};
@@ -137,7 +130,6 @@ export default async function handler(req, res) {
         return res.status(400).json({ error: 'Faltan parámetros: duracion, compania y ritmo son obligatorios.' });
     }
 
-    // ✂️ Límite de longitud por seguridad
     const longitudTotal = String(duracion).length + String(compania).length + String(ritmo).length;
     if (longitudTotal > 200) {
         return res.status(400).json({ error: 'Los parámetros enviados son demasiado largos.' });
@@ -146,7 +138,6 @@ export default async function handler(req, res) {
     const prompt = buildRoutePrompt({ duracion, compania, ritmo });
 
     try {
-        console.log(">>> [generar-ruta.js] Iniciando petición a OpenRouter...");
         const respuestaOpenRouter = await fetch(OPENROUTER_URL, {
             method: 'POST',
             headers: {
@@ -184,13 +175,11 @@ export default async function handler(req, res) {
             return res.status(502).json({ error: 'La IA devolvió una respuesta vacía.' });
         }
 
-        // Limpiar posibles bloques de markdown antes de parsear
         const cleanText = texto
             .replace(/```json\s*/gi, '')
             .replace(/```\s*/g, '')
             .trim();
 
-        // Extraer el array JSON aunque venga con texto extra
         const match = cleanText.match(/\[[\s\S]*\]/);
         if (!match) {
             console.error('[generar-ruta] No se encontró JSON en la respuesta:', texto);

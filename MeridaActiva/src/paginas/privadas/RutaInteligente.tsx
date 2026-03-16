@@ -1,14 +1,8 @@
-// src/paginas/privadas/RutaInteligente.tsx
-// ─────────────────────────────────────────────────────────────────
-// GENERADOR DE RUTAS INTELIGENTES
-// Wizard 3 pasos → Gemini genera JSON de paradas → vista lista + mapa
-// ─────────────────────────────────────────────────────────────────
 import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
-import html2pdf from 'html2pdf.js';
 import { supabase } from '../../supabaseClient';
 import { useAuth } from '../../context/AuthContext';
 import { toastExito, toastError } from '../../utils/toast';
@@ -163,7 +157,7 @@ const RutaInteligente: React.FC = () => {
     const [guardado, setGuardado] = useState(false);
     const [vistaResultado, setVistaResultado] = useState<'lista' | 'mapa'>('lista');
 
-    // ── Generación con Gemini ──────────────────────────────────────
+    // ── Generación con IA ──────────────────────────────────────────
     const generarRuta = async () => {
         if (!duracion || !compania || !ritmo) return;
         setGenerando(true);
@@ -191,7 +185,7 @@ const RutaInteligente: React.FC = () => {
             const esSaturacion = msg.includes('502') || msg.includes('503') || msg.includes('saturad') || msg.includes('occupied') || msg.includes('overload');
             setErrorMsg(
                 esSaturacion
-                    ? '😅 La IA está recibiendo muchas peticiones ahora mismo. Espera unos segundos y pulsa de nuevo “Generar Ruta”.'
+                    ? '😅 La IA está recibiendo muchas peticiones ahora mismo. Espera unos segundos y pulsa de nuevo "Generar Ruta".'
                     : 'No se pudo generar la ruta. Comprueba tu conexión e inténtalo de nuevo.'
             );
             toastError('Error al generar la ruta. Inténtalo de nuevo.');
@@ -252,27 +246,91 @@ const RutaInteligente: React.FC = () => {
     };
 
     // ── Descargar ruta como PDF ────────────────────────────────────
-    const descargarPDF = () => {
-        const elemento = document.getElementById('contenedor-ruta-pdf');
-        if (!elemento) return;
-
+    // Usa jsPDF directamente (sin html2canvas) para evitar el error
+    // "unsupported color function oklab" de Tailwind v4 con html2pdf.js
+    const descargarPDF = async () => {
+        if (paradas.length === 0) return;
         setDescargandoPDF(true);
-        const opt = {
-            margin: 10,
-            filename: `ruta-merida-${new Date().toISOString().split('T')[0]}.pdf`,
-            image: { type: 'jpeg', quality: 0.98 },
-            html2canvas: { scale: 2 },
-            jsPDF: { orientation: 'portrait', unit: 'mm', format: 'a4' },
-        };
+        try {
+            const { jsPDF } = await import('jspdf');
+            const doc = new jsPDF();
+            const fecha = new Date().toLocaleDateString('es-ES');
+            const durLabel = LABEL.duracion[duracion!];
+            const companiaLabel = LABEL.compania[compania!];
+            const ritmoLabel = LABEL.ritmo[ritmo!];
 
-        html2pdf()
-            .set(opt)
-            .from(elemento)
-            .save()
-            .finally(() => {
-                setDescargandoPDF(false);
-                toastExito('¡PDF descargado correctamente! 📄');
+            // ── Cabecera ──────────────────────────────────────────────
+            doc.setFillColor(3, 43, 67);
+            doc.rect(0, 0, 210, 40, 'F');
+            doc.setTextColor(255, 186, 8);
+            doc.setFontSize(22);
+            doc.setFont('helvetica', 'bold');
+            doc.text('MERIDA ACTIVA', 14, 18);
+            doc.setFontSize(10);
+            doc.setFont('helvetica', 'normal');
+            doc.setTextColor(255, 255, 255);
+            doc.text('Ruta Inteligente generada por IA', 14, 27);
+            doc.text(`${durLabel} · ${companiaLabel} · ${ritmoLabel}`, 14, 34);
+            doc.setTextColor(180, 180, 180);
+            doc.text(fecha, 196, 34, { align: 'right' });
+
+            // ── Paradas ───────────────────────────────────────────────
+            let y = 52;
+            paradas.forEach((parada, idx) => {
+                if (y > 255) {
+                    doc.addPage();
+                    y = 20;
+                }
+
+                // Número + nombre
+                doc.setFillColor(63, 136, 197);
+                doc.roundedRect(14, y, 8, 8, 2, 2, 'F');
+                doc.setTextColor(255, 255, 255);
+                doc.setFontSize(7);
+                doc.setFont('helvetica', 'bold');
+                doc.text(String(idx + 1), 18, y + 5.5, { align: 'center' });
+
+                doc.setTextColor(3, 43, 67);
+                doc.setFontSize(12);
+                doc.setFont('helvetica', 'bold');
+                doc.text(parada.nombre.toUpperCase(), 26, y + 6);
+                y += 12;
+
+                // Hora y duración
+                const [h, m] = parada.hora.split(':').map(Number);
+                const totalMin = h * 60 + m + parada.duracion_min;
+                const hFin = `${String(Math.floor(totalMin / 60)).padStart(2, '0')}:${String(totalMin % 60).padStart(2, '0')}`;
+                doc.setFontSize(9);
+                doc.setFont('helvetica', 'normal');
+                doc.setTextColor(100, 100, 100);
+                doc.text(`${parada.hora} – ${hFin}  ·  ${parada.duracion_min} min  ·  ${parada.categoria}`, 26, y);
+                y += 7;
+
+                // Descripción con word wrap
+                doc.setFontSize(9);
+                doc.setTextColor(80, 80, 80);
+                const lineas = doc.splitTextToSize(parada.descripcion, 165);
+                doc.text(lineas, 26, y);
+                y += lineas.length * 5 + 8;
+
+                // Línea separadora
+                doc.setDrawColor(230, 230, 230);
+                doc.line(14, y - 4, 196, y - 4);
             });
+
+            // ── Pie ───────────────────────────────────────────────────
+            doc.setFontSize(8);
+            doc.setTextColor(150, 150, 150);
+            doc.text('Generado por MeridaActiva · meridaactiva.vercel.app', 105, 290, { align: 'center' });
+
+            doc.save(`ruta-merida-${new Date().toISOString().split('T')[0]}.pdf`);
+            toastExito('¡PDF descargado correctamente! 📄');
+        } catch (err) {
+            console.error('Error generando PDF:', err);
+            toastError('No se pudo generar el PDF.');
+        } finally {
+            setDescargandoPDF(false);
+        }
     };
 
     // ── Sin sesión ────────────────────────────────────────────────
@@ -374,59 +432,47 @@ const RutaInteligente: React.FC = () => {
                         ))}
                     </div>
 
-                    {/* Contenedor para PDF */}
-                    <div id="contenedor-ruta-pdf" className="bg-white p-8 rounded-[2rem]">
+                    {/* Contenedor itinerario */}
+                    <div className="bg-white p-8 rounded-[2rem]">
                         {/* ── VISTA MAPA ── */}
                         {vistaResultado === 'mapa' && <MapaRuta paradas={paradas} />}
 
                         {/* ── VISTA LISTA ── */}
-                    {vistaResultado === 'lista' && (
-                        <div className="relative">
-                            {/* Línea vertical */}
-                            <div className="absolute left-8 top-0 bottom-0 w-0.5 bg-gradient-to-b from-brand-blue via-brand-gold to-brand-blue/10" />
-
-                            <div className="space-y-6">
-                                {paradas.map((parada, idx) => {
-                                    // Calcular hora fin
-                                    const [h, m] = parada.hora.split(':').map(Number);
-                                    const totalMin = h * 60 + m + parada.duracion_min;
-                                    const hFin = `${String(Math.floor(totalMin / 60)).padStart(2, '0')}:${String(totalMin % 60).padStart(2, '0')}`;
-
-                                    return (
-                                        <div key={idx} className="flex gap-8 items-start">
-                                            {/* Dot */}
-                                            <div className="relative z-10 flex-shrink-0 w-16 flex justify-center">
-                                                <div className="w-8 h-8 rounded-full bg-brand-dark border-4 border-brand-gold flex items-center justify-center mt-4">
-                                                    <span className="text-brand-gold text-[10px] font-black">{idx + 1}</span>
-                                                </div>
-                                            </div>
-
-                                            {/* Tarjeta */}
-                                            <div className="flex-1 pb-2">
-                                                <div className="bg-white rounded-[2rem] border border-slate-100 shadow-sm hover:shadow-md transition-shadow overflow-hidden group">
-
-                                                    {/* Cabecera coloreada */}
-                                                    <div className="bg-gradient-to-r from-brand-dark to-brand-dark/90 px-6 py-4 flex items-center justify-between">
-                                                        <div>
-                                                            <span className="text-[9px] font-black text-brand-gold uppercase tracking-widest opacity-70 block mb-0.5">
-                                                                {parada.categoria}
-                                                            </span>
-                                                            <h3 className="text-base font-black text-white uppercase italic tracking-tight leading-tight">
-                                                                {parada.nombre}
-                                                            </h3>
-                                                        </div>
-                                                        <div className="text-right flex-shrink-0 ml-4">
-                                                            <p className="text-2xl font-black text-brand-gold tracking-tighter">{parada.hora}</p>
-                                                            <p className="text-[9px] font-black text-white/50 uppercase tracking-widest">hasta {hFin}</p>
-                                                        </div>
+                        {vistaResultado === 'lista' && (
+                            <div className="relative">
+                                <div className="absolute left-8 top-0 bottom-0 w-0.5 bg-gradient-to-b from-brand-blue via-brand-gold to-brand-blue/10" />
+                                <div className="space-y-6">
+                                    {paradas.map((parada, idx) => {
+                                        const [h, m] = parada.hora.split(':').map(Number);
+                                        const totalMin = h * 60 + m + parada.duracion_min;
+                                        const hFin = `${String(Math.floor(totalMin / 60)).padStart(2, '0')}:${String(totalMin % 60).padStart(2, '0')}`;
+                                        return (
+                                            <div key={idx} className="flex gap-8 items-start">
+                                                <div className="relative z-10 flex-shrink-0 w-16 flex justify-center">
+                                                    <div className="w-8 h-8 rounded-full bg-brand-dark border-4 border-brand-gold flex items-center justify-center mt-4">
+                                                        <span className="text-brand-gold text-[10px] font-black">{idx + 1}</span>
                                                     </div>
-
-                                                    {/* Cuerpo */}
-                                                    <div className="px-6 py-4">
-                                                        <p className="text-slate-500 text-sm leading-relaxed font-medium mb-3">
-                                                            {parada.descripcion}
-                                                        </p>
-                                                        <div className="flex items-center justify-between">
+                                                </div>
+                                                <div className="flex-1 pb-2">
+                                                    <div className="bg-white rounded-[2rem] border border-slate-100 shadow-sm hover:shadow-md transition-shadow overflow-hidden group">
+                                                        <div className="bg-gradient-to-r from-brand-dark to-brand-dark/90 px-6 py-4 flex items-center justify-between">
+                                                            <div>
+                                                                <span className="text-[9px] font-black text-brand-gold uppercase tracking-widest opacity-70 block mb-0.5">
+                                                                    {parada.categoria}
+                                                                </span>
+                                                                <h3 className="text-base font-black text-white uppercase italic tracking-tight leading-tight">
+                                                                    {parada.nombre}
+                                                                </h3>
+                                                            </div>
+                                                            <div className="text-right flex-shrink-0 ml-4">
+                                                                <p className="text-2xl font-black text-brand-gold tracking-tighter">{parada.hora}</p>
+                                                                <p className="text-[9px] font-black text-white/50 uppercase tracking-widest">hasta {hFin}</p>
+                                                            </div>
+                                                        </div>
+                                                        <div className="px-6 py-4">
+                                                            <p className="text-slate-500 text-sm leading-relaxed font-medium mb-3">
+                                                                {parada.descripcion}
+                                                            </p>
                                                             <div className="flex items-center gap-3">
                                                                 <span className="flex items-center gap-1 text-[9px] font-black text-brand-dark/60 uppercase tracking-widest bg-slate-50 px-3 py-1.5 rounded-full border border-slate-100">
                                                                     <i className="bi bi-clock text-brand-gold" />{parada.duracion_min} min
@@ -441,26 +487,23 @@ const RutaInteligente: React.FC = () => {
                                                     </div>
                                                 </div>
                                             </div>
+                                        );
+                                    })}
+                                    <div className="flex gap-8 items-center">
+                                        <div className="relative z-10 flex-shrink-0 w-16 flex justify-center">
+                                            <div className="w-6 h-6 rounded-full bg-brand-gold flex items-center justify-center">
+                                                <i className="bi bi-check2 text-brand-dark text-xs" />
+                                            </div>
                                         </div>
-                                    );
-                                })}
-
-                                {/* Fin */}
-                                <div className="flex gap-8 items-center">
-                                    <div className="relative z-10 flex-shrink-0 w-16 flex justify-center">
-                                        <div className="w-6 h-6 rounded-full bg-brand-gold flex items-center justify-center">
-                                            <i className="bi bi-check2 text-brand-dark text-xs" />
+                                        <div className="bg-brand-dark rounded-[2rem] py-5 px-8 flex-1">
+                                            <p className="text-white font-black uppercase italic tracking-tighter text-lg">
+                                                ¡Fin de la ruta! Espera que hayas disfrutado de <span className="text-brand-gold">Mérida</span> 🏛️
+                                            </p>
                                         </div>
-                                    </div>
-                                    <div className="bg-brand-dark rounded-[2rem] py-5 px-8 flex-1">
-                                        <p className="text-white font-black uppercase italic tracking-tighter text-lg">
-                                            ¡Fin de la ruta! Espera que hayas disfrutado de <span className="text-brand-gold">Mérida</span> 🏛️
-                                        </p>
                                     </div>
                                 </div>
                             </div>
-                        </div>
-                    )}
+                        )}
                     </div>
                 </div>
             </div>
@@ -525,7 +568,6 @@ const RutaInteligente: React.FC = () => {
                     {/* Pasos 1–3 */}
                     {paso >= 1 && paso <= 3 && pasoActual && (
                         <div className="bg-white rounded-[2.5rem] p-10 shadow-xl border border-slate-100 relative">
-                            {/* Barra progreso */}
                             <div className="flex gap-2 mb-10">
                                 {[1, 2, 3].map(n => (
                                     <div key={n} className={`h-1.5 flex-1 rounded-full transition-all duration-500 ${n <= paso ? 'bg-brand-gold' : 'bg-slate-100'}`} />
@@ -602,7 +644,6 @@ const RutaInteligente: React.FC = () => {
                                 </div>
                             )}
 
-                            {/* Overlay mientras genera */}
                             {generando && (
                                 <div className="absolute inset-0 z-50 bg-white/80 backdrop-blur-sm rounded-[2.5rem] flex flex-col items-center justify-center gap-6">
                                     <div className="relative">
