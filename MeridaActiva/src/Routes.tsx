@@ -24,6 +24,7 @@ import Calendario from './paginas/privadas/Calendario';
 import Dashboard from './paginas/admin/Dashboard';
 import FAQPage from './paginas/publicas/FAQ';
 import RutaInteligente from './paginas/privadas/RutaInteligente';
+import NotFound from './paginas/NotFound';
 
 // COMPONENTE DE PROTECCIÓN DE RUTAS
 const ProtectedRoute = ({ children, allowedRoles }: { children: React.ReactNode, allowedRoles?: string[] }) => {
@@ -101,7 +102,7 @@ const AppRoutes = () => {
         </ProtectedRoute>
       } />
 
-      <Route path="*" element={<Navigate to="/" />} />
+      <Route path="*" element={<NotFound />} />
     </Routes>
   );
 };

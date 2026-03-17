@@ -61,19 +61,21 @@ const STATS = [
 
 const ROTATING_TEXTS = ['Cultural', 'Musical', 'Gastronómico', 'Histórico', 'Único'];
 
+// ── Ticker — solo fotos locales de Mérida ────────────────────────
 const TICKER_ITEMS = [
-  { src: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&q=75', fallback: '/Imagenes/teatro-romano.jpg', label: 'Teatro Romano' },
-  { src: 'https://images.unsplash.com/photo-1533105079780-92b9be482077?w=400&q=75', fallback: '/Imagenes/CULTURAL.jpg', label: 'Anfiteatro' },
-  { src: 'https://images.unsplash.com/photo-1579783483458-83d02161294e?w=400&q=75', fallback: '/Imagenes/MUSICA.jpg', label: 'Puente Romano' },
-  { src: 'https://images.unsplash.com/photo-1555993539-1732b0258235?w=400&q=75', fallback: '/Imagenes/Museo Romano.webp', label: 'Acueducto' },
-  { src: 'https://images.unsplash.com/photo-1567529684892-09290a1b2d05?w=400&q=75', fallback: '/Imagenes/TEATRO.JPG', label: 'Templo de Diana' },
-  { src: 'https://images.unsplash.com/photo-1565008447742-97f6f38c985c?w=400&q=75', fallback: '/Imagenes/merida-maravilla-monumental.jpg', label: 'Gastronomía' },
-  { src: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&q=75', fallback: '/Imagenes/teatro-romano.jpg', label: 'Teatro Romano' },
-  { src: 'https://images.unsplash.com/photo-1533105079780-92b9be482077?w=400&q=75', fallback: '/Imagenes/CULTURAL.jpg', label: 'Anfiteatro' },
-  { src: 'https://images.unsplash.com/photo-1579783483458-83d02161294e?w=400&q=75', fallback: '/Imagenes/MUSICA.jpg', label: 'Puente Romano' },
-  { src: 'https://images.unsplash.com/photo-1555993539-1732b0258235?w=400&q=75', fallback: '/Imagenes/Museo Romano.webp', label: 'Acueducto' },
-  { src: 'https://images.unsplash.com/photo-1567529684892-09290a1b2d05?w=400&q=75', fallback: '/Imagenes/TEATRO.JPG', label: 'Templo de Diana' },
-  { src: 'https://images.unsplash.com/photo-1565008447742-97f6f38c985c?w=400&q=75', fallback: '/Imagenes/merida-maravilla-monumental.jpg', label: 'Gastronomía' },
+  { src: '/Imagenes/teatro-romano.jpg',             label: 'Teatro Romano' },
+  { src: '/Imagenes/CULTURAL.jpg',                  label: 'Cultura' },
+  { src: '/Imagenes/MUSICA.jpg',                    label: 'Música' },
+  { src: '/Imagenes/TEATRO.JPG',                    label: 'Teatro' },
+  { src: '/Imagenes/Museo Romano.webp',             label: 'MNAR' },
+  { src: '/Imagenes/merida-maravilla-monumental.jpg', label: 'Monumentos' },
+  // duplicados para loop infinito
+  { src: '/Imagenes/teatro-romano.jpg',             label: 'Teatro Romano' },
+  { src: '/Imagenes/CULTURAL.jpg',                  label: 'Cultura' },
+  { src: '/Imagenes/MUSICA.jpg',                    label: 'Música' },
+  { src: '/Imagenes/TEATRO.JPG',                    label: 'Teatro' },
+  { src: '/Imagenes/Museo Romano.webp',             label: 'MNAR' },
+  { src: '/Imagenes/merida-maravilla-monumental.jpg', label: 'Monumentos' },
 ];
 
 // ── Hooks ────────────────────────────────────────────────────────
@@ -314,7 +316,7 @@ const Home: React.FC = () => {
         <div className="ticker-track flex gap-4 w-max">
           {TICKER_ITEMS.map((item, i) => (
             <div key={i} className="relative w-48 h-32 rounded-2xl overflow-hidden flex-shrink-0 group cursor-pointer">
-              <Img src={item.src} fallback={item.fallback} alt={item.label} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+              <img src={item.src} alt={item.label} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
               <div className="absolute inset-0 bg-brand-dark/40 group-hover:bg-brand-dark/20 transition-colors" />
               <span className="absolute bottom-3 left-3 text-[8px] font-black text-white uppercase tracking-widest">{item.label}</span>
             </div>
@@ -400,7 +402,7 @@ const Home: React.FC = () => {
       {/* ══════════════════════════════════════════
           6. CATEGORÍAS — ScrollStack con gradiente metta
       ══════════════════════════════════════════ */}
-      <section className="py-32 px-6 bg-brand-bg">
+      <section className="py-32 px-6 bg-brand-bg relative z-0">
         <div className="max-w-4xl mx-auto">
           <div
             ref={categoriasHeaderRef}
@@ -480,7 +482,7 @@ const Home: React.FC = () => {
       {/* ══════════════════════════════════════════
           7. CTA RUTAS IA
       ══════════════════════════════════════════ */}
-      <section className="py-0">
+      <section className="py-0 relative z-10">
         <div ref={bannerRef} className="relative overflow-hidden bg-brand-dark">
           <div className="absolute inset-0 z-0">
             <img

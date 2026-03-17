@@ -1,161 +1,249 @@
-# 🏛️ Mérida Activa — Tu guía interactiva de cultura y patrimonio
+# MeridaActiva
 
-<div align="center">
-  <img src="https://img.shields.io/badge/Frontend-React-20232a.svg?style=flat-square&logo=react&logoColor=%2361DAFB" alt="Frontend React" />
-  <img src="https://img.shields.io/badge/Backend-Supabase-3ECF8E.svg?style=flat-square&logo=supabase&logoColor=white" alt="Backend Supabase" />
-  <img src="https://img.shields.io/badge/Estilos-TailwindCSS-38B2AC.svg?style=flat-square&logo=tailwind-css&logoColor=white" alt="Estilos Tailwind" />
-  <img src="https://img.shields.io/badge/Licencia-MIT-F6E132.svg?style=flat-square" alt="Licencia MIT" />
-</div>
-
-<br/>
-
-🎭 Mérida Activa es una aplicación web final del ciclo Desarrollo de Aplicaciones Web. Permite a cada usuario descubrir la agenda cultural de la ciudad, guardar sus eventos favoritos y compartir sus experiencias mediante un sistema de reseñas.
+> Plataforma de turismo y eventos culturales para Mérida (Extremadura, España), impulsada por IA.
 
 ---
 
-## 🌍 Descripción general
+## ¿Qué es MeridaActiva?
 
-Mérida Activa combina una arquitectura moderna y modular:
+MeridaActiva es una Progressive Web App (PWA) que centraliza la agenda cultural de Mérida, permite explorar su patrimonio romano y genera itinerarios personalizados con Inteligencia Artificial (Google Gemini vía OpenRouter).
 
-* 🔹 **Frontend:** React + Vite + TailwindCSS + TypeScript
-* 🔹 **Base de datos y autenticación:** Supabase (PostgreSQL + Auth)
-* 🔹 **Gestión de usuarios:** login, perfiles personalizados, favoritos y comentarios
-* 🔹 **Diseño:** Limpio, moderno ("Premium"), responsive y con componentes reutilizables
-* 🔹 **Objetivo:** Fomentar el turismo y la participación cultural en la ciudad de Mérida
-
----
-
-## 🚀 Despliegue
-
-[![Deploy](https://img.shields.io/badge/Deploy-Vercel-black?style=flat-square&logo=vercel)](#) 
-
-Accede a la versión en producción: *[Añade tu link de Vercel/Netlify aquí cuando lo subas]*
+Los usuarios pueden:
+- Consultar eventos culturales, música, teatro, gastronomía y turnismo
+- Explorar los monumentos y lugares de interés en un mapa Leaflet interactivo
+- Crear rutas personalizadas en 3 preguntas con un asistente IA
+- Guardar favoritos y gestionar su agenda personal en un calendario
+- Chatear con un asistente IA para resolver dudas sobre Mérida
 
 ---
 
-## 🧱 Estructura del proyecto
+## Arquitectura
 
-```text
-merida-activa/
-│
-├── public/               # Recursos estáticos (imágenes, logos...)
-│
-├── docs/                 # Documentación (manual de usuario y manual técnico)
-│
-├── src/
-│   ├── componentes/      # BotonFavorito, FormularioReseña, etc.
-│   ├── pages/            # Inicio, Eventos, DetalleEvento, MiPerfil, Favoritos
-│   ├── context/          # Contexto de Autenticación (AuthContext)
-│   ├── supabaseClient.ts # Cliente y configuración de Supabase
-│   ├── App.tsx           # Enrutamiento principal
-│   ├── main.tsx          # Entrada React
-│   └── index.css         # Estilos globales Tailwind
-│
-├── .env.local            # Variables locales (NO se sube)
-├── package.json
-├── tailwind.config.js
-├── README.md
-└── .gitignore
+```
+╔══════════════════════════════════════════════╗
+║              NAVEGADOR / PWA                ║
+║  React 19 · TypeScript · Vite 7            ║
+║  Tailwind v4 · GSAP · Leaflet              ║
+╚═════════════════════════╦════════════════════╝
+                          │ /api/*
+              ╔═══════════▼═══════════╗
+              ║  VERCEL SERVERLESS    ║
+              ║  /api/chat.js         ║
+              ║  /api/generar-ruta.js ║
+              ╚═══════╦═══════╦═══════╝
+                      │       │
+          ╔═══════════▼╗   ╔══▼══════════════╗
+          ║ OpenRouter ║   ║    Supabase      ║
+          ║ (Gemini    ║   ║  PostgreSQL +    ║
+          ║  2.5 Flash)║   ║  Auth + Storage  ║
+          ╚════════════╝   ╚═════════════════╝
+```
 
+**Flujo de desarrollo local:**
+```
+npm run dev:full
+    ├─ node api-server.js  → puerto 3000  (Express que sirve las funciones de /api/)
+    └─ vite               → puerto 5173  (proxy /api/* → localhost:3000)
+```
 
-⚙️ Instalación y ejecución local
-1️⃣ Clonar el repositorio
+---
 
-Bash
-git clone [https://github.com/tu-usuario/merida-activa.git](https://github.com/tu-usuario/merida-activa.git)
-cd merida-activa
-2️⃣ Instalar dependencias
+## Requisitos previos
 
-Bash
+| Herramienta | Versión mínima |
+|-------------|---------------|
+| Node.js     | 18.x o superior |
+| npm         | 9.x o superior  |
+| Cuenta Supabase | Gratuita (supabase.com) |
+| Cuenta OpenRouter | Gratuita + $5 crédito (openrouter.ai) |
+| Cuenta Vercel | Gratuita (vercel.com) — solo para deploy |
+
+---
+
+## Variables de entorno
+
+Crea un archivo `.env` en la raíz del proyecto con las siguientes claves:
+
+```env
+# ── Supabase ──────────────────────────────────────────────────
+VITE_SUPABASE_URL=https://XXXXXXXXXXXXXXXXXXXX.supabase.co
+VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+
+# ── OpenRouter (para las Serverless Functions de Vercel) ──────
+# Obtén tu clave en https://openrouter.ai/keys
+API_KEY_IA=sk-or-v1-...
+
+# ── Upstash Redis (opcional — rate limiting) ──────────────────
+# Obtén las credenciales en https://console.upstash.com
+# Si no las configuras, el rate limiting queda desactivado
+UPSTASH_REDIS_REST_URL=https://...
+UPSTASH_REDIS_REST_TOKEN=...
+```
+
+> **Nota:** Las variables `VITE_*` son accesibles desde el frontend. Las variables sin prefijo `VITE_` solo están disponibles en las Serverless Functions (backend) y en `api-server.js` en local.
+
+Copia el archivo de ejemplo antes de empezar:
+```bash
+cp .env.example .env
+```
+
+---
+
+## Primeros pasos
+
+### 1. Instala las dependencias
+
+```bash
 npm install
-3️⃣ Ejecutar el entorno de desarrollo
+```
 
-Bash
-npm run dev
-El proyecto se abrirá en: http://localhost:5173
+### 2. Configura las variables de entorno
 
-🗄️ Base de datos (Supabase)
-Tablas principales:
+Crea el archivo `.env` como se indica en la sección anterior.
 
-Tabla	Descripción
-users	Gestión nativa de Auth de Supabase (Email, Contraseña)
-eventos	Catálogo de la agenda (título, fecha, imagen, descripción, etc.)
-favoritos	Tabla relacional (usuario_id, elemento_id) para la lista de guardados
-comentarios	Reseñas de los usuarios (texto, puntuación, autor)
-Políticas RLS (Row Level Security):
+### 3. Lanza el entorno de desarrollo completo
 
-La lectura de eventos es pública.
+```bash
+npm run dev:full
+```
 
-Cada usuario solo puede insertar/borrar sus propios favoritos y reseñas.
+Esto arranca simultáneamente:
+- `node api-server.js` en `http://localhost:3000` (sirve `/api/chat` y `/api/generar-ruta`)
+- `vite` en `http://localhost:5173` (con proxy transparente hacia el servidor API)
 
-👤 Roles de usuario
-Rol	Permisos
-Visitante	Ver landing page, explorar agenda cultural y leer reseñas.
-Registrado	Acceso completo: guardar favoritos, publicar reseñas y editar perfil.
-🧠 Tecnologías principales
-Tecnología	Uso
-⚛️ React + Vite	Frontend moderno, tipado con TypeScript y compilación rápida
-🎨 TailwindCSS	Estilos consistentes, diseño adaptativo y UI interactiva
-🧰 Supabase	Backend como servicio (PostgreSQL, Auth y Políticas de Seguridad)
-🧾 Markdown	Documentación del proyecto
-💻 Comandos útiles
-Acción	Comando
-Instalar dependencias	npm install
-Ejecutar en desarrollo	npm run dev
-Build de producción	npm run build
-Previsualizar build	npm run preview
-🧩 Características implementadas
-✅ Vistas principales: Inicio, Eventos (Agenda), Detalle de Evento, Favoritos y Mi Perfil.
+---
 
-✅ Navegación fluida con React Router DOM.
+## Comandos disponibles
 
-✅ Componentes UI reutilizables.
+| Comando | Descripción |
+|---------|-------------|
+| `npm run dev` | Arranca solo Vite (frontend). Las llamadas a `/api/*` fallarán sin el servidor API. |
+| `npm run api` | Arranca solo el servidor API local (`api-server.js`). |
+| `npm run dev:full` | **Recomendado.** Arranca ambos en paralelo con `concurrently`. |
+| `npm run build` | Compila TypeScript y genera el bundle de producción en `/dist`. |
+| `npm run preview` | Sirve el bundle de producción en local (`http://localhost:4173`). |
+| `npm run lint` | Ejecuta ESLint sobre todo el proyecto. |
 
-✅ Estilo 100% responsive y diseño "Premium".
+---
 
-✅ Integración completa con Supabase (Auth + Base de Datos).
+## Estructura de carpetas
 
-✅ Sistema interactivo de reseñas con valoración por estrellas/corazones.
+```
+MeridaActiva/
+├── api/                        # Serverless Functions de Vercel
+│   ├── chat.js                 # Endpoint POST /api/chat (streaming SSE)
+│   └── generar-ruta.js         # Endpoint POST /api/generar-ruta
+├── api-server.js               # Servidor Express para desarrollo local
+├── public/                     # Assets estáticos (iconos PWA, imágenes)
+│   └── Imagenes/               # Imágenes del proyecto
+├── src/
+│   ├── App.tsx                 # Componente raíz (Navbar, Toaster, Routes)
+│   ├── Routes.tsx              # Definición de todas las rutas de la SPA
+│   ├── supabaseClient.ts       # Cliente de Supabase (singleton)
+│   ├── types.ts                # Interfaces TypeScript centralizadas
+│   ├── componentes/            # Componentes reutilizables
+│   │   ├── animaciones/        # Componentes de animación (GSAP, CSS)
+│   │   ├── LazyImg.tsx         # Imagen con lazy loading y prevención de CLS
+│   │   ├── SelectCustom.tsx    # Dropdown accesible con navegación por teclado
+│   │   └── ...
+│   ├── context/
+│   │   └── AuthContext.tsx     # Contexto de autenticación (useAuth hook)
+│   ├── hooks/                  # Hooks personalizados (useSeoMeta, etc.)
+│   ├── paginas/
+│   │   ├── publicas/           # Home, Eventos, Lugares, FAQ, Contacto
+│   │   ├── privadas/           # RutaInteligente, Calendario, Favoritos, MiPerfil
+│   │   ├── admin/              # Dashboard, GestionEventos, GestionUsuarios
+│   │   ├── auth/               # Login, Registro, ResetPassword
+│   │   └── NotFound.tsx        # Página 404 personalizada
+│   ├── styles/                 # Estilos globales
+│   └── utils/
+│       ├── geminiService.ts    # Servicio de IA (streaming + reintentos)
+│       └── toast.ts            # Wrapper sobre react-hot-toast
+├── .env                        # Variables de entorno (NO subir a git)
+├── .env.example                # Plantilla de variables de entorno
+├── vite.config.ts              # Config de Vite (PWA, imagemin, proxy)
+├── tailwind.config.js          # Config de Tailwind v4
+└── vercel.json                 # Config de Vercel (rewrites SPA)
+```
 
-✅ Gestión de favoritos en tiempo real.
+---
 
-Vista	Descripción
-🏠 Inicio	Presentación de la ciudad y acceso rápido a la agenda
-📅 Agenda	Listado de eventos con filtrado y ordenación
-🔍 Detalle Evento	Información completa, botón de favoritos y sección de comentarios
-❤️ Favoritos	Rincón personal con las actividades guardadas por el usuario
-👤 Mi Perfil	Gestión de datos personales y visualización del historial de reseñas
-🧑‍🏫 Tutorías
-Tutor: [Nombre de tu tutor/a]
+## Cómo añadir una nueva Serverless Function
 
-Resumen de las tutorías
-Se mantuvo un seguimiento estructurado para el desarrollo del TFG.
+1. Crea un archivo en `/api/mi-funcion.js`:
 
-Semana 1: Inicio y planificación: definición de alcance, objetivos e interfaz gráfica.
+```js
+// api/mi-funcion.js
+export default async function handler(req, res) {
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Método no permitido' });
+  }
 
-Semana 2: Elección de stack y estructura básica del proyecto (React + Vite, Tailwind).
+  try {
+    const { dato } = req.body;
+    // ... tu lógica aquí
+    res.status(200).json({ resultado: 'ok' });
+  } catch (err) {
+    console.error('[mi-funcion]', err);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+}
+```
 
-Semana 3: Modelado de datos en Supabase: tablas eventos, favoritos, comentarios y políticas RLS.
+2. Registra la ruta en `api-server.js` para desarrollo local:
 
-Semana 4: Implementación de vistas principales: Landing, Agenda y Detalle de Evento.
+```js
+const routes = {
+  '/api/chat':          () => import('./api/chat.js'),
+  '/api/generar-ruta':  () => import('./api/generar-ruta.js'),
+  '/api/mi-funcion':    () => import('./api/mi-funcion.js'), // ← añadir aquí
+};
+```
 
-Semana 5: Diseño y componentes UI: Sistema de tarjetas, botón de favoritos y estado de carga.
+3. Llama al endpoint desde el frontend con `fetch('/api/mi-funcion', { method: 'POST', ... })`.
 
-Semana 6: Autenticación y gestión de sesiones con Supabase Auth.
+En producción (Vercel), las funciones en `/api/` se despliegan automáticamente como Serverless Functions.
 
-Semana 7: Integración de lógica de inserción de reseñas y visualización en el perfil.
+---
 
-Semana 8: Pruebas de usabilidad, corrección de bugs en RLS y limpieza de código.
+## Rate Limiting con Upstash Redis (opcional)
 
-Semana 9: Documentación final: preparación para entrega y defensa.
+Las funciones `/api/chat.js` y `/api/generar-ruta.js` ya incluyen código de rate limiting utilizando `@upstash/ratelimit` y `@upstash/redis`.
 
-👩‍💻 Autoría
-[Tu Nombre Completo] CFGS en Desarrollo de Aplicaciones Web (DAW)
+Para activarlo, necesitas:
+1. Crear una base de datos en [console.upstash.com](https://console.upstash.com)
+2. Copiar las credenciales `REST_URL` y `REST_TOKEN` a tu `.env` (y a las variables de entorno de Vercel)
 
-📍 IES Albarregas – Mérida (España)
+Si las credenciales no están configuradas, el rate limiting se desactiva automáticamente y las funciones operan sin restricciones.
 
-📘 Proyecto TFG: Mérida Activa – Tu guía interactiva (2025)
+---
 
-🏷️ Licencia
-Distribuido bajo licencia MIT.
+## Despliegue en Vercel
 
+1. Conecta el repositorio en [vercel.com/new](https://vercel.com/new)
+2. Vercel detecta el proyecto Vite automáticamente
+3. Añade las variables de entorno en *Settings → Environment Variables*:
+   - `VITE_SUPABASE_URL`
+   - `VITE_SUPABASE_ANON_KEY`
+   - `API_KEY_IA`
+   - (Opcional) `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN`
+4. Haz clic en *Deploy*
+
+El archivo `vercel.json` ya está configurado para redirigir todas las rutas al `index.html` (necesario para la SPA).
+
+---
+
+## Row Level Security en Supabase
+
+Las políticas RLS están definidas en el archivo `rls_policies.sql` (en la carpeta raíz).
+
+Para aplicarlas:
+1. Ve a **Supabase Dashboard → SQL Editor → New Query**
+2. Copia el contenido del archivo y ejecútalo
+3. Verifica en **Authentication → Policies** que aparecen las políticas
+
+---
+
+## Licencia
+
+Proyecto académico — Grado en Desarrollo de Aplicaciones Web.

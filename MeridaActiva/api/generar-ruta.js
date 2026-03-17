@@ -4,7 +4,7 @@ import { Ratelimit } from '@upstash/ratelimit';
 import { Redis } from '@upstash/redis';
 
 const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
-const MODEL = 'google/gemini-2.5-flash';
+const MODEL = 'google/gemma-2-9b-it:free';
 
 let _ratelimit = null;
 function getRatelimit() {

@@ -6,7 +6,6 @@ import { useAuth } from '../../context/AuthContext';
 import { toastExito, toastError, toastAviso } from '../../utils/toast';
 import AnimatedList from '../../componentes/animaciones/AnimatedList';
 
-// ── Tipos ────────────────────────────────────────────────────────
 interface Evento {
   id: string;
   titulo: string;
@@ -117,7 +116,7 @@ const Calendario: React.FC = () => {
         if (ids.length > 0) {
           const { data: evs, error: evsErr } = await supabase
             .from('eventos')
-            .select('id, titulo, fecha, imagen_url, categoria, lugar, precio')
+            .select('id, titulo, fecha, imagen_url, categoria, ubicacion, precio')
             .in('id', ids);
 
           if (evsErr) throw evsErr;

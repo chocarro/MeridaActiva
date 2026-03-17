@@ -1,23 +1,48 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { supabase } from '../supabaseClient';
 import Logo from './Logo';
 
 const Footer: React.FC = () => {
   const { profile } = useAuth();
   const [email, setEmail] = useState('');
-  const [subStatus, setSubStatus] = useState<'idle' | 'ok' | 'error'>('idle');
+  const [subStatus, setSubStatus] = useState<'idle' | 'loading' | 'ok' | 'exists' | 'error'>('idle');
 
-  const handleSuscribir = (e: React.FormEvent) => {
+  const handleSuscribir = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email.trim() || !email.includes('@')) {
+    const trimmed = email.trim().toLowerCase();
+    if (!trimmed || !trimmed.includes('@')) {
       setSubStatus('error');
       return;
     }
-    // Simulación — aquí podrías guardar en Supabase o algún servicio
-    setSubStatus('ok');
-    setEmail('');
-    setTimeout(() => setSubStatus('idle'), 4000);
+
+    setSubStatus('loading');
+
+    try {
+      // Intentar insertar en la tabla newsletter_suscriptores
+      const { error } = await supabase
+        .from('newsletter_suscriptores')
+        .insert({ email: trimmed });
+
+      if (error) {
+        // Código 23505 = unique_violation (ya suscrito)
+        if (error.code === '23505') {
+          setSubStatus('exists');
+        } else {
+          console.error('[Newsletter]', error);
+          setSubStatus('error');
+        }
+      } else {
+        setSubStatus('ok');
+        setEmail('');
+      }
+    } catch {
+      setSubStatus('error');
+    }
+
+    // Reset después de 5 segundos
+    setTimeout(() => setSubStatus('idle'), 5000);
   };
 
   return (
@@ -25,6 +50,7 @@ const Footer: React.FC = () => {
       <div className="max-w-7xl mx-auto px-6">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-16 mb-20">
 
+          {/* Columna 1 — Marca */}
           <div className="space-y-8">
             <Logo isScrolled={true} className="!text-3xl" />
             <p className="text-slate-400 text-sm font-medium leading-relaxed">
@@ -33,39 +59,49 @@ const Footer: React.FC = () => {
             <div className="flex gap-4">
               {['facebook', 'instagram', 'twitter-x'].map((social) => (
                 <a key={social} href="#" className="w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center hover:bg-brand-gold hover:text-brand-dark transition-all text-xl">
-                  <i className={`bi bi-${social}`}></i>
+                  <i className={`bi bi-${social}`} />
                 </a>
               ))}
             </div>
           </div>
 
+          {/* Columna 2 — Explorar */}
           <div>
             <h4 className="text-brand-gold text-[10px] font-black uppercase tracking-[0.3em] mb-10">Explorar</h4>
             <ul className="space-y-4">
               {[
                 { label: 'Eventos', to: '/eventos' },
                 { label: 'Patrimonio', to: '/lugares' },
-                { label: 'Mapa Interactivo', to: '/mapa' },
+                { label: 'Rutas con IA', to: '/rutas' },
+                { label: 'Preguntas frecuentes', to: '/faq' },
               ].map((item) => (
                 <li key={item.label}>
-                  <Link to={item.to} className="text-slate-400 hover:text-white transition-colors font-bold text-sm">{item.label}</Link>
+                  <Link to={item.to} className="text-slate-400 hover:text-white transition-colors font-bold text-sm">
+                    {item.label}
+                  </Link>
                 </li>
               ))}
             </ul>
           </div>
 
+          {/* Columna 3 — Legal */}
           <div>
-            <h4 className="text-brand-gold text-[10px] font-black uppercase tracking-[0.3em] mb-10">Ayuda</h4>
+            <h4 className="text-brand-gold text-[10px] font-black uppercase tracking-[0.3em] mb-10">Legal</h4>
             <ul className="space-y-4">
-              <li><Link to="/contacto" className="text-slate-400 hover:text-white transition-colors font-bold text-sm">Contacto</Link></li>
-              <li><Link to="/privacidad" className="text-slate-400 hover:text-white transition-colors font-bold text-sm">Privacidad</Link></li>
+              <li><Link to="/privacidad" className="text-slate-400 hover:text-white transition-colors font-bold text-sm">Política de Privacidad</Link></li>
               <li><Link to="/terminos" className="text-slate-400 hover:text-white transition-colors font-bold text-sm">Términos de Uso</Link></li>
+              <li><Link to="/cookies" className="text-slate-400 hover:text-white transition-colors font-bold text-sm">Política de Cookies</Link></li>
+              <li><Link to="/aviso-legal" className="text-slate-400 hover:text-white transition-colors font-bold text-sm">Aviso Legal</Link></li>
+              <li><Link to="/contacto" className="text-slate-400 hover:text-white transition-colors font-bold text-sm">Contacto</Link></li>
             </ul>
           </div>
 
+          {/* Columna 4 — Newsletter */}
           <div className="space-y-6">
             <h4 className="text-brand-gold text-[10px] font-black uppercase tracking-[0.3em]">Newsletter</h4>
-            <p className="text-slate-400 text-xs font-medium leading-relaxed">Recibe la agenda cultural de Mérida cada semana en tu correo.</p>
+            <p className="text-slate-400 text-xs font-medium leading-relaxed">
+              Recibe la agenda cultural de Mérida cada semana en tu correo.
+            </p>
 
             <form className="space-y-3" onSubmit={handleSuscribir}>
               <input
@@ -74,55 +110,60 @@ const Footer: React.FC = () => {
                 value={email}
                 onChange={e => setEmail(e.target.value)}
                 className="w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-4 text-xs focus:ring-1 focus:ring-brand-gold outline-none transition-all text-white placeholder:text-white/30"
-                disabled={subStatus === 'ok'}
+                disabled={subStatus === 'ok' || subStatus === 'loading'}
               />
               <button
                 type="submit"
-                disabled={subStatus === 'ok'}
-                className="w-full btn-primary !py-4 !text-[9px] disabled:opacity-60"
+                disabled={subStatus === 'ok' || subStatus === 'loading'}
+                className="w-full btn-primary !py-4 !text-[9px] disabled:opacity-60 flex items-center justify-center gap-2"
               >
-                {subStatus === 'ok' ? '¡Suscrito! ✓' : 'Suscribirme'}
+                {subStatus === 'loading' && (
+                  <svg className="animate-spin w-3 h-3" viewBox="0 0 24 24" fill="none">
+                    <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" strokeOpacity="0.25" />
+                    <path d="M4 12a8 8 0 018-8" stroke="currentColor" strokeWidth="4" strokeLinecap="round" />
+                  </svg>
+                )}
+                {subStatus === 'ok' ? (
+                  <><i className="bi bi-check2-circle" /> ¡Suscrito!</>
+                ) : subStatus === 'loading' ? 'Guardando…' : (
+                  <><i className="bi bi-envelope-fill" /> Suscribirme</>
+                )}
               </button>
+
               {subStatus === 'error' && (
-                <p className="text-brand-red text-[9px] font-black uppercase tracking-widest text-center">Introduce un email válido</p>
+                <p className="text-brand-red text-[9px] font-black uppercase tracking-widest text-center flex items-center justify-center gap-1">
+                  <i className="bi bi-exclamation-circle" /> Introduce un email válido
+                </p>
+              )}
+              {subStatus === 'exists' && (
+                <p className="text-brand-gold text-[9px] font-black uppercase tracking-widest text-center flex items-center justify-center gap-1">
+                  <i className="bi bi-info-circle" /> Este email ya está suscrito
+                </p>
               )}
               {subStatus === 'ok' && (
-                <p className="text-brand-green text-[9px] font-black uppercase tracking-widest text-center">¡Te avisaremos cada semana!</p>
+                <p className="text-brand-green text-[9px] font-black uppercase tracking-widest text-center flex items-center justify-center gap-1">
+                  <i className="bi bi-check2" /> ¡Te avisaremos cada semana!
+                </p>
               )}
             </form>
 
             {['Administrador', 'Gestor (Editor)'].includes(profile?.roles?.nombre) && (
               <Link to="/admin" className="block text-center bg-brand-blue/20 text-brand-blue border border-brand-blue/30 py-4 rounded-2xl text-[9px] font-black uppercase tracking-widest hover:bg-brand-blue hover:text-white transition-all">
-                Panel Admin
+                <i className="bi bi-speedometer2 mr-2" />Panel Admin
               </Link>
             )}
           </div>
         </div>
 
-        <div className="pt-10 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-6">
+        {/* Bottom bar — limpio, sin duplicados */}
+        <div className="pt-10 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-4">
           <p className="text-[9px] font-black text-slate-500 uppercase tracking-[0.3em]">
-            © 2026 MÉRIDAACTIVA. HECHO EN EXTREMADURA.
+            © 2026 MéridaActiva · Hecho en Extremadura
           </p>
-          <div className="flex items-center gap-6 flex-wrap justify-center">
-            <a
-              href="/faq"
-              className="text-[9px] font-black text-slate-500 uppercase tracking-widest hover:text-brand-gold transition-colors"
-            >
-              Preguntas frecuentes
-            </a>
-            <span className="text-white/10">|</span>
-            <a
-              href="/contacto"
-              className="text-[9px] font-black text-slate-500 uppercase tracking-widest hover:text-brand-gold transition-colors"
-            >
-              Contacto
-            </a>
-            <span className="text-white/10">|</span>
-            <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">
-              <i className="bi bi-award-fill text-brand-gold mr-1" />
-              Mérida, Patrimonio UNESCO
-            </span>
-          </div>
+          <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-1">
+            <i className="bi bi-award-fill text-brand-gold" />
+            Mérida, Patrimonio UNESCO 1993
+          </span>
         </div>
       </div>
     </footer>

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useSeoMeta } from '../../hooks/useSeoMeta';
 
-// ─── Tipos ──────────────────────────────────────────────────────────────────
+// ─── Tipos ───────────────────────────────────────────────────────
 type FormState = 'idle' | 'sending' | 'success' | 'error';
 
 interface FormData {
@@ -11,7 +11,7 @@ interface FormData {
     mensaje: string;
 }
 
-// ─── Datos de contacto ───────────────────────────────────────────────────────
+// ─── Datos de contacto ───────────────────────────────────────────
 const INFO_ITEMS = [
     {
         icon: 'bi-geo-alt-fill',
@@ -43,32 +43,11 @@ const INFO_ITEMS = [
     },
 ];
 
-const FAQS = [
-    {
-        pregunta: '¿Cómo puedo publicar un evento en MéridaActiva?',
-        respuesta: 'Para publicar un evento necesitas tener una cuenta de gestor o administrador. Una vez verificado, podrás acceder al panel de administración y crear nuevos eventos con toda la información necesaria.',
-    },
-    {
-        pregunta: '¿Es gratuita la plataforma?',
-        respuesta: 'Sí, MéridaActiva es completamente gratuita para los ciudadanos. Los organizadores de eventos deben registrarse y pueden solicitar permisos de gestor para publicar sus actividades.',
-    },
-    {
-        pregunta: '¿Cómo puedo guardar un evento en mi agenda?',
-        respuesta: 'Registrándote en la plataforma podrás añadir eventos a tu agenda personal y recibir notificaciones sobre los mismos.',
-    },
-    {
-        pregunta: '¿Puedo sugerir mejoras o reportar errores?',
-        respuesta: 'Absolutamente. Usa el formulario de contacto señalando el asunto "Sugerencia" o "Reporte de error" y nuestro equipo lo revisará en el menor tiempo posible.',
-    },
-];
-
-// ════════════════════════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════════════
 const Contacto: React.FC = () => {
     const [form, setForm] = useState<FormData>({ nombre: '', email: '', asunto: '', mensaje: '' });
     const [estado, setEstado] = useState<FormState>('idle');
-    const [faqAbierta, setFaqAbierta] = useState<number | null>(null);
 
-    // ── SEO ─────────────────────────────────────────────────────────
     useSeoMeta({
         title: 'Contacto — Ponte en contacto con MeridaActiva',
         description: 'Envíanos un mensaje para publicar un evento, sugerir mejoras o resolver cualquier duda sobre MeridaActiva.',
@@ -85,7 +64,6 @@ const Contacto: React.FC = () => {
             return;
         }
         setEstado('sending');
-        // Simulación de envío (aquí conectarías a un backend o servicio de email)
         await new Promise(r => setTimeout(r, 1500));
         setEstado('success');
         setForm({ nombre: '', email: '', asunto: '', mensaje: '' });
@@ -137,10 +115,8 @@ const Contacto: React.FC = () => {
                     ))}
                 </div>
 
-                {/* ── FORMULARIO + MAPA ── */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 mb-24">
-
-                    {/* Formulario */}
+                {/* ── FORMULARIO ── */}
+                <div className="max-w-3xl mx-auto">
                     <div className="bg-white rounded-[2.5rem] p-10 shadow-xl border border-slate-100">
                         <span className="text-brand-gold font-black uppercase tracking-[0.3em] text-xs mb-3 block">
                             Formulario de contacto
@@ -217,7 +193,7 @@ const Contacto: React.FC = () => {
                                         value={form.mensaje}
                                         onChange={handleChange}
                                         placeholder="Cuéntanos en qué podemos ayudarte..."
-                                        rows={5}
+                                        rows={6}
                                         className="w-full px-6 py-4 rounded-2xl bg-slate-50 border border-slate-200 outline-none focus:ring-2 focus:ring-brand-blue/20 transition-all font-medium text-brand-dark text-sm resize-none"
                                     />
                                 </div>
@@ -257,76 +233,7 @@ const Contacto: React.FC = () => {
                         )}
                     </div>
 
-                    {/* Mapa embed */}
-                    <div className="flex flex-col gap-6">
-                        <div className="bg-white rounded-[2.5rem] overflow-hidden shadow-xl border border-slate-100 flex-1 min-h-[400px]">
-                            <iframe
-                                title="Ubicación MéridaActiva"
-                                src="https://www.openstreetmap.org/export/embed.html?bbox=-6.360%2C38.906%2C-6.325%2C38.928&layer=mapnik&marker=38.9161%2C-6.3437"
-                                className="w-full h-full min-h-[400px] border-0"
-                                loading="lazy"
-                            />
-                        </div>
-                        <div className="bg-brand-dark rounded-[2rem] p-8 text-white">
-                            <h3 className="font-black uppercase italic tracking-tighter text-xl mb-2">
-                                ¿Quieres colaborar?
-                            </h3>
-                            <p className="text-slate-400 text-sm font-medium leading-relaxed mb-6">
-                                Si eres una organización, asociación o empresa cultural de Mérida, contáctanos para explorar vías de colaboración y publicitar tus eventos.
-                            </p>
-                            <div className="flex gap-3">
-                                {['facebook', 'instagram', 'twitter-x'].map((s) => (
-                                    <a
-                                        key={s}
-                                        href="#"
-                                        className="w-12 h-12 rounded-2xl bg-white/10 flex items-center justify-center hover:bg-brand-gold hover:text-brand-dark transition-all text-white text-xl"
-                                    >
-                                        <i className={`bi bi-${s}`} />
-                                    </a>
-                                ))}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                {/* ── FAQ ── */}
-                <div className="max-w-3xl mx-auto">
-                    <div className="text-center mb-12">
-                        <span className="text-brand-gold font-black uppercase tracking-[0.3em] text-xs mb-4 block">
-                            Preguntas frecuentes
-                        </span>
-                        <h2 className="text-4xl md:text-5xl font-black text-brand-dark uppercase italic tracking-tighter">
-                            ¿Tienes <span className="text-brand-blue">dudas</span>?
-                        </h2>
-                    </div>
-
-                    <div className="space-y-4">
-                        {FAQS.map((faq, idx) => (
-                            <div
-                                key={idx}
-                                className="bg-white rounded-[2rem] border border-slate-100 shadow-sm overflow-hidden"
-                            >
-                                <button
-                                    onClick={() => setFaqAbierta(faqAbierta === idx ? null : idx)}
-                                    className="w-full flex items-center justify-between px-8 py-6 text-left gap-4 hover:bg-slate-50 transition-colors"
-                                >
-                                    <span className="font-black text-brand-dark text-sm uppercase tracking-wide">
-                                        {faq.pregunta}
-                                    </span>
-                                    <i
-                                        className={`bi bi-chevron-down text-brand-blue text-lg transition-transform duration-300 flex-shrink-0 ${faqAbierta === idx ? 'rotate-180' : ''}`}
-                                    />
-                                </button>
-                                {faqAbierta === idx && (
-                                    <div className="px-8 pb-6 text-slate-500 font-medium text-sm leading-relaxed border-t border-slate-50 pt-4 animate-fade-in-up">
-                                        {faq.respuesta}
-                                    </div>
-                                )}
-                            </div>
-                        ))}
-                    </div>
-
-                    {/* CTA: ir a página FAQ completa + AI chat */}
+                    {/* ── CTA Chat IA ── */}
                     <div className="text-center mt-12">
                         <p className="text-slate-400 font-bold text-sm mb-6">
                             ¿Necesitas más ayuda? Nuestro asistente con inteligencia artificial responde al instante.
@@ -336,13 +243,13 @@ const Contacto: React.FC = () => {
                             className="inline-flex items-center gap-3 bg-brand-dark text-brand-gold px-10 py-5 rounded-2xl font-black uppercase tracking-widest text-xs hover:bg-brand-blue hover:text-white transition-all shadow-xl shadow-brand-dark/10"
                         >
                             <i className="bi bi-robot text-base" />
-                            Todas las FAQs — Chat con IA
+                            Chat con IA
                             <i className="bi bi-arrow-right" />
                         </a>
                     </div>
                 </div>
-            </div>
 
+            </div>
         </div>
     );
 };

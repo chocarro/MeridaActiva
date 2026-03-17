@@ -73,6 +73,9 @@ const LABEL: Record<string, Record<string, string>> = {
 };
 
 // ── Mapa de la ruta generada ──────────────────────────────────────
+// Mejora 6: Mapa accesible
+//   - role="complementary" + tabIndex={0} + aria-label en el wrapper
+//   - Lista de paradas sr-only (solo visible para lectores de pantalla)
 function MapaRuta({ paradas }: { paradas: ParadaRuta[] }) {
     const [rutaOSRM, setRutaOSRM] = useState<[number, number][]>([]);
     const conCoords = paradas.filter(p => p.lat && p.lng);
@@ -98,38 +101,63 @@ function MapaRuta({ paradas }: { paradas: ParadaRuta[] }) {
     if (conCoords.length === 0) {
         return (
             <div className="flex flex-col items-center justify-center h-64 bg-slate-50 rounded-[2rem] border border-slate-100">
-                <div className="text-4xl mb-3">📍</div>
+                <i className="bi bi-geo-alt text-brand-gold text-4xl mb-3" aria-hidden="true" />
                 <p className="font-black text-brand-dark text-sm">Sin coordenadas disponibles</p>
             </div>
         );
     }
 
     return (
-        <div className="rounded-[2rem] overflow-hidden shadow-2xl border-4 border-white" style={{ height: 460 }}>
-            <MapContainer center={puntos[0]} zoom={14} style={{ height: '100%', width: '100%' }}>
-                <TileLayer url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png" />
-                <AjustarBounds puntos={puntos} />
-                {rutaOSRM.length > 1 && (
-                    <Polyline positions={rutaOSRM} pathOptions={{ color: '#3F88C5', weight: 5, opacity: 0.85, lineCap: 'round' }} />
-                )}
+        <div
+            role="complementary"
+            tabIndex={0}
+            aria-label="Mapa de la ruta por Mérida"
+            className="focus:outline-none focus:ring-2 focus:ring-brand-blue/40 rounded-[2rem]"
+        >
+            {/* Lista de paradas visible solo para lectores de pantalla */}
+            <ol className="sr-only">
                 {conCoords.map((parada, idx) => (
-                    <Marker key={idx} position={[parada.lat!, parada.lng!]} icon={crearIconoNumero(idx + 1)}>
-                        <Popup closeButton={false}>
-                            <div className="min-w-[180px] p-1">
-                                <span className="text-[9px] font-black text-brand-blue uppercase tracking-widest bg-brand-blue/10 px-2 py-1 rounded-full inline-block mb-2">
-                                    Parada {idx + 1}
-                                </span>
-                                <h3 className="text-sm font-black text-brand-dark uppercase italic leading-tight mb-1">{parada.nombre}</h3>
-                                <div className="flex items-center gap-1 text-xs text-slate-500 font-bold mb-1">
-                                    <i className="bi bi-clock text-brand-gold" />{parada.hora} · {parada.duracion_min} min
-                                </div>
-                                <p className="text-[10px] text-slate-400 leading-relaxed">{parada.descripcion.slice(0, 80)}…</p>
-                            </div>
-                        </Popup>
-                    </Marker>
+                    <li key={idx}>
+                        Parada {idx + 1}: {parada.nombre}
+                        {parada.hora ? ` a las ${parada.hora}` : ''}
+                        {parada.lat && parada.lng
+                            ? ` — coordenadas: latitud ${parada.lat.toFixed(4)}, longitud ${parada.lng.toFixed(4)}`
+                            : ''}
+                    </li>
                 ))}
-            </MapContainer>
-            <style>{`.leaflet-popup-content-wrapper{border-radius:1.25rem!important;padding:6px!important;box-shadow:0 20px 60px rgba(0,0,0,.12)!important;}.leaflet-popup-tip{display:none}`}</style>
+            </ol>
+
+            <div className="rounded-[2rem] overflow-hidden shadow-2xl border-4 border-white" style={{ height: 460 }}>
+                <MapContainer
+                    center={puntos[0]}
+                    zoom={14}
+                    style={{ height: '100%', width: '100%' }}
+                    aria-label="Mapa de la ruta por Mérida"
+                >
+                    <TileLayer url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png" />
+                    <AjustarBounds puntos={puntos} />
+                    {rutaOSRM.length > 1 && (
+                        <Polyline positions={rutaOSRM} pathOptions={{ color: '#3F88C5', weight: 5, opacity: 0.85, lineCap: 'round' }} />
+                    )}
+                    {conCoords.map((parada, idx) => (
+                        <Marker key={idx} position={[parada.lat!, parada.lng!]} icon={crearIconoNumero(idx + 1)}>
+                            <Popup closeButton={false}>
+                                <div className="min-w-[180px] p-1">
+                                    <span className="text-[9px] font-black text-brand-blue uppercase tracking-widest bg-brand-blue/10 px-2 py-1 rounded-full inline-block mb-2">
+                                        Parada {idx + 1}
+                                    </span>
+                                    <h3 className="text-sm font-black text-brand-dark uppercase italic leading-tight mb-1">{parada.nombre}</h3>
+                                    <div className="flex items-center gap-1 text-xs text-slate-500 font-bold mb-1">
+                                        <i className="bi bi-clock text-brand-gold" />{parada.hora} · {parada.duracion_min} min
+                                    </div>
+                                    <p className="text-[10px] text-slate-400 leading-relaxed">{parada.descripcion.slice(0, 80)}…</p>
+                                </div>
+                            </Popup>
+                        </Marker>
+                    ))}
+                </MapContainer>
+                <style>{`.leaflet-popup-content-wrapper{border-radius:1.25rem!important;padding:6px!important;box-shadow:0 20px 60px rgba(0,0,0,.12)!important;}.leaflet-popup-tip{display:none}`}</style>
+            </div>
         </div>
     );
 }
@@ -149,9 +177,10 @@ const RutaInteligente: React.FC = () => {
     const [compania, setCompania] = useState<Compania | null>(null);
     const [ritmo, setRitmo] = useState<Ritmo | null>(null);
 
-    // Resultado
+    // Estado para la IA
     const [paradas, setParadas] = useState<ParadaRuta[]>([]);
     const [generando, setGenerando] = useState(false);
+    const [mensajeEstado, setMensajeEstado] = useState(''); // Mejora 9: reintento IA
     const [errorMsg, setErrorMsg] = useState<string | null>(null);
     const [guardando, setGuardando] = useState(false);
     const [guardado, setGuardado] = useState(false);
@@ -162,6 +191,7 @@ const RutaInteligente: React.FC = () => {
         if (!duracion || !compania || !ritmo) return;
         setGenerando(true);
         setErrorMsg(null);
+        setMensajeEstado('');
 
         const servicio = getGeminiService();
         if (!servicio) {
@@ -171,11 +201,15 @@ const RutaInteligente: React.FC = () => {
         }
 
         try {
-            const resultado = await servicio.generarRuta({
-                duracion: LABEL.duracion[duracion],
-                compania: LABEL.compania[compania],
-                ritmo: LABEL.ritmo[ritmo],
-            });
+            // Mejora 9: onRetry callback para mostrar estado de reintento
+            const resultado = await servicio.generarRuta(
+                {
+                    duracion: LABEL.duracion[duracion],
+                    compania: LABEL.compania[compania],
+                    ritmo: LABEL.ritmo[ritmo],
+                },
+                (intento) => setMensajeEstado(`Reintentando... (${intento}/2)`)
+            );
             setParadas(resultado);
             setVistaResultado('lista');
             setPaso(4);
@@ -185,12 +219,13 @@ const RutaInteligente: React.FC = () => {
             const esSaturacion = msg.includes('502') || msg.includes('503') || msg.includes('saturad') || msg.includes('occupied') || msg.includes('overload');
             setErrorMsg(
                 esSaturacion
-                    ? '😅 La IA está recibiendo muchas peticiones ahora mismo. Espera unos segundos y pulsa de nuevo "Generar Ruta".'
+                    ? 'La IA está recibiendo muchas peticiones ahora mismo. Espera unos segundos y pulsa de nuevo "Generar Ruta".'
                     : 'No se pudo generar la ruta. Comprueba tu conexión e inténtalo de nuevo.'
             );
             toastError('Error al generar la ruta. Inténtalo de nuevo.');
         } finally {
             setGenerando(false);
+            setMensajeEstado('');
         }
     };
 
@@ -660,6 +695,12 @@ const RutaInteligente: React.FC = () => {
                                         <p className="text-[10px] font-bold text-slate-400 animate-pulse">
                                             {LABEL.duracion[duracion!]} · {LABEL.compania[compania!]} · {LABEL.ritmo[ritmo!]}
                                         </p>
+                                        {/* Mejora 9: mensaje de reintento en el overlay */}
+                                        {mensajeEstado && (
+                                            <p className="mt-2 text-[9px] font-black text-brand-blue uppercase tracking-widest animate-pulse">
+                                                <i className="bi bi-arrow-repeat mr-1" />{mensajeEstado}
+                                            </p>
+                                        )}
                                     </div>
                                 </div>
                             )}

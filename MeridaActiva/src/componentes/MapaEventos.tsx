@@ -1,36 +1,83 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import { Link } from 'react-router-dom';
 import 'leaflet/dist/leaflet.css';
 import { supabase } from '../supabaseClient';
+import { useSeoMeta } from '../hooks/useSeoMeta';
 import L from 'leaflet';
 
-
-// ── Fix Leaflet default icon ──────────────────────────────────────────────────
-delete (L.Icon.Default.prototype as any)._getIconUrl;
+// ── Fix Leaflet default icon ──────────────────────────────────────
+delete (L.Icon.Default.prototype as unknown as Record<string, unknown>)._getIconUrl;
 L.Icon.Default.mergeOptions({
   iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
   iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
   shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
 });
 
-// ── Iconos de categoría ───────────────────────────────────────────────────────
-const COLORS: Record<string, string> = {
+// ── Tipos ────────────────────────────────────────────────────────
+interface Evento {
+  id: string;
+  titulo: string;
+  descripcion: string;
+  fecha: string;
+  hora: string | null;
+  ubicacion: string;
+  imagen_url: string | null;
+  categoria: string;
+  precio: string | null;
+  latitud: number;
+  longitud: number;
+}
+
+interface Lugar {
+  id: string;
+  nombre_es: string;
+  descripcion_es: string;
+  ubicacion: string;
+  imagen_url: string | null;
+  categoria: string;
+  google_maps_url: string | null;
+  latitud: number | null;
+  longitud: number | null;
+}
+
+// ── Colores por categoría ─────────────────────────────────────────
+const COLORS_EVENTOS: Record<string, string> = {
   Cultural: '#032B43',
-  Música: '#3F88C5',
-  Teatro: '#D00000',
-  'Sobre la ciudad': '#FFBA08',
-  Gastronomía: '#16a34a',
-  default: '#6B7280',
+  Música:   '#3F88C5',
+  Teatro:   '#D00000',
+  default:  '#6B7280',
 };
 
-function crearIcono(categoria: string) {
-  const color = COLORS[categoria] ?? COLORS.default;
+const COLORS_LUGARES: Record<string, string> = {
+  'Gastronomía': '#16a34a',
+  'Actividades':  '#0891b2',
+  'Sobre la ciudad': '#032B43',
+  default:        '#6B7280',
+};
+
+function getColor(categoria: string, tipo: 'evento' | 'lugar'): string {
+  const map = tipo === 'evento' ? COLORS_EVENTOS : COLORS_LUGARES;
+  // Búsqueda exacta primero, luego case-insensitive
+  if (map[categoria]) return map[categoria];
+  const key = Object.keys(map).find(
+    k => k.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '') ===
+         categoria.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+  );
+  return key ? map[key] : map['default'];
+}
+
+function crearIcono(categoria: string, tipo: 'evento' | 'lugar') {
+  const color = getColor(categoria, tipo);
+  const inner = tipo === 'lugar'
+    ? `<rect x="11" y="9" width="14" height="14" rx="2" fill="white" opacity="0.9"/>`
+    : `<circle cx="18" cy="16" r="7" fill="white" opacity="0.9"/>`;
+
   const svg = `
     <svg xmlns="http://www.w3.org/2000/svg" width="36" height="44" viewBox="0 0 36 44">
       <ellipse cx="18" cy="41" rx="7" ry="3" fill="rgba(0,0,0,0.15)"/>
       <path d="M18 0C9.163 0 2 7.163 2 16c0 10.55 14.5 26 15.1 26.7a1.2 1.2 0 001.8 0C19.5 42 34 26.55 34 16 34 7.163 26.837 0 18 0z" fill="${color}"/>
-      <circle cx="18" cy="16" r="7" fill="white" opacity="0.9"/>
+      ${inner}
     </svg>
   `;
   return L.divIcon({
@@ -42,7 +89,7 @@ function crearIcono(categoria: string) {
   });
 }
 
-// ── Subcomponente para centrar mapa ──────────────────────────────────────────
+// ── Centrar mapa al seleccionar marcador ──────────────────────────
 function MapCenter({ lat, lng }: { lat: number; lng: number }) {
   const map = useMap();
   useEffect(() => {
@@ -51,53 +98,129 @@ function MapCenter({ lat, lng }: { lat: number; lng: number }) {
   return null;
 }
 
-// ── Tipos de capas del mapa ──────────────────────────────────────────────────
+// ── Capas del mapa ────────────────────────────────────────────────
 const CAPAS = [
-  { id: 'light', label: 'Luminoso', url: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png' },
-  { id: 'dark', label: 'Oscuro', url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png' },
-  { id: 'osm', label: 'Satélite', url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png' },
+  { id: 'light',  label: 'Claro',   url: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png' },
+  { id: 'dark',   label: 'Oscuro',  url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png' },
+  { id: 'osm',    label: 'Mapa',    url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png' },
 ];
 
-const CATEGORIAS = ['Todos', 'Cultural', 'Música', 'Teatro', 'Sobre la ciudad', 'Gastronomía'];
+// ── Categorías de eventos (alineadas con la BD) ───────────────────
+const CATS_EVENTOS = ['Todos', 'Cultural', 'Música', 'Teatro'];
+const CATS_LUGARES = ['Todos', 'Gastronomía', 'Actividades', 'Sobre la ciudad'];
+// ── Helper: formatear fecha ───────────────────────────────────────
+function formatFecha(fecha: string) {
+  return new Date(fecha + 'T00:00:00').toLocaleDateString('es-ES', {
+    weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
+  });
+}
 
-// ════════════════════════════════════════════════════════════════════════════
+// ── Skeleton fila lista ───────────────────────────────────────────
+function SkeletonFila() {
+  return (
+    <div className="px-6 py-4 border-b border-slate-50 flex gap-4 items-start animate-pulse">
+      <div className="w-14 h-14 rounded-2xl bg-slate-200 flex-shrink-0" />
+      <div className="flex-1 space-y-2 pt-1">
+        <div className="h-3 bg-slate-200 rounded-full w-16" />
+        <div className="h-4 bg-slate-200 rounded-full w-full" />
+        <div className="h-3 bg-slate-200 rounded-full w-2/3" />
+      </div>
+    </div>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════
 const MapaEventos: React.FC = () => {
-  const [eventos, setEventos] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  useSeoMeta({
+    title: 'Mapa de Eventos y Lugares — MeridaActiva',
+    description: 'Explora en el mapa interactivo todos los eventos, monumentos y lugares de interés de Mérida. Teatro Romano, Anfiteatro, festivales y mucho más.',
+  });
+
+  const [tab, setTab] = useState<'eventos' | 'lugares'>('eventos');
+  const [eventos, setEventos] = useState<Evento[]>([]);
+  const [lugares, setLugares] = useState<Lugar[]>([]);
+  const [loadingEventos, setLoadingEventos] = useState(true);
+  const [loadingLugares, setLoadingLugares] = useState(true);
+
   const [categoriaActiva, setCategoriaActiva] = useState('Todos');
   const [busqueda, setBusqueda] = useState('');
-  const [capaActiva, setCapaActiva] = useState('light');
-  const [eventoSeleccionado, setEventoSeleccionado] = useState<any | null>(null);
+const [capaActiva, setCapaActiva] = useState('light');
+
+  const [seleccionado, setSeleccionado] = useState<Evento | Lugar | null>(null);
   const [panelAbierto, setPanelAbierto] = useState(false);
   const [centroMapa, setCentroMapa] = useState<{ lat: number; lng: number } | null>(null);
 
+  // ── Carga de datos ─────────────────────────────────────────────
   useEffect(() => {
     const fetchEventos = async () => {
-      setLoading(true);
-      const { data } = await supabase.from('eventos').select('*');
-      if (data) setEventos(data.filter((ev) => ev.latitud && ev.longitud));
-      setLoading(false);
+      setLoadingEventos(true);
+      const { data } = await supabase
+        .from('eventos')
+        .select('id, titulo, descripcion, fecha, hora, ubicacion, imagen_url, categoria, precio, latitud, longitud')
+        .gte('fecha', new Date().toISOString().split('T')[0])
+        .order('fecha', { ascending: true });
+      if (data) setEventos((data as Evento[]).filter(ev => ev.latitud && ev.longitud));
+      setLoadingEventos(false);
     };
+
+    const fetchLugares = async () => {
+      setLoadingLugares(true);
+      const { data } = await supabase
+        .from('lugares')
+        .select('id, nombre_es, descripcion_es, ubicacion, imagen_url, categoria, google_maps_url, latitud, longitud');
+      if (data) setLugares((data as Lugar[]).filter(l => l.latitud && l.longitud));
+      setLoadingLugares(false);
+    };
+
     fetchEventos();
+    fetchLugares();
   }, []);
 
-  // Filtrado
-  const eventosFiltrados = eventos.filter((ev) => {
+  const loading = tab === 'eventos' ? loadingEventos : loadingLugares;
+
+  // ── Filtrado ───────────────────────────────────────────────────
+  const eventosFiltrados = eventos.filter(ev => {
     const matchCat = categoriaActiva === 'Todos' || ev.categoria === categoriaActiva;
     const matchBusq = !busqueda.trim() || ev.titulo?.toLowerCase().includes(busqueda.toLowerCase());
     return matchCat && matchBusq;
   });
 
-  const capaUrl = CAPAS.find((c) => c.id === capaActiva)?.url ?? CAPAS[0].url;
+  const lugaresFiltrados = lugares.filter(l => {
+    const matchCat = categoriaActiva === 'Todos' || l.categoria === categoriaActiva;
+    const matchBusq = !busqueda.trim() || l.nombre_es?.toLowerCase().includes(busqueda.toLowerCase());
+    return matchCat && matchBusq;
+  });
 
-  const handleEventoClick = (ev: any) => {
-    setEventoSeleccionado(ev);
+  const itemsFiltrados = tab === 'eventos' ? eventosFiltrados : lugaresFiltrados;
+  const totalFiltrados = itemsFiltrados.length;
+
+  const capaUrl = CAPAS.find(c => c.id === capaActiva)?.url ?? CAPAS[0].url;
+  const categorias = tab === 'eventos' ? CATS_EVENTOS : CATS_LUGARES;
+
+  const handleClick = useCallback((item: Evento | Lugar) => {
+    const lat = 'latitud' in item ? item.latitud : null;
+    const lng = 'longitud' in item ? item.longitud : null;
+    setSeleccionado(item);
     setPanelAbierto(true);
-    setCentroMapa({ lat: ev.latitud, lng: ev.longitud });
+    if (lat && lng) setCentroMapa({ lat, lng });
+  }, []);
+
+  const cerrarPanel = () => { setPanelAbierto(false); setSeleccionado(null); };
+
+  const isEvento = (item: Evento | Lugar | null): item is Evento => !!item && 'titulo' in item;
+  const isLugar  = (item: Evento | Lugar | null): item is Lugar  => !!item && 'nombre_es' in item;
+
+  // ── Cambiar tab resetea filtros ────────────────────────────────
+  const cambiarTab = (t: 'eventos' | 'lugares') => {
+    setTab(t);
+    setCategoriaActiva('Todos');
+    setBusqueda('');
+    cerrarPanel();
   };
 
   return (
     <div className="min-h-screen bg-brand-bg flex flex-col">
+
       {/* ── CABECERA ── */}
       <div className="pt-28 pb-6 px-4">
         <div className="max-w-7xl mx-auto">
@@ -109,106 +232,148 @@ const MapaEventos: React.FC = () => {
               Mérida en el <span className="text-brand-blue">Mapa</span>
             </h1>
             <p className="text-slate-400 font-bold uppercase text-[10px] tracking-[0.3em] mt-3">
-              {loading ? 'Cargando eventos…' : `${eventosFiltrados.length} evento${eventosFiltrados.length !== 1 ? 's' : ''} en el mapa`}
+              {loading
+                ? 'Cargando…'
+                : `${totalFiltrados} ${tab === 'eventos' ? 'evento' : 'lugar'}${totalFiltrados !== 1 ? 's' : ''} en el mapa`}
             </p>
+          </div>
+
+          {/* ── Tabs Eventos / Lugares ── */}
+          <div className="flex justify-center gap-3 mb-6">
+            {(['eventos', 'lugares'] as const).map(t => (
+              <button
+                key={t}
+                onClick={() => cambiarTab(t)}
+                className={`px-8 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 ${
+                  tab === t ? 'bg-brand-dark text-brand-gold shadow-lg' : 'bg-white text-slate-500 border border-slate-100 hover:bg-slate-50'
+                }`}
+              >
+                <i className={`bi ${t === 'eventos' ? 'bi-calendar-event-fill' : 'bi-geo-alt-fill'}`} />
+                {t === 'eventos' ? 'Eventos' : 'Lugares'}
+              </button>
+            ))}
           </div>
 
           {/* ── Buscador y filtros ── */}
           <div className="bg-white rounded-[2rem] shadow-sm border border-slate-100 p-4 mb-6 flex flex-col md:flex-row gap-4 items-center">
             {/* Buscador */}
-            <div className="relative w-full md:w-64">
+            <div className="relative w-full md:w-64 flex-shrink-0">
               <i className="bi bi-search absolute left-5 top-1/2 -translate-y-1/2 text-slate-400" />
               <input
                 type="text"
-                placeholder="Buscar evento…"
+                placeholder={tab === 'eventos' ? 'Buscar evento…' : 'Buscar lugar…'}
                 value={busqueda}
-                onChange={(e) => setBusqueda(e.target.value)}
-                className="w-full pl-12 pr-4 py-3.5 rounded-2xl bg-slate-50 border-none outline-none focus:ring-2 focus:ring-brand-blue/20 text-sm font-medium text-brand-dark"
+                onChange={e => setBusqueda(e.target.value)}
+                className="w-full pl-12 pr-10 py-3.5 rounded-2xl bg-slate-50 border-none outline-none focus:ring-2 focus:ring-brand-blue/20 text-sm font-medium text-brand-dark"
               />
+              {busqueda && (
+                <button
+                  onClick={() => setBusqueda('')}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-brand-dark transition-colors"
+                >
+                  <i className="bi bi-x-circle-fill text-sm" />
+                </button>
+              )}
             </div>
 
             {/* Filtros categoría */}
             <div className="flex gap-2 flex-wrap justify-center flex-1">
-              {CATEGORIAS.map((cat) => (
+              {categorias.map(cat => (
                 <button
                   key={cat}
                   onClick={() => setCategoriaActiva(cat)}
-                  className={`px-5 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all ${categoriaActiva === cat
-                    ? 'bg-brand-dark text-brand-gold shadow-lg'
-                    : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
-                    }`}
+                  className={`px-4 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all capitalize ${
+                    categoriaActiva === cat
+                      ? 'bg-brand-dark text-brand-gold shadow-lg'
+                      : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+                  }`}
                 >
                   {cat}
                 </button>
               ))}
             </div>
 
-            {/* Capas del mapa */}
-            <div className="flex gap-2 flex-shrink-0">
-              {CAPAS.map((capa) => (
-                <button
-                  key={capa.id}
-                  onClick={() => setCapaActiva(capa.id)}
-                  title={capa.label}
-                  className={`px-4 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${capaActiva === capa.id
-                    ? 'bg-brand-blue text-white shadow-lg shadow-brand-blue/20'
-                    : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
-                    }`}
-                >
-                  {capa.label}
-                </button>
-              ))}
-            </div>
+          {/* Capas del mapa — selector compacto */}
+<div className="relative flex-shrink-0">
+  <i className="bi bi-layers-fill absolute left-4 top-1/2 -translate-y-1/2 text-brand-blue pointer-events-none text-sm" />
+  <select
+    value={capaActiva}
+    onChange={e => setCapaActiva(e.target.value)}
+    className="pl-10 pr-8 py-3.5 rounded-2xl bg-slate-100 border-none outline-none focus:ring-2 focus:ring-brand-blue/20 text-[10px] font-black uppercase tracking-widest text-slate-600 appearance-none cursor-pointer hover:bg-slate-200 transition-colors"
+  >
+    {CAPAS.map(capa => (
+      <option key={capa.id} value={capa.id}>{capa.label}</option>
+    ))}
+  </select>
+  <i className="bi bi-chevron-down absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none text-xs" />
+</div>
           </div>
         </div>
       </div>
 
-      {/* ── CONTENIDO PRINCIPAL: Mapa + Panel ── */}
-      <div className="flex-1 px-4 pb-0">
+      {/* ── CONTENIDO PRINCIPAL ── */}
+      <div className="flex-1 px-4 pb-6">
         <div className="max-w-7xl mx-auto flex flex-col lg:flex-row gap-6 h-[620px]">
 
-          {/* ── Panel lateral de eventos ── */}
+          {/* ── Panel lateral lista ── */}
           <div className="lg:w-80 flex-shrink-0 bg-white rounded-[2.5rem] shadow-xl border border-slate-100 overflow-hidden flex flex-col">
-            <div className="p-6 border-b border-slate-100">
-              <h3 className="font-black text-brand-dark uppercase tracking-widest text-[10px]">
-                Lista de Eventos
-              </h3>
-              <p className="text-slate-400 text-xs font-medium mt-1">
-                {eventosFiltrados.length} resultado{eventosFiltrados.length !== 1 ? 's' : ''}
-              </p>
+            <div className="p-6 border-b border-slate-100 flex items-center justify-between">
+              <div>
+                <h3 className="font-black text-brand-dark uppercase tracking-widest text-[10px]">
+                  {tab === 'eventos' ? 'Eventos' : 'Lugares'}
+                </h3>
+                <p className="text-slate-400 text-xs font-medium mt-0.5">
+                  {totalFiltrados} resultado{totalFiltrados !== 1 ? 's' : ''}
+                </p>
+              </div>
+              {busqueda && (
+                <button
+                  onClick={() => setBusqueda('')}
+                  className="text-[9px] font-black uppercase tracking-widest text-brand-blue hover:text-brand-dark transition-colors"
+                >
+                  Limpiar
+                </button>
+              )}
             </div>
+
             <div className="overflow-y-auto flex-1">
               {loading ? (
-                <div className="flex items-center justify-center h-40">
-                  <svg className="animate-spin w-8 h-8 text-brand-blue" viewBox="0 0 24 24" fill="none">
-                    <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" strokeOpacity="0.25" />
-                    <path d="M4 12a8 8 0 018-8" stroke="currentColor" strokeWidth="4" strokeLinecap="round" />
-                  </svg>
-                </div>
-              ) : eventosFiltrados.length === 0 ? (
+                Array.from({ length: 5 }).map((_, i) => <SkeletonFila key={i} />)
+              ) : totalFiltrados === 0 ? (
                 <div className="p-8 text-center">
                   <div className="text-4xl mb-3">🗺️</div>
                   <p className="text-slate-400 text-xs font-bold uppercase tracking-widest">Sin resultados</p>
+                  <button
+                    onClick={() => { setBusqueda(''); setCategoriaActiva('Todos'); }}
+                    className="mt-4 text-[9px] font-black uppercase tracking-widest text-brand-blue hover:text-brand-dark transition-colors"
+                  >
+                    Ver todos
+                  </button>
                 </div>
-              ) : (
-                eventosFiltrados.map((ev) => (
+              ) : tab === 'eventos' ? (
+                eventosFiltrados.map(ev => (
                   <button
                     key={ev.id}
-                    onClick={() => handleEventoClick(ev)}
-                    className={`w-full text-left px-6 py-4 border-b border-slate-50 hover:bg-slate-50 transition-colors flex gap-4 items-start ${eventoSeleccionado?.id === ev.id ? 'bg-brand-blue/5 border-l-4 border-l-brand-blue' : ''
-                      }`}
+                    onClick={() => handleClick(ev)}
+                    className={`w-full text-left px-6 py-4 border-b border-slate-50 hover:bg-slate-50 transition-colors flex gap-4 items-start ${
+                      isEvento(seleccionado) && seleccionado.id === ev.id
+                        ? 'bg-brand-blue/5 border-l-4 border-l-brand-blue'
+                        : ''
+                    }`}
                   >
-                    {ev.imagen_url && (
-                      <img
-                        src={ev.imagen_url}
-                        alt={ev.titulo}
-                        className="w-14 h-14 rounded-2xl object-cover flex-shrink-0"
-                      />
-                    )}
-                    <div className="min-w-0">
+                    <div className="w-14 h-14 rounded-2xl overflow-hidden flex-shrink-0 bg-slate-100">
+                      {ev.imagen_url ? (
+                        <img src={ev.imagen_url} alt={ev.titulo} className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-slate-300">
+                          <i className="bi bi-calendar-event text-xl" />
+                        </div>
+                      )}
+                    </div>
+                    <div className="min-w-0 flex-1">
                       <span
                         className="text-[8px] font-black uppercase tracking-widest px-2 py-1 rounded-lg inline-block mb-1"
-                        style={{ backgroundColor: `${COLORS[ev.categoria] ?? COLORS.default}20`, color: COLORS[ev.categoria] ?? COLORS.default }}
+                        style={{ backgroundColor: `${getColor(ev.categoria, 'evento')}20`, color: getColor(ev.categoria, 'evento') }}
                       >
                         {ev.categoria}
                       </span>
@@ -216,8 +381,46 @@ const MapaEventos: React.FC = () => {
                         {ev.titulo}
                       </h4>
                       <p className="text-[9px] text-slate-400 font-bold mt-1 flex items-center gap-1">
+                        <i className="bi bi-calendar3" />
+                        {new Date(ev.fecha + 'T00:00:00').toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })}
+                        {ev.hora && ` · ${ev.hora}`}
+                      </p>
+                    </div>
+                  </button>
+                ))
+              ) : (
+                lugaresFiltrados.map(l => (
+                  <button
+                    key={l.id}
+                    onClick={() => handleClick(l)}
+                    className={`w-full text-left px-6 py-4 border-b border-slate-50 hover:bg-slate-50 transition-colors flex gap-4 items-start ${
+                      isLugar(seleccionado) && seleccionado.id === l.id
+                        ? 'bg-brand-gold/5 border-l-4 border-l-brand-gold'
+                        : ''
+                    }`}
+                  >
+                    <div className="w-14 h-14 rounded-2xl overflow-hidden flex-shrink-0 bg-slate-100">
+                      {l.imagen_url ? (
+                        <img src={l.imagen_url} alt={l.nombre_es} className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-slate-300">
+                          <i className="bi bi-geo-alt text-xl" />
+                        </div>
+                      )}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <span
+                        className="text-[8px] font-black uppercase tracking-widest px-2 py-1 rounded-lg inline-block mb-1"
+                        style={{ backgroundColor: `${getColor(l.categoria, 'lugar')}20`, color: getColor(l.categoria, 'lugar') }}
+                      >
+                        {l.categoria}
+                      </span>
+                      <h4 className="text-xs font-black text-brand-dark uppercase italic tracking-tight leading-tight line-clamp-2">
+                        {l.nombre_es}
+                      </h4>
+                      <p className="text-[9px] text-slate-400 font-bold mt-1 flex items-center gap-1 truncate">
                         <i className="bi bi-geo-alt-fill" />
-                        {ev.ubicacion}
+                        {l.ubicacion}
                       </p>
                     </div>
                   </button>
@@ -235,18 +438,18 @@ const MapaEventos: React.FC = () => {
               zoomControl={false}
             >
               <TileLayer url={capaUrl} />
-
               {centroMapa && <MapCenter lat={centroMapa.lat} lng={centroMapa.lng} />}
 
-              {eventosFiltrados.map((ev) => (
+              {/* Marcadores eventos */}
+              {tab === 'eventos' && eventosFiltrados.map(ev => (
                 <Marker
                   key={ev.id}
                   position={[ev.latitud, ev.longitud]}
-                  icon={crearIcono(ev.categoria)}
-                  eventHandlers={{ click: () => handleEventoClick(ev) }}
+                  icon={crearIcono(ev.categoria, 'evento')}
+                  eventHandlers={{ click: () => handleClick(ev) }}
                 >
                   <Popup>
-                    <div className="p-3 text-center min-w-[180px]">
+                    <div className="p-3 text-center min-w-[190px]">
                       {ev.imagen_url && (
                         <img src={ev.imagen_url} alt={ev.titulo} className="w-full h-24 object-cover rounded-xl mb-3" />
                       )}
@@ -257,8 +460,14 @@ const MapaEventos: React.FC = () => {
                         <i className="bi bi-geo-alt-fill" /> {ev.ubicacion}
                       </p>
                       {ev.fecha && (
-                        <p className="text-[9px] font-bold text-slate-400 mb-3">
-                          📅 {new Date(ev.fecha).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' })}
+                        <p className="text-[9px] font-bold text-slate-400 mb-1">
+                          📅 {new Date(ev.fecha + 'T00:00:00').toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })}
+                          {ev.hora && ` · ${ev.hora}`}
+                        </p>
+                      )}
+                      {ev.precio && (
+                        <p className="text-[9px] font-bold text-emerald-600 mb-3">
+                          🎟️ {ev.precio}
                         </p>
                       )}
                       <Link
@@ -271,131 +480,192 @@ const MapaEventos: React.FC = () => {
                   </Popup>
                 </Marker>
               ))}
+
+              {/* Marcadores lugares */}
+              {tab === 'lugares' && lugaresFiltrados.map(l => l.latitud && l.longitud ? (
+                <Marker
+                  key={l.id}
+                  position={[l.latitud, l.longitud]}
+                  icon={crearIcono(l.categoria, 'lugar')}
+                  eventHandlers={{ click: () => handleClick(l) }}
+                >
+                  <Popup>
+                    <div className="p-3 text-center min-w-[190px]">
+                      {l.imagen_url && (
+                        <img src={l.imagen_url} alt={l.nombre_es} className="w-full h-24 object-cover rounded-xl mb-3" />
+                      )}
+                      <h3 className="text-sm font-[900] text-brand-dark uppercase italic mb-1 leading-tight">
+                        {l.nombre_es}
+                      </h3>
+                      <p className="text-[9px] font-black text-brand-blue uppercase tracking-widest mb-3">
+                        <i className="bi bi-geo-alt-fill" /> {l.ubicacion}
+                      </p>
+                      <Link
+                        to={`/lugares/${l.id}`}
+                        className="block bg-brand-dark text-white text-[9px] font-black py-2 rounded-xl hover:bg-brand-gold hover:text-brand-dark transition-all no-underline tracking-widest uppercase"
+                      >
+                        Ver detalles →
+                      </Link>
+                    </div>
+                  </Popup>
+                </Marker>
+              ) : null)}
             </MapContainer>
 
             {/* Badge flotante */}
             <div className="absolute bottom-6 left-6 z-[1000] bg-brand-dark text-white px-6 py-4 rounded-[1.5rem] shadow-2xl border border-white/10">
               <p className="text-[8px] font-black text-brand-gold uppercase tracking-[0.2em] mb-0.5">Radar Activo</p>
               <p className="text-lg font-[900] italic uppercase tracking-tighter">
-                {eventosFiltrados.length} <span className="text-brand-blue">Eventos</span>
+                {totalFiltrados} <span className="text-brand-blue">{tab === 'eventos' ? 'Eventos' : 'Lugares'}</span>
               </p>
             </div>
 
-            {/* Leyenda de colores */}
+            {/* Leyenda */}
             <div className="absolute top-4 right-4 z-[1000] bg-white/95 backdrop-blur-md rounded-[1.5rem] p-4 shadow-xl border border-slate-100">
               <p className="text-[8px] font-black uppercase tracking-widest text-slate-400 mb-3">Categorías</p>
-              <div className="space-y-2">
-                {Object.entries(COLORS).filter(([k]) => k !== 'default').map(([cat, color]) => (
-                  <div key={cat} className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: color }} />
-                    <span className="text-[9px] font-black text-brand-dark uppercase tracking-widest">{cat}</span>
-                  </div>
-                ))}
+              <div className="space-y-1.5">
+                {Object.entries(tab === 'eventos' ? COLORS_EVENTOS : COLORS_LUGARES)
+                  .filter(([k]) => k !== 'default')
+                  .map(([cat, color]) => (
+                    <div key={cat} className="flex items-center gap-2">
+                      <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: color }} />
+                      <span className="text-[9px] font-black text-brand-dark uppercase tracking-widest capitalize">{cat}</span>
+                    </div>
+                  ))}
               </div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* ── Panel Detalle Evento (slide-in) ── */}
-      {panelAbierto && eventoSeleccionado && (
+      {/* ── Panel Detalle slide-in ── */}
+      {panelAbierto && seleccionado && (
         <div className="fixed inset-0 z-[2000] flex items-end md:items-center justify-center md:justify-end pointer-events-none">
           <div className="pointer-events-auto w-full md:w-[420px] md:h-full md:max-h-screen md:overflow-y-auto bg-white md:rounded-none rounded-t-[2.5rem] shadow-2xl border-t md:border-l border-slate-100 p-8 animate-in slide-in-from-bottom duration-300 md:slide-in-from-right">
+
             {/* Cerrar */}
             <button
-              onClick={() => { setPanelAbierto(false); setEventoSeleccionado(null); }}
-              className="absolute top-6 right-6 w-10 h-10 rounded-2xl bg-slate-100 flex items-center justify-center hover:bg-brand-red hover:text-white transition-all"
+              onClick={cerrarPanel}
+              className="absolute top-6 right-6 w-10 h-10 rounded-2xl bg-slate-100 flex items-center justify-center hover:bg-red-100 hover:text-red-600 transition-all"
             >
               <i className="bi bi-x-lg text-sm font-black" />
             </button>
 
-            {eventoSeleccionado.imagen_url && (
+            {/* Imagen */}
+            {(isEvento(seleccionado) ? seleccionado.imagen_url : seleccionado.imagen_url) && (
               <img
-                src={eventoSeleccionado.imagen_url}
-                alt={eventoSeleccionado.titulo}
+                src={(seleccionado as Evento | Lugar).imagen_url!}
+                alt={isEvento(seleccionado) ? seleccionado.titulo : seleccionado.nombre_es}
                 className="w-full h-52 object-cover rounded-[1.5rem] mb-6"
               />
             )}
 
+            {/* Badge categoría */}
             <span
               className="text-[9px] font-black uppercase tracking-widest px-3 py-1.5 rounded-xl inline-block mb-4"
               style={{
-                backgroundColor: `${COLORS[eventoSeleccionado.categoria] ?? COLORS.default}20`,
-                color: COLORS[eventoSeleccionado.categoria] ?? COLORS.default,
+                backgroundColor: `${getColor(seleccionado.categoria, tab === 'eventos' ? 'evento' : 'lugar')}20`,
+                color: getColor(seleccionado.categoria, tab === 'eventos' ? 'evento' : 'lugar'),
               }}
             >
-              {eventoSeleccionado.categoria}
+              {seleccionado.categoria}
             </span>
 
+            {/* Título */}
             <h2 className="text-2xl font-black text-brand-dark uppercase italic tracking-tighter mb-4 leading-tight">
-              {eventoSeleccionado.titulo}
+              {isEvento(seleccionado) ? seleccionado.titulo : seleccionado.nombre_es}
             </h2>
 
+            {/* Datos */}
             <div className="space-y-3 mb-6">
+              {/* Ubicación */}
               <div className="flex items-start gap-3">
                 <div className="w-9 h-9 bg-brand-blue/10 rounded-xl flex items-center justify-center flex-shrink-0">
                   <i className="bi bi-geo-alt-fill text-brand-blue text-sm" />
                 </div>
                 <div>
                   <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Ubicación</p>
-                  <p className="text-sm font-bold text-brand-dark">{eventoSeleccionado.ubicacion}</p>
+                  <p className="text-sm font-bold text-brand-dark">
+                    {isEvento(seleccionado) ? seleccionado.ubicacion : seleccionado.ubicacion}
+                  </p>
                 </div>
               </div>
-              {eventoSeleccionado.fecha && (
+
+              {/* Fecha + hora (solo eventos) */}
+              {isEvento(seleccionado) && seleccionado.fecha && (
                 <div className="flex items-start gap-3">
                   <div className="w-9 h-9 bg-brand-gold/10 rounded-xl flex items-center justify-center flex-shrink-0">
                     <i className="bi bi-calendar-event-fill text-brand-gold text-sm" />
                   </div>
                   <div>
                     <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Fecha</p>
-                    <p className="text-sm font-bold text-brand-dark">
-                      {new Date(eventoSeleccionado.fecha).toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+                    <p className="text-sm font-bold text-brand-dark capitalize">
+                      {formatFecha(seleccionado.fecha)}
+                      {seleccionado.hora && (
+                        <span className="text-brand-blue"> · {seleccionado.hora}</span>
+                      )}
                     </p>
                   </div>
                 </div>
               )}
-              {eventoSeleccionado.precio !== null && eventoSeleccionado.precio !== undefined && (
+
+              {/* Precio (solo eventos) */}
+              {isEvento(seleccionado) && seleccionado.precio && (
                 <div className="flex items-start gap-3">
                   <div className="w-9 h-9 bg-emerald-100 rounded-xl flex items-center justify-center flex-shrink-0">
                     <i className="bi bi-tag-fill text-emerald-500 text-sm" />
                   </div>
                   <div>
                     <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Precio</p>
-                    <p className="text-sm font-bold text-brand-dark">
-                      {eventoSeleccionado.precio === 0 ? 'Entrada gratuita' : `${eventoSeleccionado.precio} €`}
-                    </p>
+                    <p className="text-sm font-bold text-brand-dark">{seleccionado.precio}</p>
                   </div>
                 </div>
               )}
+
+              {/* Google Maps (solo lugares) */}
+              {isLugar(seleccionado) && seleccionado.google_maps_url && (
+                <a
+                  href={seleccionado.google_maps_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-start gap-3 group"
+                >
+                  <div className="w-9 h-9 bg-red-50 rounded-xl flex items-center justify-center flex-shrink-0 group-hover:bg-red-100 transition-colors">
+                    <i className="bi bi-map-fill text-red-500 text-sm" />
+                  </div>
+                  <div>
+                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Google Maps</p>
+                    <p className="text-sm font-bold text-brand-blue group-hover:text-brand-dark transition-colors">
+                      Abrir en Maps →
+                    </p>
+                  </div>
+                </a>
+              )}
             </div>
 
-            {eventoSeleccionado.descripcion && (
-              <p className="text-slate-500 text-sm leading-relaxed font-medium mb-8 line-clamp-4">
-                {eventoSeleccionado.descripcion}
-              </p>
-            )}
+            {/* Descripción */}
+            <p className="text-slate-500 text-sm leading-relaxed font-medium mb-8 line-clamp-4">
+              {isEvento(seleccionado) ? seleccionado.descripcion : seleccionado.descripcion_es}
+            </p>
 
+            {/* CTA */}
             <Link
-              to={`/eventos/${eventoSeleccionado.id}`}
+              to={`/${tab === 'eventos' ? 'eventos' : 'lugares'}/${seleccionado.id}`}
               className="block w-full bg-brand-dark text-brand-gold py-4 rounded-2xl font-black uppercase tracking-widest text-xs text-center hover:bg-brand-blue hover:text-white transition-all shadow-lg"
             >
-              Ver página del evento →
+              Ver página completa →
             </Link>
           </div>
         </div>
       )}
 
-      {/* Backdrop panel */}
+      {/* Backdrop panel mobile */}
       {panelAbierto && (
         <div
           className="fixed inset-0 z-[1999] bg-black/30 backdrop-blur-sm md:hidden"
-          onClick={() => { setPanelAbierto(false); setEventoSeleccionado(null); }}
+          onClick={cerrarPanel}
         />
       )}
-
-      <div className="mt-16">
-
-      </div>
 
       <style>{`
         .leaflet-popup-content-wrapper {

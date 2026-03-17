@@ -1,9 +1,16 @@
 // src/componentes/SelectCustom.tsx
 // ─────────────────────────────────────────────────────────────────
-// Dropdown personalizado que sustituye al <select> nativo del SO.
-// Totalmente estilizado con el design system de la app.
+// CAMBIOS (Mejora 5 — Navegación por teclado):
+//   - Estado `focusedIdx` para rastrear la opción enfocada
+//   - ArrowDown/ArrowUp mueven entre opciones con wrap circular
+//   - Enter selecciona la opción enfocada
+//   - Tab cierra el dropdown sin seleccionar
+//   - aria-activedescendant actualizado dinámicamente
+//   - ID único por opción: `option-{value}`
+//   - Las opciones enfocadas muestran ring visual distinto al seleccionado
+//   - tabIndex={-1} en cada opción para no interferir con el Tab del SO
 // ─────────────────────────────────────────────────────────────────
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 
 export interface SelectOption {
   value: string;
@@ -17,7 +24,11 @@ interface SelectCustomProps {
   className?: string;
   /** Icono Bootstrap opcional delante del label (ej: 'bi-sort-down') */
   icon?: string;
+  /** ID base para accesibilidad (por defecto se genera uno) */
+  id?: string;
 }
+
+let _idCounter = 0;
 
 const SelectCustom: React.FC<SelectCustomProps> = ({
   value,
@@ -25,38 +36,95 @@ const SelectCustom: React.FC<SelectCustomProps> = ({
   options,
   className = '',
   icon = 'bi-funnel',
+  id,
 }) => {
   const [open, setOpen] = useState(false);
+  const [focusedIdx, setFocusedIdx] = useState(-1);
   const ref = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  // Stable unique ID for aria associations
+  const uid = useRef(id ?? `select-${++_idCounter}`).current;
+  const listboxId = `${uid}-listbox`;
 
   const selected = options.find(o => o.value === value);
+
+  const closeDropdown = useCallback(() => {
+    setOpen(false);
+    setFocusedIdx(-1);
+  }, []);
 
   // Cierra el dropdown al hacer clic fuera
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (ref.current && !ref.current.contains(e.target as Node)) {
-        setOpen(false);
+        closeDropdown();
       }
     };
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
-  }, []);
+  }, [closeDropdown]);
 
-  // Cierra al presionar Escape
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setOpen(false);
-    };
-    document.addEventListener('keydown', handler);
-    return () => document.removeEventListener('keydown', handler);
-  }, []);
+  // Gestión de teclado en el trigger
+  const handleTriggerKeyDown = (e: React.KeyboardEvent<HTMLButtonElement>) => {
+    switch (e.key) {
+      case 'ArrowDown':
+        e.preventDefault();
+        if (!open) {
+          setOpen(true);
+          setFocusedIdx(0);
+        } else {
+          setFocusedIdx(i => (i + 1) % options.length);
+        }
+        break;
+      case 'ArrowUp':
+        e.preventDefault();
+        if (!open) {
+          setOpen(true);
+          setFocusedIdx(options.length - 1);
+        } else {
+          setFocusedIdx(i => (i - 1 + options.length) % options.length);
+        }
+        break;
+      case 'Enter':
+      case ' ':
+        e.preventDefault();
+        if (open && focusedIdx >= 0) {
+          onChange(options[focusedIdx].value);
+          closeDropdown();
+        } else {
+          setOpen(o => !o);
+          if (!open) setFocusedIdx(0);
+        }
+        break;
+      case 'Escape':
+        closeDropdown();
+        break;
+      case 'Tab':
+        // Tab cierra el dropdown (comportamiento esperado)
+        closeDropdown();
+        break;
+      default:
+        break;
+    }
+  };
+
+  const activedescendant =
+    open && focusedIdx >= 0 ? `${uid}-option-${options[focusedIdx].value}` : undefined;
 
   return (
     <div ref={ref} className={`relative ${className}`}>
       {/* Trigger */}
       <button
+        ref={buttonRef}
+        id={uid}
         type="button"
-        onClick={() => setOpen(o => !o)}
+        onClick={() => {
+          const next = !open;
+          setOpen(next);
+          if (next) setFocusedIdx(0);
+          else setFocusedIdx(-1);
+        }}
+        onKeyDown={handleTriggerKeyDown}
         className={`
           flex items-center gap-2 px-5 py-2.5 rounded-2xl
           bg-brand-bg border-2 transition-all duration-200
@@ -70,6 +138,8 @@ const SelectCustom: React.FC<SelectCustomProps> = ({
         `}
         aria-haspopup="listbox"
         aria-expanded={open}
+        aria-controls={listboxId}
+        aria-activedescendant={activedescendant}
       >
         {icon && <i className={`bi ${icon} text-brand-gold`} />}
         <span className="text-brand-dark">{selected?.label ?? 'Seleccionar'}</span>
@@ -81,6 +151,7 @@ const SelectCustom: React.FC<SelectCustomProps> = ({
       {/* Dropdown panel */}
       {open && (
         <div
+          id={listboxId}
           className="
             absolute right-0 top-[calc(100%+8px)] z-50
             min-w-[200px] w-max
@@ -90,6 +161,8 @@ const SelectCustom: React.FC<SelectCustomProps> = ({
             animate-fade-in-up
           "
           role="listbox"
+          aria-labelledby={uid}
+          tabIndex={-1}
         >
           {/* Cabecera del panel */}
           <div className="px-5 py-3 border-b border-slate-50">
@@ -100,22 +173,28 @@ const SelectCustom: React.FC<SelectCustomProps> = ({
 
           {/* Opciones */}
           <div className="p-2">
-            {options.map(opt => {
+            {options.map((opt, idx) => {
               const isSelected = opt.value === value;
+              const isFocused  = idx === focusedIdx;
               return (
                 <button
                   key={opt.value}
+                  id={`${uid}-option-${opt.value}`}
                   type="button"
                   role="option"
                   aria-selected={isSelected}
-                  onClick={() => { onChange(opt.value); setOpen(false); }}
+                  tabIndex={-1}
+                  onClick={() => { onChange(opt.value); closeDropdown(); buttonRef.current?.focus(); }}
+                  onMouseEnter={() => setFocusedIdx(idx)}
                   className={`
                     w-full flex items-center gap-3 px-4 py-3 rounded-xl
                     font-black text-[10px] uppercase tracking-widest text-left
                     transition-all duration-150
                     ${isSelected
                       ? 'bg-brand-dark text-brand-gold'
-                      : 'text-slate-600 hover:bg-brand-bg hover:text-brand-dark'
+                      : isFocused
+                        ? 'bg-brand-bg text-brand-dark ring-2 ring-brand-blue/30'
+                        : 'text-slate-600 hover:bg-brand-bg hover:text-brand-dark'
                     }
                   `}
                 >

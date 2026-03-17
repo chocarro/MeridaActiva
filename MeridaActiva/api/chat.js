@@ -5,7 +5,7 @@ import { Ratelimit } from '@upstash/ratelimit';
 import { Redis } from '@upstash/redis';
 
 const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
-const MODEL = 'google/gemini-2.5-flash';
+const MODEL = 'google/gemma-2-9b-it:free';
 
 // ── BUG FIX: Inicialización LAZY del rate limiter ─────────────────────────
 // ANTES: Redis.fromEnv() se ejecutaba al IMPORTAR el módulo. Si las variables

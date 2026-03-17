@@ -1,5 +1,10 @@
 // api-server.js
 // ─────────────────────────────────────────────────────────────────
+// CAMBIOS (Mejora 10 — Reemplazar parser .env casero):
+//   - Eliminada la función loadEnv() artesanal y su llamada
+//   - Sustituida por `import 'dotenv/config'` (paquete dotenv estándar)
+//   - Añadir "dotenv" a dependencies con: npm install dotenv
+// ─────────────────────────────────────────────────────────────────
 // Servidor Express para desarrollo local.
 // Sirve las funciones de /api/ sin necesitar Vercel CLI.
 // El proxy de Vite (vite.config.ts) redirige /api/* a este servidor.
@@ -7,37 +12,12 @@
 // Uso: node api-server.js  (o se lanza automáticamente con npm run dev:full)
 // ─────────────────────────────────────────────────────────────────
 
+// Carga las variables del .env automáticamente (npm install dotenv)
+import 'dotenv/config';
+
 import { createServer } from 'http';
-import { readFileSync } from 'fs';
-import { join, dirname } from 'path';
-import { fileURLToPath } from 'url';
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
 const PORT = 3000;
-
-// ── Cargar variables de entorno del .env ─────────────────────────
-function loadEnv() {
-  try {
-    const envPath = join(__dirname, '.env');
-    const content = readFileSync(envPath, 'utf-8');
-    for (const line of content.split('\n')) {
-      const trimmed = line.trim();
-      if (!trimmed || trimmed.startsWith('#')) continue;
-      const idx = trimmed.indexOf('=');
-      if (idx === -1) continue;
-      const key = trimmed.slice(0, idx).trim();
-      const value = trimmed.slice(idx + 1).trim();
-      if (!process.env[key]) {
-        process.env[key] = value;
-      }
-    }
-    console.log('[api-server] Variables de entorno cargadas desde .env');
-  } catch {
-    console.warn('[api-server] No se pudo cargar .env — usando variables del sistema');
-  }
-}
-
-loadEnv();
 
 // ── Parsear body JSON de la petición ─────────────────────────────
 function parseBody(req) {

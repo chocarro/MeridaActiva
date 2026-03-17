@@ -2,12 +2,43 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react-swc'
 import tailwindcss from '@tailwindcss/vite'
 import { VitePWA } from 'vite-plugin-pwa'
+// Mejora 2: Optimización automática de imágenes en build
+// › npm install -D vite-plugin-imagemin
+// › Convierte JPG/PNG a WebP y aplica compresión mozjpeg+pngquant
+import viteImagemin from 'vite-plugin-imagemin'
 
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [
     react(),
     tailwindcss(),
+
+    // ── Mejora 2: Compresión/conversión de imágenes ────────────────
+    // Solo activa en el build de producción (no en `vite dev`).
+    // Para deshabilitar temporalmente: comenta este bloque.
+    viteImagemin({
+      // Imágenes WebP — ya optimizadas, solo recomprimimos
+      webp: {
+        quality: 80,
+      },
+      // JPEG → también genera versión WebP
+      mozjpeg: {
+        quality: 80,
+      },
+      // PNG → también genera versión WebP
+      pngquant: {
+        quality: [0.7, 0.9],
+        speed: 4,
+      },
+      // SVG opcional
+      svgo: {
+        plugins: [
+          { name: 'removeViewBox', active: false },
+          { name: 'removeEmptyAttrs', active: false },
+        ],
+      },
+    }),
+
     VitePWA({
       registerType: 'autoUpdate',
       manifest: {
@@ -46,6 +77,39 @@ export default defineConfig({
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,webp,woff,woff2,ttf,eot}'],
         runtimeCaching: [
+          // ── Mejora 3: NetworkFirst para rutas SPA ─────────────────────
+          // El SW sirve la app shell desde caché si hay red disponible
+          // usará la versión fresca; si no, la cacheada (offline real).
+          {
+            urlPattern: /^https?:\/\/[^/]+\/(eventos|lugares|rutas|mapa|faq|contacto|perfil|calendario|dashboard|admin|aviso-legal|privacidad|cookies|terminos|login|registro|reset-password)(\/.*)?$/i,
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'spa-routes-cache',
+              expiration: {
+                maxEntries: 20,
+                maxAgeSeconds: 60 * 60 * 24, // 1 día
+              },
+              networkTimeoutSeconds: 5,
+            },
+          },
+
+          // ── Mejora 3: NetworkFirst para llamadas a Supabase ───────────
+          // Los datos de la API de Supabase se sirven frescos cuando hay
+          // conexión y desde caché cuando el usuario está offline.
+          {
+            urlPattern: /^https:\/\/[a-z0-9]+\.supabase\.co\/.*/i,
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'supabase-cache',
+              expiration: {
+                maxEntries: 100,
+                maxAgeSeconds: 60 * 5, // 5 minutos
+              },
+              networkTimeoutSeconds: 5,
+            },
+          },
+
+          // ── CacheFirst para Leaflet (ya existente) ────────────────────
           {
             urlPattern: /^https:\/\/unpkg\.com\/.*/i,
             handler: 'CacheFirst',

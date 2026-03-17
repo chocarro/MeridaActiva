@@ -9,6 +9,7 @@
 //  ✅ Lazy loading en imágenes
 //  ✅ Buscador por nombre/descripción (igual que Eventos)
 //  ✅ Contador de resultados
+//  ✅ Categoría Actividades añadida
 // ─────────────────────────────────────────────────────────────────
 
 import React, { useEffect, useState } from 'react';
@@ -45,7 +46,7 @@ function SkeletonTarjeta() {
 }
 
 // ── Constantes ───────────────────────────────────────────────────
-const CATEGORIAS = ['Todos', 'Sobre la ciudad', 'Gastronomía'];
+const CATEGORIAS = ['Todos', 'Sobre la ciudad', 'Gastronomía', 'Actividades'];
 const PAGE_SIZE = 9;
 
 // ════════════════════════════════════════════════════════════════
@@ -61,8 +62,8 @@ const Lugares: React.FC = () => {
 
   // ── SEO ─────────────────────────────────────────────────────────
   useSeoMeta({
-    title: 'Patrimonio Romano de Mérida — Lugares y Monumentos',
-    description: 'Explora los monumentos, museos y plazas de Mérida. Teatro Romano, Anfiteatro, Templo de Diana y mucho más — Patrimonio de la Humanidad por la UNESCO.',
+    title: 'Lugares de Mérida — Patrimonio, Gastronomía y Actividades',
+    description: 'Explora los monumentos, restaurantes y actividades de Mérida. Teatro Romano, Anfiteatro, Templo de Diana, rutas de naturaleza y mucho más — Patrimonio de la Humanidad UNESCO.',
   });
 
   // ── Carga inicial ──────────────────────────────────────────────
