@@ -1,17 +1,3 @@
-// src/pages/Lugares.tsx
-// ─────────────────────────────────────────────────────────────────
-// MEJORAS APLICADAS:
-//  ✅ Tipos TypeScript (adiós any[])
-//  ✅ Skeleton Loaders en lugar de texto plano
-//  ✅ Toast en lugar de console.error silencioso
-//  ✅ Estado vacío con diseño y CTA
-//  ✅ Paginación con "Cargar más" + límite inicial de 9
-//  ✅ Lazy loading en imágenes
-//  ✅ Buscador por nombre/descripción (igual que Eventos)
-//  ✅ Contador de resultados
-//  ✅ Categoría Actividades añadida
-// ─────────────────────────────────────────────────────────────────
-
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '../../supabaseClient';
@@ -20,7 +6,6 @@ import { toastError } from '../../utils/toast';
 import { useSeoMeta } from '../../hooks/useSeoMeta';
 import SelectCustom from '../../componentes/SelectCustom';
 
-// ── Tipo local (mueve esto a src/types.ts cuando puedas) ─────────
 interface Lugar {
   id: string;
   nombre_es: string;
@@ -31,7 +16,6 @@ interface Lugar {
   google_maps_url: string | null;
 }
 
-// ── Skeleton de tarjeta ──────────────────────────────────────────
 function SkeletonTarjeta() {
   return (
     <div className="rounded-[2.5rem] overflow-hidden bg-white shadow-sm border border-slate-100 animate-pulse">
@@ -45,11 +29,9 @@ function SkeletonTarjeta() {
   );
 }
 
-// ── Constantes ───────────────────────────────────────────────────
 const CATEGORIAS = ['Todos', 'Sobre la ciudad', 'Gastronomía', 'Actividades'];
 const PAGE_SIZE = 9;
 
-// ════════════════════════════════════════════════════════════════
 const Lugares: React.FC = () => {
   const [lugares, setLugares] = useState<Lugar[]>([]);
   const [categoriaActiva, setCategoriaActiva] = useState('Todos');
@@ -60,38 +42,30 @@ const Lugares: React.FC = () => {
   const [pagina, setPagina] = useState(1);
   const [hayMas, setHayMas] = useState(true);
 
-  // ── SEO ─────────────────────────────────────────────────────────
   useSeoMeta({
     title: 'Lugares de Mérida — Patrimonio, Gastronomía y Actividades',
-    description: 'Explora los monumentos, restaurantes y actividades de Mérida. Teatro Romano, Anfiteatro, Templo de Diana, rutas de naturaleza y mucho más — Patrimonio de la Humanidad UNESCO.',
+    description: 'Explora los monumentos, restaurantes y actividades de Mérida. Teatro Romano, Anfiteatro, Templo de Diana, rutas de naturaleza y mucho más.',
   });
 
-  // ── Carga inicial ──────────────────────────────────────────────
-  useEffect(() => {
-    cargarLugares(1, true);
-  }, []);
+  useEffect(() => { cargarLugares(1, true); }, []);
 
   const cargarLugares = async (nuevaPagina: number, reiniciar = false) => {
     if (nuevaPagina === 1) setLoading(true);
     else setCargandoMas(true);
-
     try {
       const desde = (nuevaPagina - 1) * PAGE_SIZE;
       const hasta = desde + PAGE_SIZE - 1;
-
       const { data, error } = await supabase
         .from('lugares')
         .select('id, nombre_es, descripcion_es, ubicacion, imagen_url, categoria, google_maps_url')
         .order('nombre_es', { ascending: true })
         .range(desde, hasta);
-
       if (error) throw error;
-
       const nuevos = (data as Lugar[]) ?? [];
       setHayMas(nuevos.length === PAGE_SIZE);
       setLugares(prev => reiniciar ? nuevos : [...prev, ...nuevos]);
       setPagina(nuevaPagina);
-    } catch (err) {
+    } catch {
       toastError('No se pudo cargar el patrimonio. Inténtalo de nuevo.');
     } finally {
       setLoading(false);
@@ -99,47 +73,79 @@ const Lugares: React.FC = () => {
     }
   };
 
-  // ── Filtrado y ordenación ──────────────────────────────────────
   const lugaresProcesados = lugares
     .filter(l => {
       if (categoriaActiva !== 'Todos' && l.categoria !== categoriaActiva) return false;
-
       if (busqueda.trim()) {
         const t = busqueda.toLowerCase();
-        if (
-          !l.nombre_es?.toLowerCase().includes(t) &&
-          !l.descripcion_es?.toLowerCase().includes(t)
-        ) return false;
+        if (!l.nombre_es?.toLowerCase().includes(t) && !l.descripcion_es?.toLowerCase().includes(t)) return false;
       }
-
       return true;
     })
-    .sort((a, b) => {
-      if (orden === 'asc') return a.nombre_es.localeCompare(b.nombre_es);
-      return b.nombre_es.localeCompare(a.nombre_es);
-    });
-
+    .sort((a, b) => orden === 'asc' ? a.nombre_es.localeCompare(b.nombre_es) : b.nombre_es.localeCompare(a.nombre_es));
 
   return (
-    <div className="min-h-screen bg-brand-bg pt-28 pb-20 px-4">
-      <div className="max-w-7xl mx-auto">
+    <div className="min-h-screen bg-brand-bg overflow-x-hidden">
 
-        {/* Cabecera */}
-        <div className="text-center mb-16">
-          <h2 className="section-title">
-            Patrimonio <span className="text-brand-gold">Eterno</span>
-          </h2>
-          <p className="section-subtitle">Descubre la historia en cada rincón</p>
+      {/* HERO */}
+      <header className="relative h-72 md:h-96 flex items-end justify-start overflow-hidden">
+        <div className="absolute inset-0 z-0">
+          <img
+            src="/Imagenes/Museo Romano.webp"
+            alt="Patrimonio de Mérida"
+            className="w-full h-full object-cover animate-slow-zoom"
+            onError={(e) => { (e.target as HTMLImageElement).src = 'https://turismomerida.org/wp-content/uploads/2017/03/teatro-romano01.jpg'; }}
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-brand-dark via-brand-dark/60 to-transparent" />
         </div>
+        <div className="relative z-10 max-w-7xl mx-auto px-6 pb-12 w-full">
+          <span className="text-brand-gold font-black uppercase tracking-[0.3em] text-[10px] mb-3 block">
+            <i className="bi bi-award mr-2" />
+            Patrimonio UNESCO · Fundada 25 a.C.
+          </span>
+          <h1 className="text-5xl md:text-7xl font-black text-white italic uppercase tracking-tighter leading-none mb-4">
+            Patrimonio <span className="text-brand-gold">Eterno</span>
+          </h1>
+          <p className="text-white/60 font-medium max-w-lg">
+            Monumentos romanos, gastronomía extremeña y actividades únicas en la ciudad más antigua de España.
+          </p>
+        </div>
+      </header>
+
+      {/* BANNER RUTAS IA */}
+      <div className="bg-brand-dark border-b border-white/5">
+        <div className="max-w-7xl mx-auto px-6 py-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 bg-brand-gold/20 rounded-xl flex items-center justify-center flex-shrink-0">
+              <i className="bi bi-map text-brand-gold text-sm" />
+            </div>
+            <p className="text-white/70 text-sm font-medium">
+              <span className="text-brand-gold font-black">Visita inteligente</span> — Genera una ruta por los mejores monumentos
+            </p>
+          </div>
+          <div className="flex gap-3 flex-shrink-0">
+            <Link to="/rutas" className="inline-flex items-center gap-2 bg-brand-gold text-brand-dark px-6 py-2.5 rounded-xl font-black uppercase tracking-widest text-[10px] hover:bg-white transition-all">
+              <i className="bi bi-stars text-xs" />
+              Ruta por Monumentos
+            </Link>
+            <Link to="/faq" className="inline-flex items-center gap-2 bg-white/10 text-white px-6 py-2.5 rounded-xl font-black uppercase tracking-widest text-[10px] hover:bg-white/20 transition-all">
+              <i className="bi bi-robot text-xs" />
+              Preguntar a la IA
+            </Link>
+          </div>
+        </div>
+      </div>
+
+      <div className="max-w-7xl mx-auto px-4 pt-10 pb-20">
 
         {/* Buscador */}
-        <div className="mb-8">
+        <div className="mb-6">
           <div className="flex flex-col md:flex-row gap-4 items-center bg-white p-4 rounded-3xl shadow-sm border border-slate-100">
             <div className="relative w-full md:w-1/2">
               <i className="bi bi-search absolute left-6 top-1/2 -translate-y-1/2 text-slate-400" />
               <input
                 type="text"
-                placeholder="Buscar monumentos, plazas, museos..."
+                placeholder="Buscar monumentos, restaurantes, actividades..."
                 value={busqueda}
                 onChange={(e) => setBusqueda(e.target.value)}
                 aria-label="Buscar lugares"
@@ -149,32 +155,27 @@ const Lugares: React.FC = () => {
           </div>
         </div>
 
-        {/* Filtros de categoría + orden */}
+        {/* Filtros */}
         <div className="filter-toolbar">
           <div className="flex flex-wrap justify-center gap-2">
             {CATEGORIAS.map(cat => (
-              <button
-                key={cat}
-                onClick={() => setCategoriaActiva(cat)}
-                className={categoriaActiva === cat ? 'filter-btn-active' : 'filter-btn'}
-              >
+              <button key={cat} onClick={() => setCategoriaActiva(cat)} className={categoriaActiva === cat ? 'filter-btn-active' : 'filter-btn'}>
                 {cat}
               </button>
             ))}
           </div>
-
           <SelectCustom
             value={orden}
             onChange={(v) => setOrden(v as typeof orden)}
             icon="bi-sort-alpha-down"
             options={[
-              { value: 'asc',  label: 'A — Z' },
+              { value: 'asc', label: 'A — Z' },
               { value: 'desc', label: 'Z — A' },
             ]}
           />
         </div>
 
-        {/* Contador de resultados */}
+        {/* Contador */}
         {!loading && (
           <p className="text-xs font-black uppercase tracking-widest text-slate-400 mb-6 text-right">
             {lugaresProcesados.length} lugar{lugaresProcesados.length !== 1 ? 'es' : ''} encontrado{lugaresProcesados.length !== 1 ? 's' : ''}
@@ -183,58 +184,40 @@ const Lugares: React.FC = () => {
 
         {/* Grid */}
         {loading ? (
-          // ── Skeleton grid ──────────────────────────────────────
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {Array.from({ length: PAGE_SIZE }).map((_, i) => (
-              <SkeletonTarjeta key={i} />
-            ))}
+            {Array.from({ length: PAGE_SIZE }).map((_, i) => <SkeletonTarjeta key={i} />)}
           </div>
         ) : lugaresProcesados.length === 0 ? (
-          // ── Estado vacío ───────────────────────────────────────
           <div className="py-24 text-center bg-white rounded-[3rem] border-2 border-dashed border-slate-200 mt-4">
-            <div className="w-20 h-20 bg-brand-gold/10 rounded-[2rem] flex items-center justify-center mx-auto mb-8 text-4xl">
-              🏛️
-            </div>
-            <h3 className="text-2xl font-black uppercase italic tracking-tighter text-brand-dark mb-3">
-              Sin resultados
-            </h3>
+            <div className="w-20 h-20 bg-brand-gold/10 rounded-[2rem] flex items-center justify-center mx-auto mb-8 text-4xl">🏛️</div>
+            <h3 className="text-2xl font-black uppercase italic tracking-tighter text-brand-dark mb-3">Sin resultados</h3>
             <p className="text-slate-400 font-bold text-xs uppercase tracking-widest mb-8 max-w-xs mx-auto">
-              {busqueda
-                ? `No hay lugares que coincidan con "${busqueda}"`
-                : 'No hay lugares en esta categoría'}
+              {busqueda ? `No hay lugares que coincidan con "${busqueda}"` : 'No hay lugares en esta categoría'}
             </p>
-            <button
-              onClick={() => {
-                setBusqueda('');
-                setCategoriaActiva('Todos');
-              }}
-              className="bg-brand-dark text-brand-gold px-8 py-4 rounded-2xl font-black text-xs uppercase tracking-widest hover:scale-105 transition-all"
-            >
-              Ver todos los lugares
-            </button>
+            <div className="flex flex-col sm:flex-row gap-3 justify-center">
+              <button
+                onClick={() => { setBusqueda(''); setCategoriaActiva('Todos'); }}
+                className="bg-brand-dark text-brand-gold px-8 py-4 rounded-2xl font-black text-xs uppercase tracking-widest hover:scale-105 transition-all"
+              >
+                Ver todos los lugares
+              </button>
+              <Link to="/faq" className="inline-flex items-center justify-center gap-2 bg-brand-blue text-white px-8 py-4 rounded-2xl font-black text-xs uppercase tracking-widest hover:scale-105 transition-all">
+                <i className="bi bi-robot" />
+                Preguntar a la IA
+              </Link>
+            </div>
           </div>
         ) : (
-          // ── Grid de lugares ────────────────────────────────────
           <>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
               {lugaresProcesados.map((lugar, idx) => (
                 <div key={lugar.id} className="card-overlay group">
-                  <img
-                    src={lugar.imagen_url}
-                    className="card-overlay-img"
-                    alt={lugar.nombre_es}
-                    loading={idx < 3 ? 'eager' : 'lazy'}
-                  />
+                  <img src={lugar.imagen_url} className="card-overlay-img" alt={lugar.nombre_es} loading={idx < 3 ? 'eager' : 'lazy'} />
                   <div className="card-overlay-gradient" />
-
                   <div className="absolute top-6 right-6 z-20">
                     <BotonFavorito lugarId={lugar.id} tipo="lugar" />
                   </div>
-
-                  <Link
-                    to={`/lugares/${lugar.id}`}
-                    className="absolute inset-0 p-10 flex flex-col justify-end z-10"
-                  >
+                  <Link to={`/lugares/${lugar.id}`} className="absolute inset-0 p-10 flex flex-col justify-end z-10">
                     <div className="mb-4">
                       <span className="tag-badge">{lugar.categoria}</span>
                     </div>
@@ -255,7 +238,6 @@ const Lugares: React.FC = () => {
               ))}
             </div>
 
-            {/* Cargar más */}
             {hayMas && (
               <div className="mt-16 text-center">
                 <button

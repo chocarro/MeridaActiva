@@ -7,70 +7,71 @@ interface LogoProps {
 }
 
 const Logo: React.FC<LogoProps> = ({ className = '', isScrolled = false }) => {
-  const primaryColor = isScrolled ? '#FFBA08' : '#032B43';
-  const secondaryColor = isScrolled ? '#FAFAFA' : '#3F88C5';
+  // ── Colores según estado del navbar ─────────────────────────────
+  const textPrimary    = isScrolled ? '#FAFAFA'  : '#032B43';
+  const textAccent     = isScrolled ? '#FFBA08'  : '#3F88C5';
+  const subColor       = isScrolled ? 'rgba(255,255,255,0.45)' : 'rgba(3,43,67,0.45)';
+  const colBlue        = isScrolled ? '#3F88C5'  : '#3F88C5';
+  const colCenter      = isScrolled ? '#FFBA08'  : '#032B43';
+  const arcColor       = isScrolled ? '#FFBA08'  : '#032B43';
 
   return (
     <Link
       to="/"
-      className={`group flex items-center gap-1.5 md:gap-2 transition-all duration-300 hover:opacity-90 ${className}`}
+      className={`group flex items-center gap-2 transition-all duration-300 hover:opacity-90 ${className}`}
     >
-      {/* Dynamic Icon: Roman Arches 'M' + Sun */}
-      <div className="relative flex items-center justify-center w-6 h-6 md:w-8 md:h-8 transition-transform duration-500 group-hover:scale-105 group-hover:-translate-y-0.5">
+      {/* ── Icono: Teatro Romano ── */}
+      <div className="relative flex items-center justify-center transition-transform duration-500 group-hover:scale-105 group-hover:-translate-y-0.5">
         <svg
-          viewBox="0 0 100 100"
+          width="44"
+          height="36"
+          viewBox="0 0 110 90"
           fill="none"
           xmlns="http://www.w3.org/2000/svg"
-          className="w-full h-full drop-shadow-md"
         >
-          {/* Left Arch */}
+          {/* Columna izquierda exterior — más baja */}
+          <rect x="6"  y="58" width="10" height="30" rx="2" fill={colBlue} className="transition-colors duration-300" />
+          {/* Columna izquierda interior */}
+          <rect x="26" y="48" width="10" height="40" rx="2" fill={colBlue} className="transition-colors duration-300" />
+          {/* Columna central — la más alta, acento */}
+          <rect x="48" y="40" width="14" height="48" rx="2" fill={colCenter} className="transition-colors duration-300" />
+          {/* Columna derecha interior */}
+          <rect x="74" y="48" width="10" height="40" rx="2" fill={colBlue} className="transition-colors duration-300" />
+          {/* Columna derecha exterior — más baja */}
+          <rect x="94" y="58" width="10" height="30" rx="2" fill={colBlue} className="transition-colors duration-300" />
+          {/* Arco superior — curva del teatro */}
           <path
-            d="M 18 85 V 50 C 18 20, 50 25, 50 60"
-            stroke={primaryColor}
-            strokeWidth="14"
+            d="M5 60 Q55 8 105 60"
+            stroke={arcColor}
+            strokeWidth="5.5"
             strokeLinecap="round"
-            strokeLinejoin="round"
+            fill="none"
             className="transition-colors duration-300"
           />
-          {/* Right Arch */}
-          <path
-            d="M 82 85 V 50 C 82 20, 50 25, 50 60"
-            stroke={primaryColor}
-            strokeWidth="14"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            className="transition-colors duration-300"
-          />
-          {/* Sun / Spark */}
-          <circle
-            cx="50"
-            cy="18"
-            r="11"
-            fill={secondaryColor}
-            className="transition-colors duration-300"
-          />
+          {/* Base horizontal */}
+          <rect x="4" y="86" width="102" height="4" rx="2" fill={colBlue} className="transition-colors duration-300" />
         </svg>
       </div>
 
-      {/* Typography */}
+      {/* ── Tipografía ── */}
       <div className="flex flex-col justify-center leading-none">
-        <div className="flex items-baseline tracking-tighter">
+        <div className="flex items-baseline tracking-tight">
           <span
             className="text-lg md:text-xl font-black uppercase transition-colors duration-300"
-            style={{ color: primaryColor }}
+            style={{ color: textPrimary }}
           >
             Mérida
           </span>
           <span
             className="text-lg md:text-xl font-black uppercase italic transition-colors duration-300"
-            style={{ color: secondaryColor }}
+            style={{ color: textAccent }}
           >
             Activa
           </span>
         </div>
-        <span 
-          className="text-[8px] md:text-[9px] font-bold uppercase tracking-[0.3em] pl-0.5 opacity-80 mt-0.5 transition-colors duration-300 block"
-          style={{ color: primaryColor }}
+        <span
+          className="text-[8px] md:text-[9px] font-bold uppercase tracking-[0.28em] pl-0.5 mt-0.5 block transition-colors duration-300"
+          style={{ color: subColor }}
         >
           Turismo Inteligente
         </span>

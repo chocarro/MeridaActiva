@@ -47,6 +47,12 @@ const Navbar: React.FC = () => {
     { name: 'Contacto', path: '/contacto', icon: 'bi-envelope' },
   ];
 
+  // ── Links exclusivos para usuarios registrados ──────────────────
+const navLinksAuth = [
+    { name: 'Rutas', path: '/rutas', icon: 'bi-stars' },
+    { name: 'Chat IA', path: '/faq', icon: 'bi-robot' },
+];
+
   const esAdmin = profile?.roles?.nombre === 'Administrador' || profile?.roles?.nombre === 'Gestor (Editor)';
   const userInitial = profile?.nombre?.charAt(0).toUpperCase() || session?.user?.email?.charAt(0).toUpperCase() || 'U';
   const userName = profile?.nombre?.split(' ')[0] || 'Usuario';
@@ -54,10 +60,10 @@ const Navbar: React.FC = () => {
   return (
     <>
       <nav
-        className={`fixed top-0 left-0 right-0 z-[100] transition-all duration-500 ${isScrolled ? 'py-4 shadow-2xl' : 'py-6'
+        className={`fixed top-0 left-0 right-0 z-[100] transition-all duration-500 ${isScrolled ? 'py-4 shadow-2xl' : 'py-3'
           }`}
         style={{
-          backgroundColor: isScrolled ? 'rgba(3,43,67,0.97)' : 'transparent',
+          backgroundColor: isScrolled ? 'rgba(15,23,42,0.97)' : 'transparent',
           backdropFilter: isScrolled ? 'blur(20px)' : 'none',
         }}
       >
@@ -83,7 +89,6 @@ const Navbar: React.FC = () => {
                     }}
                   >
                     {link.name}
-                    {/* Active indicator */}
                     <span
                       className="absolute -bottom-1 left-0 h-0.5 rounded-full transition-all duration-300"
                       style={{
@@ -94,6 +99,31 @@ const Navbar: React.FC = () => {
                   </Link>
                 );
               })}
+
+              {/* Links IA — solo para usuarios registrados */}
+              {session && (
+                <div className="flex items-center gap-3 border-l pl-6 ml-2"
+                  style={{ borderColor: isScrolled ? 'rgba(255,255,255,0.12)' : 'rgba(3,43,67,0.12)' }}
+                >
+                  {navLinksAuth.map((link) => {
+                    const isActive = location.pathname === link.path;
+                    return (
+                      <Link
+                        key={link.path}
+                        to={link.path}
+                        className="relative flex items-center gap-1.5 text-[10px] font-black uppercase tracking-[0.2em] transition-all duration-200 px-3 py-1.5 rounded-xl"
+                        style={{
+                          color: isActive ? '#032B43' : '#FFBA08',
+                          backgroundColor: isActive ? '#FFBA08' : 'rgba(255,186,8,0.12)',
+                        }}
+                      >
+                        <i className={`bi ${link.icon} text-xs`} />
+                        {link.name}
+                      </Link>
+                    );
+                  })}
+                </div>
+              )}
             </div>
 
             {/* USER AREA */}
@@ -240,7 +270,7 @@ const Navbar: React.FC = () => {
               <button
                 className="w-10 h-10 rounded-2xl flex items-center justify-center transition-all"
                 style={{
-                  backgroundColor: mobileMenuOpen ? '#032B43' : isScrolled ? 'rgba(255,255,255,0.1)' : 'rgba(3,43,67,0.08)',
+                  backgroundColor: mobileMenuOpen ? '#0F172A' : isScrolled ? 'rgba(255,255,255,0.1)' : 'rgba(3,43,67,0.08)',
                   color: mobileMenuOpen ? '#FFBA08' : isScrolled ? '#FAFAFA' : '#032B43',
                 }}
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
@@ -257,7 +287,7 @@ const Navbar: React.FC = () => {
       {mobileMenuOpen && (
         <div
           className="md:hidden fixed inset-0 z-[90] flex flex-col pt-24"
-          style={{ backgroundColor: '#032B43' }}
+          style={{ backgroundColor: '#0F172A' }}
         >
           {/* Nav links */}
           <div className="flex-1 overflow-y-auto px-6 space-y-1">
@@ -279,6 +309,34 @@ const Navbar: React.FC = () => {
                 </Link>
               );
             })}
+
+            {/* Links IA solo para registrados */}
+            {session && (
+              <>
+                <div className="h-px my-2 mx-2" style={{ backgroundColor: 'rgba(255,255,255,0.08)' }} />
+                <p className="text-[9px] font-black text-brand-gold/50 uppercase tracking-widest px-5 py-2">
+                  <i className="bi bi-stars mr-1" />Herramientas IA
+                </p>
+                {navLinksAuth.map(link => {
+                  const isActive = location.pathname === link.path;
+                  return (
+                    <Link
+                      key={link.path}
+                      to={link.path}
+                      onClick={() => setMobileMenuOpen(false)}
+                      className="flex items-center gap-4 px-5 py-4 rounded-2xl transition-all"
+                      style={{
+                        backgroundColor: isActive ? 'rgba(255,186,8,0.15)' : 'rgba(255,186,8,0.06)',
+                        color: '#FFBA08',
+                      }}
+                    >
+                      <i className={`bi ${link.icon} text-xl flex-shrink-0`} />
+                      <span className="text-xl font-black uppercase italic tracking-tighter">{link.name}</span>
+                    </Link>
+                  );
+                })}
+              </>
+            )}
           </div>
 
           {/* Bottom user actions */}

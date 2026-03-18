@@ -48,22 +48,22 @@ type Duracion = 'media' | 'dia' | 'finde';
 type Compania = 'pareja' | 'familia' | 'solo' | 'amigos';
 type Ritmo = 'relax' | 'nonstop';
 
-interface OpcionStep<T> { valor: T; label: string; desc: string; emoji: string; }
+interface OpcionStep<T> { valor: T; label: string; desc: string; icon: string; }
 
 const OPCIONES_DURACION: OpcionStep<Duracion>[] = [
-    { valor: 'media', label: 'Media jornada', desc: '3–4 horas', emoji: '🌤️' },
-    { valor: 'dia', label: '1 día completo', desc: 'Salida 9h – Vuelta 18h', emoji: '☀️' },
-    { valor: 'finde', label: 'Fin de semana', desc: '2 días para verlo todo', emoji: '🎉' },
+    { valor: 'media', label: 'Media jornada', desc: '3–4 horas', icon: 'bi-clock' },
+    { valor: 'dia', label: '1 día completo', desc: 'Salida 9h – Vuelta 18h', icon: 'bi-sun' },
+    { valor: 'finde', label: 'Fin de semana', desc: '2 días para verlo todo', icon: 'bi-calendar2-week' },
 ];
 const OPCIONES_COMPANIA: OpcionStep<Compania>[] = [
-    { valor: 'pareja', label: 'En pareja', desc: 'Escapada romántica ❤️', emoji: '💑' },
-    { valor: 'familia', label: 'Con familia', desc: 'Niños incluidos 👧', emoji: '👨‍👩‍👧‍👦' },
-    { valor: 'solo', label: 'Solo', desc: 'A tu ritmo 🎒', emoji: '🎧' },
-    { valor: 'amigos', label: 'Con amigos', desc: 'Plan de grupo 🎉', emoji: '🎊' },
+    { valor: 'pareja', label: 'En pareja', desc: 'Escapada romántica', icon: 'bi-heart' },
+    { valor: 'familia', label: 'Con familia', desc: 'Niños incluidos', icon: 'bi-people-fill' },
+    { valor: 'solo', label: 'Solo', desc: 'A tu ritmo', icon: 'bi-person' },
+    { valor: 'amigos', label: 'Con amigos', desc: 'Plan de grupo', icon: 'bi-people' },
 ];
 const OPCIONES_RITMO: OpcionStep<Ritmo>[] = [
-    { valor: 'relax', label: 'Relax', desc: 'Sin prisas, disfruta cada rincón', emoji: '🌿' },
-    { valor: 'nonstop', label: 'Non‑stop', desc: 'Máximo en el menor tiempo', emoji: '⚡' },
+    { valor: 'relax', label: 'Relax', desc: 'Sin prisas, disfruta cada rincón', icon: 'bi-feather' },
+    { valor: 'nonstop', label: 'Non‑stop', desc: 'Máximo en el menor tiempo', icon: 'bi-lightning-charge-fill' },
 ];
 
 const LABEL: Record<string, Record<string, string>> = {
@@ -244,7 +244,7 @@ const RutaInteligente: React.FC = () => {
             }));
             const { error } = await supabase.from('agenda_personal').insert(rows);
             if (error) throw error;
-            toastExito(`¡Ruta guardada! ${paradas.length} paradas añadidas a tu agenda 🗺️`);
+            toastExito(`¡Ruta guardada! ${paradas.length} paradas añadidas a tu agenda`);
             setGuardado(true);
         } catch {
             toastError('No se pudo guardar la ruta en tu agenda.');
@@ -268,12 +268,12 @@ const RutaInteligente: React.FC = () => {
             })
             .join('\n');
 
-        const rutaCompleta = `🗺️ RUTA INTELIGENTE MÉRIDA ACTIVA\n${LABEL.duracion[duracion!]} • ${LABEL.compania[compania!]} • ${LABEL.ritmo[ritmo!]}\n\n${textoRuta}`;
+        const rutaCompleta = `RUTA INTELIGENTE MERIDA ACTIVA\n${LABEL.duracion[duracion!]} • ${LABEL.compania[compania!]} • ${LABEL.ritmo[ritmo!]}\n\n${textoRuta}`;
 
         try {
             await navigator.clipboard.writeText(rutaCompleta);
             setCopiado(true);
-            toastExito('¡Ruta copiada al portapapeles! 📋');
+            toastExito('¡Ruta copiada al portapapeles!');
             setTimeout(() => setCopiado(false), 2000);
         } catch {
             toastError('No se pudo copiar la ruta.');
@@ -359,7 +359,7 @@ const RutaInteligente: React.FC = () => {
             doc.text('Generado por MeridaActiva · meridaactiva.vercel.app', 105, 290, { align: 'center' });
 
             doc.save(`ruta-merida-${new Date().toISOString().split('T')[0]}.pdf`);
-            toastExito('¡PDF descargado correctamente! 📄');
+            toastExito('¡PDF descargado correctamente!');
         } catch (err) {
             console.error('Error generando PDF:', err);
             toastError('No se pudo generar el PDF.');
@@ -373,7 +373,9 @@ const RutaInteligente: React.FC = () => {
         return (
             <div className="min-h-screen bg-brand-bg flex items-center justify-center px-6 pt-20">
                 <div className="max-w-md w-full bg-white rounded-[3rem] p-14 text-center border border-slate-100 shadow-2xl">
-                    <div className="text-5xl mb-6">🗺️</div>
+                    <div className="w-20 h-20 bg-brand-gold/10 rounded-[2rem] flex items-center justify-center mx-auto mb-6">
+                        <i className="bi bi-map text-brand-gold text-4xl" />
+                    </div>
                     <h2 className="text-4xl font-black italic uppercase tracking-tighter text-brand-dark mb-4">
                         Rutas <span className="text-brand-gold">Inteligentes</span>
                     </h2>
@@ -399,7 +401,7 @@ const RutaInteligente: React.FC = () => {
                     <div className="flex flex-col md:flex-row items-start md:items-end justify-between mb-10 gap-6">
                         <div>
                             <span className="text-brand-gold font-black uppercase tracking-[0.3em] text-xs mb-3 block">
-                                ✨ Generado por IA · Gemini
+                                <i className="bi bi-stars mr-2" />Generado por IA · Gemini
                             </span>
                             <h1 className="text-5xl md:text-6xl font-black italic uppercase tracking-tighter text-brand-dark leading-none">
                                 Tu Ruta <span className="text-brand-blue">Perfecta</span>
@@ -433,7 +435,7 @@ const RutaInteligente: React.FC = () => {
                                         : 'bg-white text-brand-dark border border-slate-200 hover:border-brand-dark'
                                 }`}
                             >
-                                <i className={`bi ${copiado ? 'bi-check2' : 'bi-clipboard'}`} />{copiado ? '¡Copiado!' : '📋 Copiar Ruta'}
+                                <i className={`bi ${copiado ? 'bi-check2' : 'bi-clipboard'}`} />{copiado ? '¡Copiado!' : 'Copiar Ruta'}
                             </button>
                             <button
                                 onClick={descargarPDF}
@@ -442,7 +444,7 @@ const RutaInteligente: React.FC = () => {
                             >
                                 {descargandoPDF
                                     ? <><svg className="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" strokeOpacity="0.25" /><path d="M4 12a8 8 0 018-8" stroke="currentColor" strokeWidth="4" strokeLinecap="round" /></svg>Generando…</>
-                                    : <><i className="bi bi-file-earmark-pdf" />📄 PDF</>
+                                    : <><i className="bi bi-file-earmark-pdf" />PDF</>
                                 }
                             </button>
                             <button
@@ -532,7 +534,7 @@ const RutaInteligente: React.FC = () => {
                                         </div>
                                         <div className="bg-brand-dark rounded-[2rem] py-5 px-8 flex-1">
                                             <p className="text-white font-black uppercase italic tracking-tighter text-lg">
-                                                ¡Fin de la ruta! Espera que hayas disfrutado de <span className="text-brand-gold">Mérida</span> 🏛️
+                                                ¡Fin de la ruta! Espera que hayas disfrutado de <span className="text-brand-gold">Mérida</span> <i className="bi bi-building-fill text-brand-gold" />
                                             </p>
                                         </div>
                                     </div>
@@ -562,7 +564,9 @@ const RutaInteligente: React.FC = () => {
                     <div className="absolute inset-0 bg-gradient-to-b from-brand-dark/70 via-brand-dark/50 to-brand-bg" />
                 </div>
                 <div className="relative z-10 text-center px-4">
-                    <span className="text-brand-gold font-black uppercase tracking-[0.3em] text-xs mb-4 block">✨ Powered by Gemini AI</span>
+                    <span className="text-brand-gold font-black uppercase tracking-[0.3em] text-xs mb-4 block">
+                        <i className="bi bi-stars mr-2" />Powered by Gemini AI
+                    </span>
                     <h1 className="text-5xl md:text-6xl font-black italic uppercase tracking-tighter text-white leading-none">
                         Crea tu <span className="text-brand-gold">Ruta Ideal</span>
                     </h1>
@@ -576,7 +580,9 @@ const RutaInteligente: React.FC = () => {
                     {/* Pantalla intro */}
                     {paso === 0 && (
                         <div className="bg-white rounded-[2.5rem] p-10 shadow-xl border border-slate-100 text-center">
-                            <div className="text-6xl mb-6">🗺️</div>
+                            <div className="w-20 h-20 bg-brand-gold/10 rounded-[2rem] flex items-center justify-center mx-auto mb-6">
+                                <i className="bi bi-map text-brand-gold text-4xl" />
+                            </div>
                             <h2 className="text-4xl font-black italic uppercase tracking-tighter text-brand-dark mb-4">
                                 Tu itinerario,<br />en <span className="text-brand-gold">3 preguntas</span>
                             </h2>
@@ -584,9 +590,13 @@ const RutaInteligente: React.FC = () => {
                                 La IA creará un itinerario personalizado con monumentos y restaurantes reales de Mérida, horarios y descripciones de por qué encajan contigo.
                             </p>
                             <div className="grid grid-cols-3 gap-4 mb-10">
-                                {[{ icon: '⏱️', label: '¿Cuánto tiempo?' }, { icon: '👥', label: '¿Con quién?' }, { icon: '⚡', label: '¿Qué ritmo?' }].map(({ icon, label }) => (
+                                {[
+                                    { icon: 'bi-clock', label: '¿Cuánto tiempo?' },
+                                    { icon: 'bi-people', label: '¿Con quién?' },
+                                    { icon: 'bi-lightning-charge', label: '¿Qué ritmo?' },
+                                ].map(({ icon, label }) => (
                                     <div key={label} className="bg-brand-bg rounded-2xl p-4 text-center">
-                                        <div className="text-3xl mb-2">{icon}</div>
+                                        <i className={`bi ${icon} text-3xl text-brand-gold mb-2 block`} />
                                         <p className="text-[10px] font-black text-brand-dark uppercase tracking-widest">{label}</p>
                                     </div>
                                 ))}
@@ -627,7 +637,9 @@ const RutaInteligente: React.FC = () => {
                                         disabled={generando}
                                         className={`flex items-center gap-4 p-5 rounded-2xl border-2 text-left transition-all hover:border-brand-gold hover:bg-brand-gold/5 hover:-translate-y-0.5 ${pasoActual.valor === op.valor ? 'border-brand-gold bg-brand-gold/10' : 'border-slate-100 bg-brand-bg'}`}
                                     >
-                                        <span className="text-3xl">{op.emoji}</span>
+                                        <div className="w-10 h-10 rounded-xl bg-brand-dark/5 flex items-center justify-center flex-shrink-0 group-hover:bg-brand-gold/20 transition-colors">
+                                            <i className={`bi ${op.icon} text-brand-dark text-xl group-hover:text-brand-dark`} />
+                                        </div>
                                         <div>
                                             <p className="font-black text-brand-dark uppercase tracking-wide text-sm">{op.label}</p>
                                             <p className="text-[10px] font-bold text-slate-400 mt-0.5">{op.desc}</p>
@@ -686,7 +698,9 @@ const RutaInteligente: React.FC = () => {
                                             <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" strokeOpacity="0.15" />
                                             <path d="M4 12a8 8 0 018-8" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
                                         </svg>
-                                        <div className="absolute inset-0 flex items-center justify-center text-2xl">✨</div>
+                                        <div className="absolute inset-0 flex items-center justify-center">
+                                            <i className="bi bi-stars text-brand-gold text-2xl" />
+                                        </div>
                                     </div>
                                     <div className="text-center">
                                         <p className="text-sm font-black text-brand-dark uppercase tracking-widest mb-1">

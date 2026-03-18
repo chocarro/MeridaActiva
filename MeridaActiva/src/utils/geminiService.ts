@@ -1,13 +1,3 @@
-// src/utils/geminiService.ts
-// ─────────────────────────────────────────────────────────────────
-// CAMBIOS (Mejora 9 — Reintentos con backoff exponencial):
-//   - Helper privado `sleep(ms)` para esperas no bloqueantes
-//   - Helper privado `esErrorReintentar(msg)` detecta 502/503/overload
-//   - `enviarMensajeStream` acepta callback opcional `onRetry`
-//     y reintenta hasta 2 veces con delays de 1s y 2s
-//   - `generarRuta` acepta callback opcional `onRetry` ídem
-// ─────────────────────────────────────────────────────────────────
-
 export interface MensajeChat {
     rol: 'usuario' | 'ia';
     texto: string;

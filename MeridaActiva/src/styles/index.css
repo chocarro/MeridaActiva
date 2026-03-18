@@ -37,7 +37,7 @@
     /* Fuerza siempre el modo claro, ignore la preferencia del sistema */
     color-scheme: light;
 
-    --theme-brand-dark: #032B43;
+    --theme-brand-dark: #0F172A;
     --theme-brand-gold: #FFBA08;
     --theme-brand-blue: #3F88C5;
     --theme-brand-green: #136F63;

@@ -14,13 +14,6 @@ import { useSeoMeta } from '../../hooks/useSeoMeta';
 gsap.registerPlugin(ScrollTrigger);
 
 // ── Datos ────────────────────────────────────────────────────────
-const RAZONES = [
-  { num: '1', titulo: 'Agenda Centralizada', desc: 'Todos los eventos culturales, gastronómicos y de ocio de Mérida en un solo lugar, actualizado en tiempo real.', icon: 'bi-calendar-check', gradient: 'from-amber-400/20 via-yellow-300/10 to-transparent' },
-  { num: '2', titulo: 'Rutas con IA', desc: 'Genera itinerarios personalizados con inteligencia artificial adaptados a tu tiempo, compañía y ritmo de viaje.', icon: 'bi-cpu', gradient: 'from-blue-400/20 via-sky-300/10 to-transparent' },
-  { num: '3', titulo: 'Patrimonio UNESCO', desc: 'Accede a información detallada de los monumentos romanos más importantes de España en un clic.', icon: 'bi-columns-gap', gradient: 'from-emerald-400/20 via-teal-300/10 to-transparent' },
-  { num: '4', titulo: 'Tu Agenda Personal', desc: 'Guarda favoritos, crea recordatorios y organiza tu visita con un calendario personal completamente gratis.', icon: 'bi-bookmark-star', gradient: 'from-rose-400/20 via-pink-300/10 to-transparent' },
-];
-
 const CATEGORIAS = [
   {
     title: 'Cultural', tag: 'Historia & Arte', icon: 'bi-bank2',
@@ -61,20 +54,18 @@ const STATS = [
 
 const ROTATING_TEXTS = ['Cultural', 'Musical', 'Gastronómico', 'Histórico', 'Único'];
 
-// ── Ticker — solo fotos locales de Mérida ────────────────────────
 const TICKER_ITEMS = [
-  { src: '/Imagenes/teatro-romano.jpg',             label: 'Teatro Romano' },
-  { src: '/Imagenes/CULTURAL.jpg',                  label: 'Cultura' },
-  { src: '/Imagenes/MUSICA.jpg',                    label: 'Música' },
-  { src: '/Imagenes/TEATRO.JPG',                    label: 'Teatro' },
-  { src: '/Imagenes/Museo Romano.webp',             label: 'MNAR' },
+  { src: '/Imagenes/teatro-romano.jpg',              label: 'Teatro Romano' },
+  { src: '/Imagenes/CULTURAL.jpg',                   label: 'Cultura' },
+  { src: '/Imagenes/MUSICA.jpg',                     label: 'Música' },
+  { src: '/Imagenes/TEATRO.JPG',                     label: 'Teatro' },
+  { src: '/Imagenes/Museo Romano.webp',              label: 'MNAR' },
   { src: '/Imagenes/merida-maravilla-monumental.jpg', label: 'Monumentos' },
-  // duplicados para loop infinito
-  { src: '/Imagenes/teatro-romano.jpg',             label: 'Teatro Romano' },
-  { src: '/Imagenes/CULTURAL.jpg',                  label: 'Cultura' },
-  { src: '/Imagenes/MUSICA.jpg',                    label: 'Música' },
-  { src: '/Imagenes/TEATRO.JPG',                    label: 'Teatro' },
-  { src: '/Imagenes/Museo Romano.webp',             label: 'MNAR' },
+  { src: '/Imagenes/teatro-romano.jpg',              label: 'Teatro Romano' },
+  { src: '/Imagenes/CULTURAL.jpg',                   label: 'Cultura' },
+  { src: '/Imagenes/MUSICA.jpg',                     label: 'Música' },
+  { src: '/Imagenes/TEATRO.JPG',                     label: 'Teatro' },
+  { src: '/Imagenes/Museo Romano.webp',              label: 'MNAR' },
   { src: '/Imagenes/merida-maravilla-monumental.jpg', label: 'Monumentos' },
 ];
 
@@ -154,40 +145,29 @@ function StatCard({ num, label, icon, active }: { num: string; label: string; ic
   );
 }
 
-function Img({ src, fallback, alt, className }: { src: string; fallback: string; alt: string; className?: string }) {
-  return (
-    <img
-      src={src}
-      alt={alt}
-      className={className}
-      onError={(e) => { (e.target as HTMLImageElement).src = fallback; }}
-      loading="lazy"
-    />
-  );
-}
-
 // ════════════════════════════════════════════════════════════════
 const Home: React.FC = () => {
   const [reseñas, setReseñas] = useState<any[]>([]);
   const [statsActive, setStatsActive] = useState(false);
   const statsRef = useRef<HTMLDivElement>(null);
-
   const heroTextRef = useRef<HTMLDivElement>(null);
   const heroBadgeRef = useRef<HTMLSpanElement>(null);
   const heroCTARef = useRef<HTMLDivElement>(null);
   const parallaxBgRef = useRef<HTMLImageElement>(null);
   const bannerRef = useRef<HTMLDivElement>(null);
+  const iaRef = useRef<HTMLDivElement>(null);
 
   const razonesRef = useStaggerOnScroll();
+  const iaCardsRef = useStaggerOnScroll();
 
   const { ref: bandRef, visible: bandVisible } = useFadeInOnScroll();
-  const { ref: razonesHeaderRef, visible: razonesHeaderVisible } = useFadeInOnScroll();
   const { ref: categoriasHeaderRef, visible: categoriasHeaderVisible } = useFadeInOnScroll();
   const { ref: reseñasHeaderRef, visible: reseñasHeaderVisible } = useFadeInOnScroll();
+  const { ref: iaHeaderRef, visible: iaHeaderVisible } = useFadeInOnScroll();
 
   useSeoMeta({
-    title: 'MeridaActiva — Eventos, Turismo y Gastronomía en Mérida',
-    description: 'Descubre la agenda cultural, el patrimonio romano y los mejores restaurantes de Mérida (Extremadura). La ciudad más romana de España te espera.',
+    title: 'MeridaActiva — Eventos, Turismo y Rutas con IA en Mérida',
+    description: 'Descubre la agenda cultural, el patrimonio romano y genera rutas personalizadas con IA en Mérida (Extremadura). La ciudad más romana de España te espera.',
     image: '/Imagenes/teatro-romano.jpg',
   });
 
@@ -282,18 +262,34 @@ const Home: React.FC = () => {
               </GradientText>
             </h1>
             <p className="text-white/70 text-lg font-medium max-w-xl mx-auto mb-10 leading-relaxed">
-              La plataforma definitiva para descubrir eventos, monumentos romanos y gastronomía en la ciudad más antigua de España.
+              Eventos, monumentos romanos, rutas inteligentes con IA y todo lo que necesitas para vivir Mérida al máximo.
             </p>
           </div>
 
           <div ref={heroCTARef} className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link to="/eventos" className="inline-flex items-center justify-center gap-3 bg-brand-gold text-brand-dark px-10 py-5 rounded-2xl font-black uppercase tracking-widest text-xs hover:bg-white hover:scale-105 transition-all shadow-2xl shadow-brand-gold/30" style={{ opacity: 0 }}>
+            <Link
+              to="/eventos"
+              className="inline-flex items-center justify-center gap-3 bg-brand-gold text-brand-dark px-10 py-5 rounded-2xl font-black uppercase tracking-widest text-xs hover:bg-white hover:scale-105 transition-all shadow-2xl shadow-brand-gold/30"
+              style={{ opacity: 0 }}
+            >
               <i className="bi bi-calendar-event" />
               Ver Agenda
             </Link>
-            <Link to="/rutas" className="inline-flex items-center justify-center gap-3 bg-white/10 backdrop-blur-md text-white border border-white/20 px-10 py-5 rounded-2xl font-black uppercase tracking-widest text-xs hover:bg-brand-blue hover:border-brand-blue hover:scale-105 transition-all" style={{ opacity: 0 }}>
-              <i className="bi bi-cpu" />
-              Crear Ruta con IA
+            <Link
+              to="/rutas"
+              className="inline-flex items-center justify-center gap-3 bg-white/10 backdrop-blur-md text-white border border-white/20 px-10 py-5 rounded-2xl font-black uppercase tracking-widest text-xs hover:bg-brand-blue hover:border-brand-blue hover:scale-105 transition-all"
+              style={{ opacity: 0 }}
+            >
+              <i className="bi bi-stars" />
+              Crear Ruta Personalizada
+            </Link>
+            <Link
+              to="/faq"
+              className="inline-flex items-center justify-center gap-3 bg-white/10 backdrop-blur-md text-white border border-white/20 px-10 py-5 rounded-2xl font-black uppercase tracking-widest text-xs hover:bg-white/20 hover:scale-105 transition-all"
+              style={{ opacity: 0 }}
+            >
+              <i className="bi bi-robot" />
+              Chat IA
             </Link>
           </div>
         </div>
@@ -305,7 +301,7 @@ const Home: React.FC = () => {
       </header>
 
       {/* ══════════════════════════════════════════
-          2. FRANJA TICKER
+          2. TICKER
       ══════════════════════════════════════════ */}
       <div className="overflow-hidden bg-brand-dark py-6 border-y border-white/5">
         <style>{`
@@ -362,37 +358,147 @@ const Home: React.FC = () => {
       </section>
 
       {/* ══════════════════════════════════════════
-          5. POR QUÉ MERIDAACTIVA — tarjetas con gradiente metta
+          5. RUTAS IA + CHAT — Sección destacada
       ══════════════════════════════════════════ */}
       <section className="py-32 px-6 bg-white">
         <div className="max-w-6xl mx-auto">
           <div
-            ref={razonesHeaderRef}
-            className="text-center mb-20 transition-all duration-1000"
-            style={{ opacity: razonesHeaderVisible ? 1 : 0, transform: razonesHeaderVisible ? 'translateY(0)' : 'translateY(30px)' }}
+            ref={iaHeaderRef}
+            className="text-center mb-16 transition-all duration-1000"
+            style={{ opacity: iaHeaderVisible ? 1 : 0, transform: iaHeaderVisible ? 'translateY(0)' : 'translateY(30px)' }}
           >
-            <span className="text-brand-gold font-black uppercase tracking-[0.3em] text-[10px] mb-4 block">¿Por qué elegirnos?</span>
+            <span className="text-brand-gold font-black uppercase tracking-[0.3em] text-[10px] mb-4 block">
+              <i className="bi bi-stars mr-2" />
+              Mérida Activa
+            </span>
             <ScrollFloat textClassName="text-5xl md:text-6xl font-black text-brand-dark italic uppercase tracking-tighter">
-              4 razones para usar MeridaActiva
+              Tu viaje, a tu medida
             </ScrollFloat>
+            <p className="text-slate-500 font-medium text-lg max-w-2xl mx-auto mt-6">
+              Herramientas inteligentes que hacen que descubrir Mérida sea más fácil, más personal y más memorable.
+            </p>
           </div>
 
-          <div ref={razonesRef} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {RAZONES.map((r) => (
-              <div
-                key={r.num}
-                className={`relative rounded-[2rem] p-8 border border-slate-100 shadow-sm hover:shadow-xl hover:-translate-y-2 transition-all duration-300 group cursor-default overflow-hidden bg-gradient-to-br ${r.gradient} bg-brand-bg`}
-              >
-                <span className="absolute -right-2 -top-4 text-[7rem] font-black text-black/5 select-none leading-none pointer-events-none">
-                  {r.num}
-                </span>
-                <div className="w-12 h-12 bg-brand-dark rounded-2xl flex items-center justify-center mb-5 group-hover:bg-brand-gold group-hover:scale-110 transition-all duration-300 relative z-10">
-                  <i className={`bi ${r.icon} text-brand-gold group-hover:text-brand-dark text-xl transition-colors`} />
+          {/* Cards IA — 2 grandes */}
+          <div ref={iaCardsRef} className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12">
+
+            {/* Rutas IA */}
+            <div className="relative rounded-[2.5rem] overflow-hidden bg-brand-dark group hover:-translate-y-2 transition-all duration-500 shadow-2xl">
+              <div className="absolute inset-0 z-0">
+                <img
+                  src="/Imagenes/merida-maravilla-monumental.jpg"
+                  alt="Rutas IA"
+                  className="w-full h-full object-cover opacity-20 group-hover:opacity-30 group-hover:scale-105 transition-all duration-700"
+                  onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-brand-dark via-brand-dark/80 to-brand-dark/40" />
+              </div>
+              <div className="relative z-10 p-10 flex flex-col h-full min-h-[420px]">
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="w-14 h-14 bg-brand-gold rounded-2xl flex items-center justify-center shadow-lg shadow-brand-gold/30">
+                    <i className="bi bi-stars text-brand-dark text-2xl" />
+                  </div>
+                  <div>
+                    <span className="text-brand-gold font-black uppercase tracking-widest text-[10px] block">Novedad</span>
+                    <h3 className="text-white font-black text-xl uppercase italic tracking-tighter">Rutas con IA</h3>
+                  </div>
                 </div>
-                <h3 className="font-black text-brand-dark uppercase italic tracking-tight text-lg mb-3 group-hover:text-brand-blue transition-colors relative z-10">
-                  {r.titulo}
-                </h3>
-                <p className="text-slate-500 text-sm font-medium leading-relaxed relative z-10">{r.desc}</p>
+                <p className="text-slate-300 font-medium leading-relaxed mb-6 flex-1">
+                  Dinos cuánto tiempo tienes, con quién vienes y tu ritmo de viaje. En segundos tendrás un itinerario personalizado con monumentos, horarios y descripciones reales de Mérida.
+                </p>
+                <div className="grid grid-cols-3 gap-3 mb-8">
+                  {[
+                    { icon: 'bi-clock', label: '¿Cuánto tiempo?' },
+                    { icon: 'bi-people', label: '¿Con quién?' },
+                    { icon: 'bi-lightning-charge', label: '¿Qué ritmo?' },
+                  ].map(({ icon, label }) => (
+                    <div key={label} className="bg-white/5 border border-white/10 rounded-2xl p-4 text-center hover:bg-white/10 hover:border-brand-gold/30 transition-all group/card">
+                      <i className={`bi ${icon} text-brand-gold text-xl mb-2 block group-hover/card:scale-110 transition-transform`} />
+                      <p className="text-[9px] font-black text-white/50 uppercase tracking-widest leading-tight">{label}</p>
+                    </div>
+                  ))}
+                </div>
+                <div className="flex items-center gap-4 flex-wrap">
+                  <Link
+                    to="/rutas"
+                    className="inline-flex items-center gap-3 bg-brand-gold text-brand-dark px-8 py-4 rounded-2xl font-black uppercase tracking-widest text-xs hover:bg-white hover:scale-105 transition-all shadow-xl shadow-brand-gold/20"
+                  >
+                    <i className="bi bi-stars" />
+                    Crear Mi Ruta
+                  </Link>
+                  <span className="text-[9px] font-black text-white/30 uppercase tracking-widest">
+                    <i className="bi bi-shield-check mr-1" />
+                    Con registro
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Chat IA */}
+            <div className="relative rounded-[2.5rem] overflow-hidden bg-gradient-to-br from-brand-blue/10 to-brand-dark/5 border border-brand-blue/20 group hover:-translate-y-2 transition-all duration-500 shadow-xl">
+              <div className="p-10 flex flex-col h-full min-h-[420px]">
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="w-14 h-14 bg-brand-blue rounded-2xl flex items-center justify-center shadow-lg shadow-brand-blue/30">
+                    <i className="bi bi-robot text-white text-2xl" />
+                  </div>
+                  <div>
+                    <span className="text-brand-blue font-black uppercase tracking-widest text-[10px] block">Siempre disponible</span>
+                    <h3 className="text-brand-dark font-black text-xl uppercase italic tracking-tighter">Asistente IA</h3>
+                  </div>
+                </div>
+                <p className="text-slate-500 font-medium leading-relaxed mb-8 flex-1">
+                  Pregunta lo que quieras sobre Mérida: horarios de monumentos, restaurantes recomendados, historia romana, qué hacer con niños... La IA te responde al instante.
+                </p>
+
+                {/* Chat preview */}
+                <div className="bg-white rounded-[1.5rem] p-5 mb-8 shadow-sm border border-slate-100 space-y-3">
+                  <div className="flex justify-end">
+                    <div className="bg-brand-dark text-white text-xs font-medium px-4 py-2.5 rounded-[1rem] rounded-br-sm max-w-[80%]">
+                      ¿Qué monumentos puedo ver en 3 horas?
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <div className="w-7 h-7 bg-brand-blue rounded-xl flex items-center justify-center flex-shrink-0">
+                      <i className="bi bi-robot text-white text-xs" />
+                    </div>
+                    <div className="bg-slate-50 text-slate-600 text-xs font-medium px-4 py-2.5 rounded-[1rem] rounded-bl-sm max-w-[80%] leading-relaxed">
+                      En 3 horas puedes visitar el Teatro Romano, Anfiteatro y el MNAR. Te recomiendo empezar a las 10:00...
+                    </div>
+                  </div>
+                  <div className="flex justify-center">
+                    <div className="flex gap-1">
+                      {[0, 150, 300].map(d => (
+                        <span key={d} className="w-1.5 h-1.5 bg-slate-300 rounded-full animate-bounce" style={{ animationDelay: `${d}ms` }} />
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                <Link
+                  to="/faq"
+                  className="inline-flex items-center gap-3 bg-brand-dark text-brand-gold px-8 py-4 rounded-2xl font-black uppercase tracking-widest text-xs hover:bg-brand-blue hover:text-white transition-all self-start"
+                >
+                  <i className="bi bi-robot" />
+                  Abrir Chat IA
+                </Link>
+              </div>
+            </div>
+          </div>
+
+          {/* Mini features IA */}
+          <div ref={razonesRef} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {[
+              { icon: 'bi-calendar-check', titulo: 'Agenda Centralizada', desc: 'Todos los eventos de Mérida en un solo lugar, actualizado en tiempo real.', color: 'text-amber-500', bg: 'bg-amber-500/10' },
+              { icon: 'bi-geo-alt-fill', titulo: 'Mapa Interactivo', desc: 'Explora monumentos, restaurantes y eventos en el mapa de la ciudad.', color: 'text-brand-blue', bg: 'bg-brand-blue/10' },
+              { icon: 'bi-bookmark-star', titulo: 'Tu Agenda Personal', desc: 'Guarda favoritos y organiza tu visita con un calendario gratuito.', color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
+              { icon: 'bi-columns-gap', titulo: 'Patrimonio UNESCO', desc: 'Información detallada de los monumentos romanos más importantes de España.', color: 'text-brand-gold', bg: 'bg-brand-gold/10' },
+            ].map((r) => (
+              <div key={r.titulo} className="rounded-[2rem] p-7 border border-slate-100 shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-300 bg-white group cursor-default">
+                <div className={`w-11 h-11 ${r.bg} rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform`}>
+                  <i className={`bi ${r.icon} ${r.color} text-xl`} />
+                </div>
+                <h3 className="font-black text-brand-dark uppercase italic tracking-tight text-sm mb-2">{r.titulo}</h3>
+                <p className="text-slate-400 text-xs font-medium leading-relaxed">{r.desc}</p>
               </div>
             ))}
           </div>
@@ -400,7 +506,7 @@ const Home: React.FC = () => {
       </section>
 
       {/* ══════════════════════════════════════════
-          6. CATEGORÍAS — ScrollStack con gradiente metta
+          6. CATEGORÍAS — ScrollStack
       ══════════════════════════════════════════ */}
       <section className="py-32 px-6 bg-brand-bg relative z-0">
         <div className="max-w-4xl mx-auto">
@@ -425,10 +531,7 @@ const Home: React.FC = () => {
             {CATEGORIAS.map((cat, i) => (
               <ScrollStackItem key={i}>
                 <Link to={cat.link} className="block group">
-                  <div
-                    className="relative w-full h-80 md:h-[28rem] rounded-[2.5rem] overflow-hidden"
-                    style={{ background: cat.gradient }}
-                  >
+                  <div className="relative w-full h-80 md:h-[28rem] rounded-[2.5rem] overflow-hidden" style={{ background: cat.gradient }}>
                     <img
                       src={cat.image}
                       alt={cat.title}
@@ -436,7 +539,6 @@ const Home: React.FC = () => {
                       onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
-
                     <div className="absolute top-8 left-8 right-8 flex items-center justify-between">
                       <span className="text-[9px] font-black uppercase tracking-widest text-white/80 border border-white/30 px-4 py-2 rounded-full backdrop-blur-sm bg-black/10">
                         {cat.tag}
@@ -448,21 +550,14 @@ const Home: React.FC = () => {
                         <i className={`bi ${cat.icon} text-white text-xl`} />
                       </div>
                     </div>
-
                     <div className="absolute top-8 right-24 text-[8rem] font-black text-white/5 leading-none select-none pointer-events-none">
                       {String(i + 1).padStart(2, '0')}
                     </div>
-
                     <div className="absolute bottom-0 left-0 right-0 p-8">
-                      <h3
-                        className="text-5xl md:text-6xl font-black text-white uppercase italic tracking-tighter leading-none mb-3 transition-colors duration-300"
-                        style={{ textShadow: '0 2px 20px rgba(0,0,0,0.4)' }}
-                      >
+                      <h3 className="text-5xl md:text-6xl font-black text-white uppercase italic tracking-tighter leading-none mb-3 transition-colors duration-300" style={{ textShadow: '0 2px 20px rgba(0,0,0,0.4)' }}>
                         {cat.title}
                       </h3>
-                      <p className="text-white/70 text-sm font-medium leading-relaxed max-w-lg mb-5">
-                        {cat.desc}
-                      </p>
+                      <p className="text-white/70 text-sm font-medium leading-relaxed max-w-lg mb-5">{cat.desc}</p>
                       <div
                         className="inline-flex items-center gap-2 font-black text-[10px] uppercase tracking-widest px-5 py-2.5 rounded-full transition-all duration-300 group-hover:gap-4"
                         style={{ backgroundColor: cat.accentColor, color: '#032B43' }}
@@ -480,7 +575,7 @@ const Home: React.FC = () => {
       </section>
 
       {/* ══════════════════════════════════════════
-          7. CTA RUTAS IA
+          7. CTA RUTAS IA — Banner oscuro
       ══════════════════════════════════════════ */}
       <section className="py-0 relative z-10">
         <div ref={bannerRef} className="relative overflow-hidden bg-brand-dark">
@@ -496,8 +591,8 @@ const Home: React.FC = () => {
           <div className="relative z-10 max-w-6xl mx-auto px-6 py-28 flex flex-col lg:flex-row items-center justify-between gap-10">
             <div className="max-w-xl">
               <span className="banner-animate block text-brand-gold font-black uppercase tracking-[0.3em] text-[10px] mb-5" style={{ opacity: 0 }}>
-                <i className="bi bi-cpu mr-2" />
-                Inteligencia Artificial
+                <i className="bi bi-stars mr-2" />
+                Rutas Inteligentes con IA
               </span>
               <h2 className="banner-animate text-5xl md:text-6xl font-black text-white italic uppercase tracking-tighter leading-none mb-6" style={{ opacity: 0 }}>
                 Tu itinerario <span className="text-brand-gold">perfecto</span> en 3 preguntas
@@ -522,6 +617,10 @@ const Home: React.FC = () => {
               <Link to="/rutas" className="inline-flex items-center gap-3 bg-brand-gold text-brand-dark px-10 py-5 rounded-2xl font-black uppercase tracking-widest text-xs hover:bg-white hover:scale-105 transition-all shadow-2xl shadow-brand-gold/20">
                 <i className="bi bi-stars" />
                 Crear Mi Ruta Ahora
+              </Link>
+              <Link to="/faq" className="inline-flex items-center gap-3 text-brand-gold/60 hover:text-brand-gold transition-colors font-black uppercase tracking-widest text-xs">
+                <i className="bi bi-robot" />
+                O pregúntale a la IA
               </Link>
               <span className="text-[9px] font-black text-white/30 uppercase tracking-widest">
                 <i className="bi bi-shield-check mr-1" />
@@ -574,22 +673,13 @@ const Home: React.FC = () => {
       )}
 
       {/* ══════════════════════════════════════════
-          9. CTA FINAL — FluidGlass sobre gradiente
+          9. CTA FINAL
       ══════════════════════════════════════════ */}
       <section className="relative overflow-hidden py-32 px-6">
-        <div
-          className="absolute inset-0"
-          style={{ background: 'linear-gradient(135deg, #032B43 0%, #1a2744 40%, #2d4a6e 70%, #3F88C5 100%)' }}
-        />
+        <div className="absolute inset-0" style={{ background: 'linear-gradient(135deg, #032B43 0%, #1a2744 40%, #2d4a6e 70%, #3F88C5 100%)' }} />
         <div className="absolute inset-0 opacity-15">
-          <img
-            src="/Imagenes/teatro-romano.jpg"
-            alt=""
-            className="w-full h-full object-cover"
-            onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
-          />
+          <img src="/Imagenes/teatro-romano.jpg" alt="" className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
         </div>
-
         <div className="max-w-3xl mx-auto relative z-10">
           <FluidGlass blur={28} tintOpacity={0.12} borderColor="rgba(255,255,255,0.2)" className="p-12 md:p-16 text-center">
             <span className="text-brand-gold font-black uppercase tracking-[0.3em] text-[10px] mb-5 block">
@@ -601,16 +691,20 @@ const Home: React.FC = () => {
               <span className="text-brand-gold">Mérida hoy</span>
             </h2>
             <p className="text-white/70 font-medium text-lg max-w-lg mx-auto mb-10 leading-relaxed">
-              Regístrate gratis y accede a rutas inteligentes, agenda personal, favoritos y mucho más.
+              Regístrate gratis y accede a rutas inteligentes con IA, agenda personal, favoritos y mucho más.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link to="/registro" className="inline-flex items-center justify-center gap-3 px-10 py-5 rounded-2xl font-black uppercase tracking-widest text-xs hover:scale-105 transition-all shadow-2xl shadow-brand-gold/20 bg-brand-gold text-brand-dark">
                 <i className="bi bi-person-plus-fill" />
-                Crear Cuenta Gratis
+                Registrarse
               </Link>
-              <Link to="/contacto" className="inline-flex items-center justify-center gap-3 px-10 py-5 rounded-2xl font-black uppercase tracking-widest text-xs border hover:scale-105 transition-all border-white/25 text-white">
-                <i className="bi bi-envelope-fill" />
-                Contactar
+              <Link to="/rutas" className="inline-flex items-center justify-center gap-3 px-10 py-5 rounded-2xl font-black uppercase tracking-widest text-xs border hover:scale-105 transition-all border-white/25 text-white hover:bg-white/10">
+                <i className="bi bi-stars" />
+                Crear Ruta Personalizada
+              </Link>
+              <Link to="/faq" className="inline-flex items-center justify-center gap-3 px-10 py-5 rounded-2xl font-black uppercase tracking-widest text-xs border hover:scale-105 transition-all border-white/25 text-white hover:bg-white/10">
+                <i className="bi bi-robot" />
+                Chat IA
               </Link>
             </div>
           </FluidGlass>
