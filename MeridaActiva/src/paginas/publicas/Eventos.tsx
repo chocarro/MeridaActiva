@@ -110,7 +110,7 @@ const Eventos: React.FC = () => {
       <header className="relative h-72 md:h-96 flex items-end justify-start overflow-hidden">
         <div className="absolute inset-0 z-0">
           <img
-            src="/Imagenes/CULTURAL.jpg"
+            src="/Imagenes/teatro-romano-merida_98.jpg"
             alt="Agenda Cultural Mérida"
             className="w-full h-full object-cover animate-slow-zoom"
             onError={(e) => { (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=1600&q=80'; }}

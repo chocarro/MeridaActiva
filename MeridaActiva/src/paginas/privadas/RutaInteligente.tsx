@@ -560,7 +560,7 @@ const RutaInteligente: React.FC = () => {
             {/* Hero */}
             <div className="relative h-[38vh] min-h-[240px] flex items-center justify-center overflow-hidden pt-20">
                 <div className="absolute inset-0">
-                    <img src="/Imagenes/merida-maravilla-monumental.jpg" alt="Rutas por Mérida" className="w-full h-full object-cover" />
+                    <img src="/Imagenes/Puente.jpg" alt="Rutas por Mérida" className="w-full h-full object-cover" />
                     <div className="absolute inset-0 bg-gradient-to-b from-brand-dark/70 via-brand-dark/50 to-brand-bg" />
                 </div>
                 <div className="relative z-10 text-center px-4">

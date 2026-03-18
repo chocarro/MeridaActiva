@@ -107,7 +107,7 @@ const FAQPage: React.FC = () => {
                     ...prev,
                     {
                         rol: 'ia',
-                        texto: '⚠️ Para usar el asistente IA necesitas estar registrado. **[Inicia sesión o regístrate](/login) completamente gratis** para empezar a chatear sobre Mérida.',
+                        texto: 'Para usar el asistente IA necesitas estar registrado. **[Inicia sesión o regístrate](/login) completamente gratis** para empezar a chatear sobre Mérida.',
                         ts: Date.now(),
                     },
                 ]);
@@ -130,7 +130,7 @@ const FAQPage: React.FC = () => {
                 ...prev,
                 {
                     rol: 'ia',
-                    texto: respuesta + '\n\n*⚠️ Añade `VITE_GEMINI_API_KEY` en `.env` para activar la IA real.*',
+                    texto: respuesta + '\n\n* Añade `VITE_GEMINI_API_KEY` en `.env` para activar la IA real.*',
                     ts: Date.now(),
                 },
             ]);
@@ -154,7 +154,7 @@ const FAQPage: React.FC = () => {
                 {
                     rol: 'ia',
                     texto: esSaturacion
-                        ? '😅 La IA está recibiendo muchas peticiones ahora mismo. Espera unos segundos y vuelve a intentarlo.'
+                        ? ' La IA está recibiendo muchas peticiones ahora mismo. Espera unos segundos y vuelve a intentarlo.'
                         : 'Hubo un problema al conectar con el asistente. Comprueba tu conexión e inténtalo de nuevo.',
                     ts: Date.now(),
                 },
@@ -171,7 +171,7 @@ const FAQPage: React.FC = () => {
             <header className="relative h-[38vh] min-h-[260px] flex items-center justify-center overflow-hidden pt-20">
                 <div className="absolute inset-0 z-0">
                     <img
-                        src="/Imagenes/CULTURAL.jpg"
+                        src="/Imagenes/acueducto-de-los-milagros-merida.jpg"
                         alt="Asistente IA MeridaActiva"
                         className="w-full h-full object-cover scale-110 animate-slow-zoom"
                     />
