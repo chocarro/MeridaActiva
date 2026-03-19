@@ -5,39 +5,13 @@ import { VitePWA } from 'vite-plugin-pwa'
 // Mejora 2: Optimización automática de imágenes en build
 // › npm install -D vite-plugin-imagemin
 // › Convierte JPG/PNG a WebP y aplica compresión mozjpeg+pngquant
-import viteImagemin from 'vite-plugin-imagemin'
+
 
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [
     react(),
     tailwindcss(),
-
-    // ── Mejora 2: Compresión/conversión de imágenes ────────────────
-    // Solo activa en el build de producción (no en `vite dev`).
-    // Para deshabilitar temporalmente: comenta este bloque.
-    viteImagemin({
-      // Imágenes WebP — ya optimizadas, solo recomprimimos
-      webp: {
-        quality: 80,
-      },
-      // JPEG → también genera versión WebP
-      mozjpeg: {
-        quality: 80,
-      },
-      // PNG → también genera versión WebP
-      pngquant: {
-        quality: [0.7, 0.9],
-        speed: 4,
-      },
-      // SVG opcional
-      svgo: {
-        plugins: [
-          { name: 'removeViewBox', active: false },
-          { name: 'removeEmptyAttrs', active: false },
-        ],
-      },
-    }),
 
     VitePWA({
       registerType: 'autoUpdate',
