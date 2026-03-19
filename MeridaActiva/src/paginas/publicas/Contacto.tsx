@@ -71,32 +71,68 @@ const Contacto: React.FC = () => {
     };
 
     return (
-        <div className="min-h-screen bg-brand-bg">
+        <div className="min-h-screen bg-brand-bg overflow-x-hidden relative">
+
+            {/* Decorative thread — full page background */}
+            <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
+                <img src="/Imagenes/hilo-decorativo-verde.jpg" alt="" className="w-full h-full object-cover opacity-[0.04] select-none" aria-hidden="true" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+            </div>
 
             {/* ── HERO ── */}
-            <header className="relative h-[40vh] min-h-[280px] flex items-center justify-center overflow-hidden pt-20">
+            <header className="relative z-10 h-72 md:h-96 flex items-end justify-start overflow-hidden">
                 <div className="absolute inset-0 z-0">
                     <img
                         src="/Imagenes/CULTURAL.jpg"
                         alt="Contacto"
-                        className="w-full h-full object-cover scale-110"
+                        className="w-full h-full object-cover"
                     />
-                    <div className="absolute inset-0 bg-gradient-to-b from-brand-dark/80 via-brand-dark/60 to-brand-bg" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-brand-dark via-brand-dark/60 to-transparent" />
                 </div>
-                <div className="relative z-10 text-center px-4">
-                    <span className="text-brand-gold font-black uppercase tracking-[0.3em] text-xs mb-4 block">
+                <div className="relative z-10 max-w-7xl mx-auto px-6 pb-12 w-full">
+                    <span className="text-brand-gold font-black uppercase tracking-[0.3em] text-[10px] mb-3 block">
+                        <i className="bi bi-envelope-fill mr-2" />
                         Estamos aquí para ayudarte
                     </span>
-                    <h1 className="text-5xl md:text-7xl font-black tracking-tighter italic uppercase text-white leading-none">
-                        Contáctanos
+                    <h1 className="text-5xl md:text-7xl font-black text-white italic uppercase tracking-tighter leading-none mb-4">
+                        Contáct<span className="text-brand-gold">anos</span>
                     </h1>
+                    <p className="text-white/60 font-medium max-w-lg">
+                        Publica un evento, sugiere mejoras o resuelve cualquier duda sobre MeridaActiva.
+                    </p>
                 </div>
             </header>
 
-            <div className="max-w-7xl mx-auto px-4 pb-24">
+            {/* ── BANNER IA ── */}
+            <div className="bg-brand-dark border-b border-white/5 relative z-10 overflow-hidden">
+                <div className="absolute inset-0 pointer-events-none z-0">
+                    <img  alt="" className="w-full h-full object-cover opacity-[0.08] select-none" aria-hidden="true" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                </div>
+                <div className="max-w-7xl mx-auto px-6 py-4 flex flex-col sm:flex-row items-center justify-between gap-4 relative z-10">
+                    <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 bg-brand-gold/20 rounded-xl flex items-center justify-center flex-shrink-0">
+                            <i className="bi bi-robot text-brand-gold text-sm" />
+                        </div>
+                        <p className="text-white/70 text-sm font-medium">
+                            <span className="text-brand-gold font-black">¿Prefieres respuesta inmediata?</span> — Nuestro asistente IA responde al instante
+                        </p>
+                    </div>
+                    <div className="flex gap-3 flex-shrink-0">
+                        <a href="/faq" className="inline-flex items-center gap-2 bg-brand-gold text-brand-dark px-6 py-2.5 rounded-xl font-black uppercase tracking-widest text-[10px] hover:bg-white transition-all">
+                            <i className="bi bi-robot text-xs" />
+                            Chat IA
+                        </a>
+                        <a href="/rutas" className="inline-flex items-center gap-2 bg-white/10 text-white px-6 py-2.5 rounded-xl font-black uppercase tracking-widest text-[10px] hover:bg-white/20 transition-all">
+                            <i className="bi bi-stars text-xs" />
+                            Crear Ruta
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <div className="max-w-7xl mx-auto px-4 pb-24 relative z-10">
 
                 {/* ── TARJETAS DE INFO ── */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 -mt-10 mb-20 relative z-10">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mt-10 mb-20 relative z-10">
                     {INFO_ITEMS.map((item) => (
                         <div
                             key={item.titulo}

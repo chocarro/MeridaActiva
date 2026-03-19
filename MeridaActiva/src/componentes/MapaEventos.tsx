@@ -2,9 +2,10 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import { Link } from 'react-router-dom';
 import 'leaflet/dist/leaflet.css';
-import { supabase } from '../supabaseClient';
-import { useSeoMeta } from '../hooks/useSeoMeta';
+
 import L from 'leaflet';
+import { useSeoMeta } from '../hooks/useSeoMeta';
+import { supabase } from '../supabaseClient';
 
 // ── Fix Leaflet default icon ──────────────────────────────────────
 delete (L.Icon.Default.prototype as unknown as Record<string, unknown>)._getIconUrl;
@@ -219,24 +220,66 @@ const [capaActiva, setCapaActiva] = useState('light');
   };
 
   return (
-    <div className="min-h-screen bg-brand-bg flex flex-col">
+    <div className="min-h-screen bg-brand-bg overflow-x-hidden relative">
+      {/* Decorative thread — full page background */}
+      <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
+        <img src="/Imagenes/hilo-decorativo-azul.jpg" alt="" className="w-full h-full object-cover opacity-[0.04] select-none" aria-hidden="true" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+      </div>
 
-      {/* ── CABECERA ── */}
-      <div className="pt-28 pb-6 px-4">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-8">
-            <span className="text-brand-gold font-black uppercase tracking-[0.3em] text-xs mb-3 block">
-              Explora la ciudad
-            </span>
-            <h1 className="text-5xl md:text-7xl font-[900] text-brand-dark italic uppercase tracking-tighter">
-              Mérida en el <span className="text-brand-blue">Mapa</span>
-            </h1>
-            <p className="text-slate-400 font-bold uppercase text-[10px] tracking-[0.3em] mt-3">
-              {loading
-                ? 'Cargando…'
-                : `${totalFiltrados} ${tab === 'eventos' ? 'evento' : 'lugar'}${totalFiltrados !== 1 ? 's' : ''} en el mapa`}
+      {/* ── HERO ── */}
+      <header className="relative z-10 h-72 md:h-96 flex items-end justify-start overflow-hidden">
+        <div className="absolute inset-0 z-0">
+          <img
+            src="/Imagenes/teatro-edited.webp"
+            alt="Mapa de Mérida"
+            className="w-full h-full object-cover"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-brand-dark via-brand-dark/60 to-transparent" />
+        </div>
+        <div className="relative z-10 max-w-7xl mx-auto px-6 pb-12 w-full">
+          <span className="text-brand-gold font-black uppercase tracking-[0.3em] text-[10px] mb-3 block">
+            <i className="bi bi-geo-alt-fill mr-2" />
+            Explora la ciudad
+          </span>
+          <h1 className="text-5xl md:text-7xl font-black text-white italic uppercase tracking-tighter leading-none mb-4">
+            Mérida en el <span className="text-brand-gold">Mapa</span>
+          </h1>
+          <p className="text-white/60 font-medium max-w-lg">
+            Todos los eventos y monumentos de Mérida en un solo mapa interactivo.
+          </p>
+        </div>
+      </header>
+
+      {/* ── BANNER IA ── */}
+      <div className="bg-brand-dark border-b border-white/5 relative z-10 overflow-hidden">
+        <div className="absolute inset-0 pointer-events-none z-0">
+          <img alt="" className="w-full h-full object-cover opacity-[0.08] select-none" aria-hidden="true" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+        </div>
+        <div className="max-w-7xl mx-auto px-6 py-4 flex flex-col sm:flex-row items-center justify-between gap-4 relative z-10">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 bg-brand-gold/20 rounded-xl flex items-center justify-center flex-shrink-0">
+              <i className="bi bi-map text-brand-gold text-sm" />
+            </div>
+            <p className="text-white/70 text-sm font-medium">
+              <span className="text-brand-gold font-black">Mapa interactivo</span> — Eventos y monumentos de Mérida en tiempo real
             </p>
           </div>
+          <div className="flex gap-3 flex-shrink-0">
+            <Link to="/rutas" className="inline-flex items-center gap-2 bg-brand-gold text-brand-dark px-6 py-2.5 rounded-xl font-black uppercase tracking-widest text-[10px] hover:bg-white transition-all">
+              <i className="bi bi-stars text-xs" />
+              Crear Ruta
+            </Link>
+            <Link to="/faq" className="inline-flex items-center gap-2 bg-white/10 text-white px-6 py-2.5 rounded-xl font-black uppercase tracking-widest text-[10px] hover:bg-white/20 transition-all">
+              <i className="bi bi-robot text-xs" />
+              Chat IA
+            </Link>
+          </div>
+        </div>
+      </div>
+
+      {/* ── FILTROS Y CONTENIDO ── */}
+      <div className="pb-6 px-4 pt-6 relative z-10">
+        <div className="max-w-7xl mx-auto">
 
           {/* ── Tabs Eventos / Lugares ── */}
           <div className="flex justify-center gap-3 mb-6">
@@ -312,7 +355,7 @@ const [capaActiva, setCapaActiva] = useState('light');
       </div>
 
       {/* ── CONTENIDO PRINCIPAL ── */}
-      <div className="flex-1 px-4 pb-6">
+      <div className="flex-1 px-4 pb-6 relative z-10">
         <div className="max-w-7xl mx-auto flex flex-col lg:flex-row gap-6 h-[620px]">
 
           {/* ── Panel lateral lista ── */}

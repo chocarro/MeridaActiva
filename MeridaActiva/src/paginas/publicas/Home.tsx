@@ -148,6 +148,9 @@ function StatCard({ num, label, icon, active }: { num: string; label: string; ic
 // ════════════════════════════════════════════════════════════════
 const Home: React.FC = () => {
   const [reseñas, setReseñas] = useState<any[]>([]);
+  const [totalReseñas, setTotalReseñas] = useState(0);
+  const [activeCardIndex, setActiveCardIndex] = useState(0);
+  const reseñasScrollRef = useRef<HTMLDivElement>(null);
   const [statsActive, setStatsActive] = useState(false);
   const statsRef = useRef<HTMLDivElement>(null);
   const heroTextRef = useRef<HTMLDivElement>(null);
@@ -211,12 +214,13 @@ const Home: React.FC = () => {
 
   useEffect(() => {
     const fetchReseñas = async () => {
-      const { data } = await supabase
+      const { data, count } = await supabase
         .from('comentarios')
-        .select('id, texto, nombre_usuario, puntuacion, created_at, evento_id')
+        .select('id, texto, nombre_usuario, puntuacion, created_at, evento_id', { count: 'exact' })
         .order('created_at', { ascending: false })
-        .limit(6);
+        .limit(12);
       if (!data?.length) return;
+      setTotalReseñas(count || data.length);
       const ids = [...new Set(data.map((r: any) => r.evento_id).filter(Boolean))];
       if (ids.length) {
         const { data: evs } = await supabase.from('eventos').select('id, titulo').in('id', ids);
@@ -323,10 +327,14 @@ const Home: React.FC = () => {
       {/* ══════════════════════════════════════════
           3. BAND — Texto rotativo
       ══════════════════════════════════════════ */}
-      <section className="py-20 bg-brand-dark text-center overflow-hidden">
+      <section className="py-20 bg-brand-dark text-center overflow-hidden relative">
+        {/* Decorative background thread */}
+        <div className="absolute inset-0 z-0 pointer-events-none">
+          <img src="/Imagenes/hilo-decorativo-verde.jpg" alt="" className="w-full h-full object-cover opacity-10 select-none" aria-hidden="true" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+        </div>
         <div
           ref={bandRef}
-          className="max-w-4xl mx-auto px-6 transition-all duration-1000"
+          className="max-w-4xl mx-auto px-6 transition-all duration-1000 relative z-10"
           style={{ opacity: bandVisible ? 1 : 0, transform: bandVisible ? 'translateY(0)' : 'translateY(40px)' }}
         >
           <span className="text-brand-gold font-black uppercase tracking-[0.3em] text-[10px] mb-4 block">Descubre Mérida</span>
@@ -349,8 +357,8 @@ const Home: React.FC = () => {
       {/* ══════════════════════════════════════════
           4. STATS
       ══════════════════════════════════════════ */}
-      <section ref={statsRef} className="py-20 bg-brand-dark border-t border-white/5">
-        <div className="max-w-5xl mx-auto px-6">
+      <section ref={statsRef} className="py-20 bg-brand-dark border-t border-white/5 relative overflow-hidden">
+        <div className="max-w-5xl mx-auto px-6 relative z-10">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {STATS.map((s, i) => <StatCard key={i} {...s} active={statsActive} />)}
           </div>
@@ -360,8 +368,12 @@ const Home: React.FC = () => {
       {/* ══════════════════════════════════════════
           5. RUTAS IA + CHAT — Sección destacada
       ══════════════════════════════════════════ */}
-      <section className="py-32 px-6 bg-white">
-        <div className="max-w-6xl mx-auto">
+      <section className="py-32 px-6 bg-white relative overflow-hidden">
+        {/* Decorative background thread */}
+        <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden">
+          <img src="/Imagenes/hilo-decorativo-azul.jpg" alt="" className="w-full h-full object-cover opacity-[0.07] select-none" aria-hidden="true" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+        </div>
+        <div className="max-w-6xl mx-auto relative z-10">
           <div
             ref={iaHeaderRef}
             className="text-center mb-16 transition-all duration-1000"
@@ -508,8 +520,12 @@ const Home: React.FC = () => {
       {/* ══════════════════════════════════════════
           6. CATEGORÍAS — ScrollStack
       ══════════════════════════════════════════ */}
-      <section className="py-32 px-6 bg-brand-bg relative z-0">
-        <div className="max-w-4xl mx-auto">
+      <section className="py-32 px-6 bg-brand-bg relative z-0 overflow-hidden">
+        {/* Decorative background thread */}
+        <div className="absolute inset-0 z-0 pointer-events-none">
+          <img src="/Imagenes/hilo-decorativo-rosa.jpg" alt="" className="w-full h-full object-cover opacity-[0.05] select-none" aria-hidden="true" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+        </div>
+        <div className="max-w-4xl mx-auto relative z-10">
           <div
             ref={categoriasHeaderRef}
             className="flex flex-col md:flex-row md:items-end justify-between mb-20 gap-6 transition-all duration-1000"
@@ -635,39 +651,158 @@ const Home: React.FC = () => {
           8. RESEÑAS
       ══════════════════════════════════════════ */}
       {reseñas.length > 0 && (
-        <section className="py-32 bg-brand-dark relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-96 h-96 bg-brand-blue/10 rounded-full blur-[120px] -translate-y-1/2 translate-x-1/2 animate-pulse" />
-          <div className="relative z-10">
+        <section className="pt-20 pb-24 bg-brand-dark relative overflow-hidden">
+          {/* Ambient glows */}
+          <div className="absolute top-0 right-0 w-96 h-96 bg-brand-blue/10 rounded-full blur-[120px] -translate-y-1/2 translate-x-1/2 animate-pulse pointer-events-none" />
+          <div className="absolute bottom-0 left-0 w-72 h-72 bg-brand-gold/5 rounded-full blur-[100px] translate-y-1/2 -translate-x-1/2 pointer-events-none" />
+          {/* Decorative background thread */}
+          <div className="absolute inset-0 z-0 pointer-events-none">
+            <img src="/Imagenes/hilo-decorativo-liso.jpg" alt="" className="w-full h-full object-cover opacity-[0.07] select-none" aria-hidden="true" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+          </div>
+
+          <div className="relative z-10 max-w-7xl mx-auto px-6">
+
+            {/* ── Header ─────────────────────────────── */}
             <div
               ref={reseñasHeaderRef}
-              className="text-center mb-16 px-6 transition-all duration-1000"
-              style={{ opacity: reseñasHeaderVisible ? 1 : 0, transform: reseñasHeaderVisible ? 'translateY(0)' : 'translateY(30px)' }}
+              className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12"
             >
-              <span className="text-brand-gold font-black uppercase tracking-[0.3em] text-[10px] mb-4 block">Experiencias reales</span>
-              <h2 className="text-4xl md:text-6xl font-black text-white italic uppercase tracking-tighter leading-none">
-                Voces de la <span className="text-brand-blue">ciudad</span>
-              </h2>
+              <div>
+                <div className="flex items-center gap-3 mb-3">
+                  <span className="text-brand-gold font-black uppercase tracking-[0.3em] text-[10px]">
+                    <i className="bi bi-chat-quote-fill mr-2" />
+                    Experiencias reales
+                  </span>
+                  {totalReseñas > 0 && (
+                    <span className="bg-brand-gold/15 border border-brand-gold/25 text-brand-gold font-black text-[9px] uppercase tracking-widest px-3 py-1 rounded-full">
+                      {totalReseñas}+ opiniones
+                    </span>
+                  )}
+                </div>
+                <h2 className="text-4xl md:text-6xl font-black text-white italic uppercase tracking-tighter leading-none">
+                  Voces de la <span className="text-brand-blue">ciudad</span>
+                </h2>
+                <p className="text-slate-500 font-medium text-sm mt-3 max-w-md">
+                  Lo que dicen quienes ya han vivido Mérida a través de MéridaActiva.
+                </p>
+              </div>
+
+              {/* Controles de navegación */}
+              <div className="flex items-center gap-3 flex-shrink-0">
+                <span className="text-white/30 font-black text-[9px] uppercase tracking-widest mr-1">
+                  {activeCardIndex + 1} / {reseñas.length}
+                </span>
+                <button
+                  onClick={() => {
+                    const el = reseñasScrollRef.current;
+                    if (!el) return;
+                    const cardW = el.querySelector('div')?.offsetWidth ?? 380;
+                    el.scrollBy({ left: -(cardW + 24), behavior: 'smooth' });
+                  }}
+                  className="w-11 h-11 rounded-xl border border-white/10 bg-white/5 hover:bg-brand-gold hover:border-brand-gold text-white hover:text-brand-dark transition-all duration-200 flex items-center justify-center group"
+                  aria-label="Anterior"
+                >
+                  <i className="bi bi-chevron-left text-sm" />
+                </button>
+                <button
+                  onClick={() => {
+                    const el = reseñasScrollRef.current;
+                    if (!el) return;
+                    const cardW = el.querySelector('div')?.offsetWidth ?? 380;
+                    el.scrollBy({ left: cardW + 24, behavior: 'smooth' });
+                  }}
+                  className="w-11 h-11 rounded-xl border border-white/10 bg-white/5 hover:bg-brand-gold hover:border-brand-gold text-white hover:text-brand-dark transition-all duration-200 flex items-center justify-center"
+                  aria-label="Siguiente"
+                >
+                  <i className="bi bi-chevron-right text-sm" />
+                </button>
+              </div>
             </div>
-            <AnimatedList className="flex overflow-x-auto gap-6 pb-6 px-6 md:px-16 snap-x snap-mandatory hide-scrollbar">
-              {reseñas.map((res) => (
-                <div key={res.id} className="min-w-[300px] md:min-w-[380px] bg-white/5 border border-white/10 p-8 rounded-[2.5rem] hover:bg-white/10 hover:border-brand-gold/20 hover:-translate-y-1 transition-all duration-300 snap-center flex flex-col">
-                  <i className="bi bi-quote text-brand-gold text-4xl opacity-40 mb-4" />
-                  <p className="text-slate-300 italic leading-relaxed font-medium flex-1 mb-8">{res.texto}</p>
-                  <div className="flex items-center gap-4 border-t border-white/5 pt-6">
-                    <div className="w-11 h-11 bg-brand-gold rounded-xl flex items-center justify-center font-black text-brand-dark text-lg shadow-lg flex-shrink-0">
-                      {res.nombre_usuario?.charAt(0)?.toUpperCase() || 'U'}
+
+            {/* ── Carrusel ───────────────────────────── */}
+            <div className="relative">
+              {/* Fade edges */}
+              <div className="absolute left-0 top-0 bottom-6 w-16 bg-gradient-to-r from-brand-dark to-transparent z-10 pointer-events-none rounded-l-3xl" />
+              <div className="absolute right-0 top-0 bottom-6 w-16 bg-gradient-to-l from-brand-dark to-transparent z-10 pointer-events-none rounded-r-3xl" />
+
+              <div
+                ref={reseñasScrollRef}
+                onScroll={() => {
+                  const el = reseñasScrollRef.current;
+                  if (!el) return;
+                  const cardW = (el.querySelector('div')?.offsetWidth ?? 380) + 24;
+                  setActiveCardIndex(Math.round(el.scrollLeft / cardW));
+                }}
+                className="flex overflow-x-auto gap-6 pb-6 snap-x snap-mandatory"
+                style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+              >
+                {reseñas.map((res, idx) => (
+                  <div
+                    key={res.id}
+                    className="min-w-[300px] md:min-w-[380px] bg-white/5 border border-white/10 p-8 rounded-[2.5rem] hover:bg-white/8 hover:border-brand-gold/20 hover:-translate-y-1 transition-all duration-300 snap-center flex flex-col"
+                    style={{ opacity: idx === activeCardIndex ? 1 : 0.65, transition: 'opacity 0.3s, transform 0.3s' }}
+                  >
+                    <div className="flex items-start justify-between mb-4">
+                      <i className="bi bi-quote text-brand-gold text-3xl opacity-40" />
+                      <div className="flex gap-0.5">
+                        {Array.from({ length: res.puntuacion || 5 }).map((_, j) => (
+                          <i key={j} className="bi bi-star-fill text-brand-gold text-[9px]" />
+                        ))}
+                      </div>
                     </div>
-                    <div className="min-w-0">
-                      <p className="font-black text-white text-[10px] uppercase tracking-widest truncate">{res.nombre_usuario || 'Explorador'}</p>
-                      {res.titulo_evento && <p className="text-[9px] text-brand-gold/70 font-bold uppercase tracking-widest mt-0.5 truncate">{res.titulo_evento}</p>}
-                      <div className="flex gap-0.5 mt-1">
-                        {Array.from({ length: res.puntuacion || 5 }).map((_, j) => <i key={j} className="bi bi-star-fill text-brand-gold text-[8px]" />)}
+                    <p className="text-slate-300 italic leading-relaxed font-medium flex-1 mb-8 text-sm">{res.texto}</p>
+                    <div className="flex items-center gap-4 border-t border-white/5 pt-5">
+                      <div className="w-11 h-11 bg-brand-gold rounded-xl flex items-center justify-center font-black text-brand-dark text-lg shadow-lg flex-shrink-0">
+                        {res.nombre_usuario?.charAt(0)?.toUpperCase() || 'U'}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="font-black text-white text-[10px] uppercase tracking-widest truncate">{res.nombre_usuario || 'Explorador'}</p>
+                        {res.titulo_evento && (
+                          <p className="text-[9px] text-brand-gold/70 font-bold uppercase tracking-widest mt-0.5 truncate">
+                            <i className="bi bi-calendar-event mr-1 opacity-60" />
+                            {res.titulo_evento}
+                          </p>
+                        )}
+                        {res.created_at && (
+                          <p className="text-[8px] text-white/20 font-bold uppercase tracking-widest mt-1">
+                            {new Date(res.created_at).toLocaleDateString('es-ES', { month: 'short', year: 'numeric' })}
+                          </p>
+                        )}
                       </div>
                     </div>
                   </div>
-                </div>
-              ))}
-            </AnimatedList>
+                ))}
+              </div>
+            </div>
+
+            {/* ── Dot indicators + CTA ───────────────── */}
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-6 mt-6">
+              <div className="flex gap-2">
+                {reseñas.map((_, i) => (
+                  <button
+                    key={i}
+                    onClick={() => {
+                      const el = reseñasScrollRef.current;
+                      if (!el) return;
+                      const cardW = (el.querySelector('div')?.offsetWidth ?? 380) + 24;
+                      el.scrollTo({ left: cardW * i, behavior: 'smooth' });
+                    }}
+                    className={`rounded-full transition-all duration-300 ${i === activeCardIndex ? 'w-6 h-2 bg-brand-gold' : 'w-2 h-2 bg-white/20 hover:bg-white/40'}`}
+                    aria-label={`Ir a reseña ${i + 1}`}
+                  />
+                ))}
+              </div>
+              {totalReseñas > reseñas.length && (
+                <Link
+                  to="/eventos"
+                  className="inline-flex items-center gap-2 text-brand-gold/70 hover:text-brand-gold transition-colors font-black uppercase tracking-widest text-[9px]"
+                >
+                  Ver todas las opiniones
+                  <i className="bi bi-arrow-right" />
+                </Link>
+              )}
+            </div>
+
           </div>
         </section>
       )}

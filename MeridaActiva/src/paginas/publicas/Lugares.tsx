@@ -85,10 +85,14 @@ const Lugares: React.FC = () => {
     .sort((a, b) => orden === 'asc' ? a.nombre_es.localeCompare(b.nombre_es) : b.nombre_es.localeCompare(a.nombre_es));
 
   return (
-    <div className="min-h-screen bg-brand-bg overflow-x-hidden">
+    <div className="min-h-screen bg-brand-bg overflow-x-hidden relative">
+      {/* Decorative thread — full page background */}
+      <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
+        <img src="/Imagenes/hilo-decorativo-rosa.jpg" alt="" className="w-full h-full object-cover opacity-[0.04] select-none" aria-hidden="true" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+      </div>
 
       {/* HERO */}
-      <header className="relative h-72 md:h-96 flex items-end justify-start overflow-hidden">
+      <header className="relative z-10 h-72 md:h-96 flex items-end justify-start overflow-hidden">
         <div className="absolute inset-0 z-0">
           <img
             src="/Imagenes/Museo Romano.webp"
@@ -113,8 +117,12 @@ const Lugares: React.FC = () => {
       </header>
 
       {/* BANNER RUTAS IA */}
-      <div className="bg-brand-dark border-b border-white/5">
-        <div className="max-w-7xl mx-auto px-6 py-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+      <div className="bg-brand-dark border-b border-white/5 relative z-10 overflow-hidden">
+        {/* Decorative thread */}
+        <div className="absolute inset-0 pointer-events-none z-0">
+          <img  alt="" className="w-full h-full object-cover opacity-[0.09] select-none" aria-hidden="true" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+        </div>
+        <div className="max-w-7xl mx-auto px-6 py-4 flex flex-col sm:flex-row items-center justify-between gap-4 relative z-10">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 bg-brand-gold/20 rounded-xl flex items-center justify-center flex-shrink-0">
               <i className="bi bi-map text-brand-gold text-sm" />
@@ -136,10 +144,10 @@ const Lugares: React.FC = () => {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 pt-10 pb-20">
+      <div className="max-w-7xl mx-auto px-4 pt-10 pb-20 relative z-10">
 
         {/* Buscador */}
-        <div className="mb-6">
+        <div className="mb-6 relative z-10">
           <div className="flex flex-col md:flex-row gap-4 items-center bg-white p-4 rounded-3xl shadow-sm border border-slate-100">
             <div className="relative w-full md:w-1/2">
               <i className="bi bi-search absolute left-6 top-1/2 -translate-y-1/2 text-slate-400" />
