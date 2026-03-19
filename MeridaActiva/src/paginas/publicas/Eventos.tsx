@@ -116,7 +116,7 @@ const Eventos: React.FC = () => {
           <img
             src="/Imagenes/teatro-romano-merida_98.jpg"
             alt="Agenda Cultural Mérida"
-            className="w-full h-full object-cover animate-slow-zoom"
+            className="w-full h-full object-cover"
             onError={(e) => { (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=1600&q=80'; }}
           />
           <div className="absolute inset-0 bg-gradient-to-t from-brand-dark via-brand-dark/60 to-transparent" />
@@ -239,7 +239,9 @@ const Eventos: React.FC = () => {
           </div>
         ) : eventosProcesados.length === 0 ? (
           <div className="py-24 text-center bg-white rounded-[3rem] border-2 border-dashed border-slate-200 mt-4">
-            <div className="w-20 h-20 bg-brand-gold/10 rounded-[2rem] flex items-center justify-center mx-auto mb-8 text-4xl">🎭</div>
+            <div className="w-20 h-20 bg-brand-gold/10 rounded-[2rem] flex items-center justify-center mx-auto mb-8">
+              <i className="bi bi-calendar2-x text-4xl text-brand-dark/30" />
+            </div>
             <h3 className="text-2xl font-black uppercase italic tracking-tighter text-brand-dark mb-3">Sin resultados</h3>
             <p className="text-slate-400 font-bold text-xs uppercase tracking-widest mb-8 max-w-xs mx-auto">
               {busqueda ? `No hay eventos que coincidan con "${busqueda}"` : 'No hay eventos en esta categoría o fecha'}

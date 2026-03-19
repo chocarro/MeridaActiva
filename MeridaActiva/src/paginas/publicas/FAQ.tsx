@@ -44,11 +44,11 @@ function responderIA(pregunta: string): string {
         if (p.includes(clave)) hallazgos.push(RESPUESTAS_IA[clave]);
     }
     if (hallazgos.length === 0 && p.match(/\b(hola|buenas|saludos|que tal|hey|hello)\b/)) {
-        return '¡Muy buenas! 🏛️ Soy la IA de MeridaActiva. Pregúntame sobre la historia romana de la ciudad, el teatro, los mejores sitios para comer tapas, o cómo usar la plataforma. ¡Soy todo oídos!';
+        return '¡Muy buenas! Soy la IA de MeridaActiva. Pregúntame sobre la historia romana de la ciudad, el teatro, los mejores sitios para comer tapas, o cómo usar la plataforma. ¡Soy todo oídos!';
     }
     if (hallazgos.length > 1) return hallazgos.join('\n\n*Y además:*\n');
     if (hallazgos.length === 1) return hallazgos[0];
-    return '¡Vaya! 😅 Esa pregunta es muy específica. Pregúntame sobre el **teatro, anfiteatro, historia, gastronomía o las funciones de la web**. ¡Si es urgente ve a Contacto!';
+    return '¡Vaya! Esa pregunta es muy específica. Pregúntame sobre el **teatro, anfiteatro, historia, gastronomía o las funciones de la web**. ¡Si es urgente ve a Contacto!';
 }
 
 type MsgChat = MensajeChat;
@@ -77,7 +77,7 @@ const FAQPage: React.FC = () => {
     const [mensajes, setMensajes] = useState<MsgChat[]>([
         {
             rol: 'ia',
-            texto: '¡Hola! Soy el asistente de MeridaActiva 🏛️\n\nPuedo ayudarte con:\n- **Eventos** y agenda cultural de Mérida\n- **Monumentos** romanos y patrimonio\n- **Gastronomía** y restaurantes\n- **Rutas** personalizadas por la ciudad\n- Cualquier duda sobre la plataforma\n\n¿Qué quieres saber?',
+            texto: '¡Hola! Soy el asistente de MeridaActiva\n\nPuedo ayudarte con:\n- **Eventos** y agenda cultural de Mérida\n- **Monumentos** romanos y patrimonio\n- **Gastronomía** y restaurantes\n- **Rutas** personalizadas por la ciudad\n- Cualquier duda sobre la plataforma\n\n¿Qué quieres saber?',
             ts: Date.now(),
         },
     ]);
@@ -173,7 +173,7 @@ const FAQPage: React.FC = () => {
                     <img
                         src="/Imagenes/acueducto-de-los-milagros-merida.jpg"
                         alt="Asistente IA MeridaActiva"
-                        className="w-full h-full object-cover scale-110 animate-slow-zoom"
+                        className="w-full h-full object-cover"
                     />
                     <div className="absolute inset-0 bg-gradient-to-b from-brand-dark/80 via-brand-dark/60 to-brand-bg" />
                 </div>

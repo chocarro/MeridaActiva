@@ -34,13 +34,33 @@ interface AuthContextType {
   session: Session | null;
   profile: any | null;
   loading: boolean;
+  forceNuclearLogout: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType>({
   session: null,
   profile: null,
   loading: true,
+  forceNuclearLogout: async () => {},
 });
+
+// ─────────────────────────────────────────────
+// Nuclear Logout — limpia TODO el estado de auth
+// pase lo que pase con la sesión de Supabase
+// ─────────────────────────────────────────────
+export const forceNuclearLogout = async (): Promise<void> => {
+  try {
+    await supabase.auth.signOut();
+  } catch (e) {
+    console.warn('[NuclearLogout] signOut falló (esperado si token corrupto):', e);
+  } finally {
+    // Barrer todas las claves de Supabase del localStorage
+    const keysToDelete = Object.keys(localStorage).filter(k => k.startsWith('sb-'));
+    keysToDelete.forEach(k => localStorage.removeItem(k));
+    // Redirigir con recarga total de la app
+    window.location.href = '/';
+  }
+};
 
 // ─────────────────────────────────────────────
 // Provider
@@ -73,9 +93,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
         if (!isMounted) return;
 
-        // Caso 1: error de token inválido / sesión expirada
+        // Caso 1: error de token inválido / sesión expirada → Nuclear Logout
         if (error && isInvalidTokenError(error.message)) {
-          console.warn('[AuthContext] Sesión expirada o token inválido — limpiando sesión.');
+          console.warn('[AuthContext] Token inválido detectado — ejecutando Nuclear Logout.');
+          // Limpiar claves sb- del localStorage directamente (no esperamos a signOut)
+          Object.keys(localStorage).filter(k => k.startsWith('sb-')).forEach(k => localStorage.removeItem(k));
           await supabase.auth.signOut().catch(() => {});
           if (isMounted) {
             setSession(null);
@@ -195,7 +217,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ session, profile, loading }}>
+    <AuthContext.Provider value={{ session, profile, loading, forceNuclearLogout }}>
       {children}
     </AuthContext.Provider>
   );

@@ -69,7 +69,9 @@ const DetalleEvento: React.FC = () => {
   if (error || !evento) return (
     <div className="min-h-screen bg-brand-bg flex items-center justify-center">
       <div className="text-center max-w-sm mx-auto px-4">
-        <div className="text-8xl mb-6">🎭</div>
+        <div className="w-20 h-20 bg-brand-gold/10 rounded-[2.5rem] flex items-center justify-center mx-auto mb-6">
+          <i className="bi bi-masks-theater text-5xl text-brand-dark/30" />
+        </div>
         <h2 className="text-3xl font-black uppercase italic text-brand-dark mb-4">
           {error ? 'Error de conexión' : 'Evento no encontrado'}
         </h2>
@@ -108,12 +110,12 @@ const DetalleEvento: React.FC = () => {
     <div className="min-h-screen bg-brand-bg">
 
       {/* ── HERO ─────────────────────────────────────────────── */}
-      <div className="relative h-[45vh] md:h-[75vh] w-full overflow-hidden">
+      <div className="relative h-[55vh] md:h-[80vh] min-h-[400px] w-full overflow-hidden">
         <LazyImg
           src={evento.imagen_url}
           alt={evento.titulo}
           priority
-          className="w-full h-full object-cover scale-105 animate-slow-zoom"
+          className="w-full h-full object-cover"
           wrapperClassName="absolute inset-0"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-brand-dark via-brand-dark/50 to-transparent" />
@@ -328,7 +330,9 @@ const DetalleEvento: React.FC = () => {
                 </div>
               ) : (
                 <div className="mt-8 py-16 text-center bg-white rounded-[2rem] border-2 border-dashed border-slate-100">
-                  <div className="text-5xl mb-4">💬</div>
+                  <div className="w-16 h-16 bg-brand-blue/10 rounded-[2rem] flex items-center justify-center mx-auto mb-4">
+                    <i className="bi bi-chat-left-text text-3xl text-brand-blue/40" />
+                  </div>
                   <p className="font-black text-sm uppercase tracking-widest text-slate-300">Sé el primero en compartir tu experiencia</p>
                 </div>
               )}

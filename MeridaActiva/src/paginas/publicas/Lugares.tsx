@@ -97,7 +97,7 @@ const Lugares: React.FC = () => {
           <img
             src="/Imagenes/Museo Romano.webp"
             alt="Patrimonio de Mérida"
-            className="w-full h-full object-cover animate-slow-zoom"
+            className="w-full h-full object-cover"
             onError={(e) => { (e.target as HTMLImageElement).src = 'https://turismomerida.org/wp-content/uploads/2017/03/teatro-romano01.jpg'; }}
           />
           <div className="absolute inset-0 bg-gradient-to-t from-brand-dark via-brand-dark/60 to-transparent" />
@@ -197,7 +197,9 @@ const Lugares: React.FC = () => {
           </div>
         ) : lugaresProcesados.length === 0 ? (
           <div className="py-24 text-center bg-white rounded-[3rem] border-2 border-dashed border-slate-200 mt-4">
-            <div className="w-20 h-20 bg-brand-gold/10 rounded-[2rem] flex items-center justify-center mx-auto mb-8 text-4xl">🏛️</div>
+            <div className="w-20 h-20 bg-brand-gold/10 rounded-[2rem] flex items-center justify-center mx-auto mb-8">
+              <i className="bi bi-building-fill text-4xl text-brand-dark/30" />
+            </div>
             <h3 className="text-2xl font-black uppercase italic tracking-tighter text-brand-dark mb-3">Sin resultados</h3>
             <p className="text-slate-400 font-bold text-xs uppercase tracking-widest mb-8 max-w-xs mx-auto">
               {busqueda ? `No hay lugares que coincidan con "${busqueda}"` : 'No hay lugares en esta categoría'}

@@ -225,8 +225,8 @@ const Calendario: React.FC = () => {
     return (
       <div className="min-h-screen bg-brand-bg flex items-center justify-center px-6 pt-20">
         <div className="max-w-md w-full bg-white rounded-[3rem] p-14 text-center border border-slate-100 shadow-2xl">
-          <div className="w-20 h-20 bg-brand-gold/10 rounded-[2rem] flex items-center justify-center mx-auto mb-8 text-4xl">
-            📅
+          <div className="w-20 h-20 bg-brand-gold/10 rounded-[2rem] flex items-center justify-center mx-auto mb-8">
+            <i className="bi bi-calendar3 text-4xl text-brand-dark/30" />
           </div>
           <h2 className="text-4xl font-black italic uppercase tracking-tighter text-brand-dark mb-4">
             Tu <span className="text-brand-gold">Agenda</span>
@@ -451,8 +451,8 @@ const Calendario: React.FC = () => {
                 <div className="p-6 space-y-4">
                   {todosLosEventos.length === 0 ? (
                     <div className="py-24 text-center">
-                      <div className="w-16 h-16 bg-slate-100 rounded-[1.5rem] flex items-center justify-center mx-auto mb-6 text-3xl">
-                        📅
+                      <div className="w-12 h-12 bg-slate-100 rounded-[1.5rem] flex items-center justify-center mx-auto mb-6">
+                        <i className="bi bi-calendar3 text-2xl text-brand-dark/30" />
                       </div>
                       <p className="text-slate-400 font-black uppercase text-[10px] tracking-[0.2em] mb-6">
                         No tienes eventos en la agenda

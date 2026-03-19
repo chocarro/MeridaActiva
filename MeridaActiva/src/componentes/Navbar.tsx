@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
-import { supabase } from '../supabaseClient';
+import { useAuth, forceNuclearLogout } from '../context/AuthContext';
+// supabase import removed — logout now handled by forceNuclearLogout
 import Logo from './Logo';
 
 const Navbar: React.FC = () => {
@@ -35,10 +35,7 @@ const Navbar: React.FC = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    window.location.href = '/';
-  };
+  const handleLogout = () => forceNuclearLogout();
 
   const navLinks = [
     { name: 'Eventos', path: '/eventos', icon: 'bi-calendar-event' },

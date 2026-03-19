@@ -1,13 +1,11 @@
 // src/componentes/LazyImg.tsx
 // ─────────────────────────────────────────────────────────────────
-// CAMBIOS (Mejora 2 — Optimización de imágenes):
-//   - Añadidas props `width`, `height` explícitas → evita CLS
-//   - Añadida prop `sizes` para responsive srcset
-//   - Generación automática de `srcSet` a 1× y 2× cuando se
-//     proporcione `width` (solo para imágenes locales/CDN que
-//     acepten parámetros de query `?w=...`)
-//   - `loading="lazy"` sigue siendo el default
-//   - `loading="eager"` + `fetchpriority="high"` con priority={true}
+// Mejora 2 — WebP con <picture>:
+//   - Usa <picture> de HTML5 para priorizar WebP y dejar JPG/PNG como fallback
+//   - Para URLs de Unsplash: añade ?fm=webp para la fuente WebP
+//   - Para imágenes locales (/Imagenes/...): busca la variante .webp en la misma ruta
+//   - Mantiene el shimmer placeholder y el fallback de error
+//   - Mantiene srcSet/sizes para responsive images
 // ─────────────────────────────────────────────────────────────────
 
 import React, { useState } from 'react';
@@ -37,24 +35,39 @@ interface LazyImgProps extends React.ImgHTMLAttributes<HTMLImageElement> {
     sizes?: string;
 }
 
-/**
- * Genera un srcSet sencillo a 1× y 2× a partir de una URL.
- * Solo funciona con URLs que soporten el parámetro ?w= (Unsplash, imagekit, etc.)
- * o con imágenes que el build de viteImagemin ya transformó a WebP.
- */
-function generarSrcSet(src: string, width: number): string {
-    // Si la URL ya contiene parámetros de query, no modificamos
-    // (puede ser una URL ya optimizada o externa sin soporte de resize)
-    if (src.startsWith('/') && !src.includes('?')) {
-        // Imagen local — no añadimos srcset automático
-        // (vite-plugin-imagemin ya genera las versiones WebP en build)
-        return '';
-    }
+// ── Genera la URL WebP y el srcSet WebP a partir de la URL original ──
+function getWebpSrc(src: string, width?: number): { webpSrc: string; webpSrcSet?: string } | null {
+    // Unsplash: añade ?fm=webp&w=... para solicitar formato WebP directamente
     if (src.includes('unsplash.com') || src.includes('images.unsplash')) {
         const base = src.split('?')[0];
-        return `${base}?w=${width}&q=75 1x, ${base}?w=${width * 2}&q=75 2x`;
+        const webpSrc = width
+            ? `${base}?fm=webp&w=${width}&q=80`
+            : `${base}?fm=webp&q=80`;
+        const webpSrcSet = width
+            ? `${base}?fm=webp&w=${width}&q=80 1x, ${base}?fm=webp&w=${width * 2}&q=75 2x`
+            : undefined;
+        return { webpSrc, webpSrcSet };
     }
-    return '';
+
+    // Imágenes locales (e.g. /Imagenes/teatro.jpg → /Imagenes/teatro.webp)
+    if (src.startsWith('/') && !src.startsWith('//')) {
+        const withoutExt = src.replace(/\.(jpg|jpeg|png)$/i, '');
+        const webpSrc = `${withoutExt}.webp`;
+        return { webpSrc };
+    }
+
+    // URLs externas sin soporte especial: no ofrecemos variante WebP
+    return null;
+}
+
+// ── srcSet para el fallback JPG/PNG (Unsplash) ──
+function getFallbackSrcSet(src: string, width?: number): string | undefined {
+    if (!width) return undefined;
+    if (src.includes('unsplash.com') || src.includes('images.unsplash')) {
+        const base = src.split('?')[0];
+        return `${base}?w=${width}&q=80 1x, ${base}?w=${width * 2}&q=75 2x`;
+    }
+    return undefined;
 }
 
 const LazyImg: React.FC<LazyImgProps> = ({
@@ -71,8 +84,10 @@ const LazyImg: React.FC<LazyImgProps> = ({
     const [loaded, setLoaded] = useState(false);
     const [error, setError] = useState(false);
 
-    // Genera srcSet solo si se pasa un width
-    const srcSet = width ? generarSrcSet(src, width) : undefined;
+    const webp = getWebpSrc(src, width);
+    const fallbackSrcSet = getFallbackSrcSet(src, width);
+    const loading = priority ? 'eager' : 'lazy';
+    const imgClassName = `${className} transition-opacity duration-500 ${loaded ? 'opacity-100' : 'opacity-0'}`;
 
     return (
         <div className={`relative overflow-hidden ${wrapperClassName}`}>
@@ -85,33 +100,45 @@ const LazyImg: React.FC<LazyImgProps> = ({
                 />
             )}
 
-            {/* Imagen real */}
             {!error ? (
-                <img
-                    src={src}
-                    alt={alt}
-                    loading={priority ? 'eager' : 'lazy'}
-                    decoding="async"
-                    {...(priority ? { fetchPriority: 'high' } : {})}
-                    {...(width  ? { width }  : {})}
-                    {...(height ? { height } : {})}
-                    {...(srcSet ? { srcSet, sizes } : {})}
-                    onLoad={() => setLoaded(true)}
-                    onError={() => setError(true)}
-                    className={`
-            ${className}
-            transition-opacity duration-500
-            ${loaded ? 'opacity-100' : 'opacity-0'}
-          `}
-                    {...rest}
-                />
+                <picture>
+                    {/* Fuente WebP — el navegador la carga si la soporta */}
+                    {webp && (
+                        <source
+                            type="image/webp"
+                            srcSet={webp.webpSrcSet ?? webp.webpSrc}
+                            sizes={sizes}
+                        />
+                    )}
+                    {/* Fuente JPEG/PNG como fallback */}
+                    {fallbackSrcSet && (
+                        <source
+                            srcSet={fallbackSrcSet}
+                            sizes={sizes}
+                        />
+                    )}
+                    {/* <img> siempre obligatorio dentro de <picture> */}
+                    <img
+                        src={src}
+                        alt={alt}
+                        loading={loading}
+                        decoding="async"
+                        {...(priority ? { fetchPriority: 'high' } : {})}
+                        {...(width  ? { width }  : {})}
+                        {...(height ? { height } : {})}
+                        onLoad={() => setLoaded(true)}
+                        onError={() => setError(true)}
+                        className={imgClassName}
+                        {...rest}
+                    />
+                </picture>
             ) : (
-                /* Fallback si la imagen falla */
+                /* Fallback si la imagen falla por completo */
                 <div
                     className={`${className} flex items-center justify-center bg-slate-100`}
                     role="img"
                     aria-label={alt}
-                    {...(width  ? { style: { width, height } } : {})}
+                    {...(width ? { style: { width, height } } : {})}
                 >
                     <i className="bi bi-image text-slate-300 text-4xl" aria-hidden="true" />
                 </div>

@@ -18,6 +18,14 @@ function FooterCondicional() {
   return <Footer />;
 }
 
+// ── ScrollToTop: restablece el scroll al inicio en cada cambio de ruta ──
+function ScrollToTop() {
+  const { pathname } = useLocation();
+  useEffect(() => { window.scrollTo({ top: 0, left: 0, behavior: 'instant' }); }, [pathname]);
+  return null;
+}
+
+
 function NavbarCondicional() {
   const { pathname } = useLocation();
   if (RUTAS_SIN_FOOTER.includes(pathname)) return null;
@@ -46,6 +54,7 @@ function App() {
     <AuthProvider>
       <div className="main-layout">
         <OfflineBanner />
+        <ScrollToTop />
         <NavbarCondicional />
         <main id="main-content" className="content-area">
           <AppRoutes />

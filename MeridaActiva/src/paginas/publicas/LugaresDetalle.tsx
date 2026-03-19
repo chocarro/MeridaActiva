@@ -78,7 +78,7 @@ const LugaresDetalle: React.FC = () => {
       } else {
         await supabase.from('favoritos_lugares').insert([{ user_id: session.user.id, lugar_id: id }]);
         setEsFavorito(true);
-        toastExito('¡Lugar guardado en favoritos! También disponible sin conexión 📡');
+        toastExito('Lugar guardado en favoritos. Disponible sin conexión');
         // Pre-cachear esta página y su imagen para modo offline
         const urlsToCache: string[] = [`/lugares/${id}`];
         if (lugar?.imagen_url) urlsToCache.push(lugar.imagen_url);
@@ -102,7 +102,9 @@ const LugaresDetalle: React.FC = () => {
   if (fetchError || !lugar) return (
     <div className="min-h-screen bg-brand-bg flex items-center justify-center">
       <div className="text-center max-w-sm mx-auto px-4">
-        <div className="text-8xl mb-6">🏛️</div>
+        <div className="w-20 h-20 bg-brand-gold/10 rounded-[2.5rem] flex items-center justify-center mx-auto mb-6">
+          <i className="bi bi-building-fill text-5xl text-brand-dark/30" />
+        </div>
         <h2 className="text-3xl font-black uppercase italic text-brand-dark mb-4">
           {fetchError ? 'Error de conexión' : 'Lugar no encontrado'}
         </h2>
@@ -138,12 +140,12 @@ const LugaresDetalle: React.FC = () => {
     <div className="min-h-screen bg-brand-bg">
 
       {/* ── HERO ─────────────────────────────────────────────── */}
-      <div className="relative h-[45vh] md:h-[70vh] w-full overflow-hidden">
+      <div className="relative h-[55vh] md:h-[80vh] min-h-[400px] w-full overflow-hidden">
         <LazyImg
           src={lugar.imagen_url}
           alt={nombre}
           priority
-          className="w-full h-full object-cover scale-105 animate-slow-zoom"
+          className="w-full h-full object-cover"
           wrapperClassName="absolute inset-0"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-brand-dark via-brand-dark/40 to-transparent" />

@@ -68,19 +68,36 @@ export default defineConfig({
             },
           },
 
-          // ── Mejora 3: NetworkFirst para llamadas a Supabase ───────────
-          // Los datos de la API de Supabase se sirven frescos cuando hay
-          // conexión y desde caché cuando el usuario está offline.
+          // ── Imágenes estáticas de /public (CacheFirst 30 días) ───────
+          // Las imágenes propias (teatro, museo, etc.) se almacenan en
+          // caché la primera vez que se cargan y después se sirven
+          // instantáneamente, incluso sin conexión.
           {
-            urlPattern: /^https:\/\/[a-z0-9]+\.supabase\.co\/.*/i,
-            handler: 'NetworkFirst',
+            urlPattern: /\.(?:png|jpg|jpeg|webp|svg|gif|avif)(\?.*)?$/i,
+            handler: 'CacheFirst',
             options: {
-              cacheName: 'supabase-cache',
+              cacheName: 'static-images-cache',
+              expiration: {
+                maxEntries: 150,
+                maxAgeSeconds: 60 * 60 * 24 * 30, // 30 días
+              },
+            },
+          },
+
+          // ── Supabase GET (StaleWhileRevalidate) ───────────────────────
+          // Los datos de eventos y lugares se sirven desde caché (última
+          // versión conocida) mientras se actualiza en segundo plano.
+          // Garantiza que la app funcione aunque el usuario pierda
+          // cobertura dentro de un monumento.
+          {
+            urlPattern: /^https:\/\/[a-z0-9]+\.supabase\.co\/rest\/.*/i,
+            handler: 'StaleWhileRevalidate',
+            options: {
+              cacheName: 'supabase-rest-cache',
               expiration: {
                 maxEntries: 100,
-                maxAgeSeconds: 60 * 5, // 5 minutos
+                maxAgeSeconds: 60 * 60 * 24, // 24 horas de datos offline
               },
-              networkTimeoutSeconds: 5,
             },
           },
 

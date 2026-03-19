@@ -384,7 +384,9 @@ const [capaActiva, setCapaActiva] = useState('light');
                 Array.from({ length: 5 }).map((_, i) => <SkeletonFila key={i} />)
               ) : totalFiltrados === 0 ? (
                 <div className="p-8 text-center">
-                  <div className="text-4xl mb-3">🗺️</div>
+                  <div className="text-4xl mb-3 flex items-center justify-center">
+                    <i className="bi bi-map text-slate-400 text-4xl" />
+                  </div>
                   <p className="text-slate-400 text-xs font-bold uppercase tracking-widest">Sin resultados</p>
                   <button
                     onClick={() => { setBusqueda(''); setCategoriaActiva('Todos'); }}
@@ -504,13 +506,13 @@ const [capaActiva, setCapaActiva] = useState('light');
                       </p>
                       {ev.fecha && (
                         <p className="text-[9px] font-bold text-slate-400 mb-1">
-                          📅 {new Date(ev.fecha + 'T00:00:00').toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })}
+                          <i className="bi bi-calendar3 mr-1" /> {new Date(ev.fecha + 'T00:00:00').toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })}
                           {ev.hora && ` · ${ev.hora}`}
                         </p>
                       )}
                       {ev.precio && (
                         <p className="text-[9px] font-bold text-emerald-600 mb-3">
-                          🎟️ {ev.precio}
+                          <i className="bi bi-ticket-perforated mr-1" /> {ev.precio}
                         </p>
                       )}
                       <Link
@@ -720,6 +722,7 @@ const [capaActiva, setCapaActiva] = useState('light');
         .leaflet-popup-tip { display: none; }
         .leaflet-container { font-family: inherit; }
         .leaflet-control-zoom { border-radius: 1rem !important; overflow: hidden; }
+        .leaflet-control-attribution { display: none !important; }
       `}</style>
     </div>
   );

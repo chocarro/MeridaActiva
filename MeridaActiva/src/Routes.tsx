@@ -24,6 +24,7 @@ import Calendario from './paginas/privadas/Calendario';
 import Dashboard from './paginas/admin/Dashboard';
 import FAQPage from './paginas/publicas/FAQ';
 import RutaInteligente from './paginas/privadas/RutaInteligente';
+import RutaCompartida from './paginas/publicas/RutaCompartida';
 import NotFound from './paginas/NotFound';
 
 // COMPONENTE DE PROTECCIÓN DE RUTAS
@@ -54,6 +55,7 @@ const AppRoutes = () => {
       <Route path="/lugares/:id" element={<LugaresDetalle />} />
       <Route path="/contacto" element={<Contacto />} />
       <Route path="/faq" element={<FAQPage />} />
+      <Route path="/ruta/:id" element={<RutaCompartida />} />
 
       {/* Rutas Legales */}
       <Route path="/aviso-legal" element={<AvisoLegal />} />
