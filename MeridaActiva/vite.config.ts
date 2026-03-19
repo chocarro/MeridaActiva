@@ -49,6 +49,7 @@ export default defineConfig({
         categories: ['travel', 'lifestyle'],
       },
       workbox: {
+        maximumFileSizeToCacheInBytes: 7 * 1024 * 1024, // 7 MiB — permite og-default.png (6.26 MB)
         globPatterns: ['**/*.{js,css,html,ico,png,svg,webp,woff,woff2,ttf,eot}'],
         runtimeCaching: [
           // ── Mejora 3: NetworkFirst para rutas SPA ─────────────────────

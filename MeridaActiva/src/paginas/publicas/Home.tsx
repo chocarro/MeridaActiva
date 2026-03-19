@@ -8,7 +8,7 @@ import RotatingText from '../../componentes/animaciones/RotatingText';
 import ScrollFloat from '../../componentes/animaciones/ScrollFloat';
 import ScrollStack, { ScrollStackItem } from '../../componentes/animaciones/ScrollStack';
 import FluidGlass from '../../componentes/animaciones/FluidGlass';
-import AnimatedList from '../../componentes/animaciones/AnimatedList';
+
 import { useSeoMeta } from '../../hooks/useSeoMeta';
 
 gsap.registerPlugin(ScrollTrigger);
@@ -158,14 +158,14 @@ const Home: React.FC = () => {
   const heroCTARef = useRef<HTMLDivElement>(null);
   const parallaxBgRef = useRef<HTMLImageElement>(null);
   const bannerRef = useRef<HTMLDivElement>(null);
-  const iaRef = useRef<HTMLDivElement>(null);
+
 
   const razonesRef = useStaggerOnScroll();
   const iaCardsRef = useStaggerOnScroll();
 
   const { ref: bandRef, visible: bandVisible } = useFadeInOnScroll();
   const { ref: categoriasHeaderRef, visible: categoriasHeaderVisible } = useFadeInOnScroll();
-  const { ref: reseñasHeaderRef, visible: reseñasHeaderVisible } = useFadeInOnScroll();
+  const { ref: reseñasHeaderRef } = useFadeInOnScroll();
   const { ref: iaHeaderRef, visible: iaHeaderVisible } = useFadeInOnScroll();
 
   useSeoMeta({
