@@ -1,5 +1,4 @@
 {
-  "rootDirectory": "app",
   "rewrites": [
     { "source": "/(.*)", "destination": "/index.html" }
   ]
