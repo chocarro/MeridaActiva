@@ -60,17 +60,24 @@ Reglas:
 
 const ALLOWED_ORIGIN = process.env.ALLOWED_ORIGIN ?? 'https://meridaactiva.vercel.app';
 
+function isOriginAllowed(origin) {
+    if (!origin) return true;
+    if (origin.includes('localhost') || origin.includes('127.0.0.1')) return true;
+    if (origin === ALLOWED_ORIGIN) return true;
+    if (/^https:\/\/[a-zA-Z0-9-]+\.vercel\.app$/.test(origin)) return true;
+    return false;
+}
+
 function checkCors(req, res) {
     const origin = req.headers.origin ?? '';
-    const isLocal = !origin || origin.includes('localhost') || origin.includes('127.0.0.1');
-    const isAllowed = origin === ALLOWED_ORIGIN || isLocal;
-
-    if (!isAllowed) {
+    if (!isOriginAllowed(origin)) {
         console.error(`[generar-ruta CORS] Acceso denegado al origen: ${origin}`);
         res.status(403).json({ error: 'Acceso denegado.' });
         return false;
     }
-    res.setHeader('Access-Control-Allow-Origin', origin);
+    if (origin) {
+        res.setHeader('Access-Control-Allow-Origin', origin);
+    }
     res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
     return true;
