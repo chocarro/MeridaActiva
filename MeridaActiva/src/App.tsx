@@ -7,6 +7,7 @@ import AppRoutes from './Routes';
 import CookieBanner from './componentes/CookieBanner';
 import { Toaster } from 'react-hot-toast';
 import OfflineBanner from './componentes/OfflineBanner';
+import { Analytics } from '@vercel/analytics/react';
 
 // Rutas donde NO se muestra el footer (páginas de autenticación)
 const RUTAS_SIN_FOOTER = ['/login', '/registro', '/reset-password'];
@@ -51,6 +52,7 @@ function App() {
         </main>
         <FooterCondicional />
         <CookieBanner />
+        <Analytics />
         <Toaster
           position="bottom-right"
           toastOptions={{
