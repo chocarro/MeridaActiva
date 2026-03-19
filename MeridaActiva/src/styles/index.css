@@ -53,6 +53,14 @@
     font-family: var(--font-family-sans);
     -webkit-font-smoothing: antialiased;
     transition: background-color 0.3s ease, color 0.3s ease;
+    /* Evitar scroll horizontal no deseado en móvil */
+    overflow-x: hidden;
+  }
+
+  /* Espacio inferior para letras con trazos descendentes en animaciones */
+  .split-char {
+    display: inline-block;
+    padding-bottom: 0.12em;
   }
 
   h1,

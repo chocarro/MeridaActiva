@@ -138,7 +138,7 @@ const LugaresDetalle: React.FC = () => {
     <div className="min-h-screen bg-brand-bg">
 
       {/* ── HERO ─────────────────────────────────────────────── */}
-      <div className="relative h-[65vh] md:h-[80vh] w-full overflow-hidden">
+      <div className="relative h-[45vh] md:h-[70vh] w-full overflow-hidden">
         <LazyImg
           src={lugar.imagen_url}
           alt={nombre}
@@ -151,50 +151,86 @@ const LugaresDetalle: React.FC = () => {
         {/* Back button */}
         <Link
           to="/lugares"
-          className="absolute top-28 left-6 md:left-20 z-20 flex items-center gap-2 text-white/70 hover:text-white font-black text-[10px] uppercase tracking-widest transition-all group"
+          className="absolute top-20 md:top-28 left-4 md:left-20 z-20 flex items-center gap-2 text-white/70 hover:text-white font-black text-[10px] uppercase tracking-widest transition-all group"
         >
           <i className="bi bi-arrow-left group-hover:-translate-x-1 transition-transform" />
-          Volver a lugares
+          <span className="hidden sm:inline">Volver a lugares</span>
+          <span className="sm:hidden">Volver</span>
         </Link>
 
-        <div className="absolute bottom-0 left-0 w-full p-6 md:p-20 z-10">
-          <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-end justify-between gap-8">
-            <div className="flex-1">
-              <div className="flex items-center gap-3 mb-6">
-                <span className="flex items-center gap-2 text-[9px] font-black uppercase tracking-[0.25em] text-white px-5 py-2.5 rounded-full bg-white/10 backdrop-blur-md border border-white/20">
-                  <i className={`bi ${catIcon}`} />
-                  {lugar.categoria}
-                </span>
-              </div>
-              <h1 className="text-5xl md:text-8xl font-black text-white italic uppercase tracking-tighter leading-[0.85] mb-4 max-w-4xl">
-                {nombre}
-              </h1>
-              {lugar.ubicacion && (
-                <p className="text-white/50 font-bold text-sm">
-                  <i className="bi bi-geo-alt-fill mr-2 text-brand-gold" />
-                  {lugar.ubicacion}
-                </p>
-              )}
+        <div className="absolute bottom-0 left-0 w-full p-4 md:p-20 z-10">
+          <div className="max-w-7xl mx-auto">
+            <div className="mb-3 md:mb-6">
+              <span className="flex items-center gap-2 text-[9px] font-black uppercase tracking-[0.25em] text-white px-4 py-2 rounded-full bg-white/10 backdrop-blur-md border border-white/20 w-fit">
+                <i className={`bi ${catIcon}`} />
+                {lugar.categoria}
+              </span>
             </div>
-
-            <button
-              onClick={toggleFavorito}
-              aria-label={esFavorito ? 'Quitar de favoritos' : 'Guardar en favoritos'}
-              aria-pressed={esFavorito}
-              className={`w-20 h-20 rounded-[2rem] flex items-center justify-center text-2xl transition-all duration-500 shadow-2xl flex-shrink-0 ${esFavorito
-                ? 'bg-brand-red text-white scale-110'
-                : 'bg-white/10 backdrop-blur-xl text-white border border-white/20 hover:bg-white hover:text-brand-dark'
-                }`}
-            >
-              <i className={`bi bi-heart${esFavorito ? '-fill' : ''}`} />
-            </button>
+            <div className="flex items-end justify-between gap-4">
+              <div className="flex-1 min-w-0">
+                <h1
+                  style={{ fontSize: 'clamp(1.8rem, 7vw, 5rem)' }}
+                  className="font-black text-white italic uppercase tracking-tighter leading-[0.9] mb-2 max-w-4xl"
+                >
+                  {nombre}
+                </h1>
+                {lugar.ubicacion && (
+                  <p className="text-white/50 font-bold text-xs md:text-sm">
+                    <i className="bi bi-geo-alt-fill mr-2 text-brand-gold" />
+                    {lugar.ubicacion}
+                  </p>
+                )}
+              </div>
+              <button
+                onClick={toggleFavorito}
+                aria-label={esFavorito ? 'Quitar de favoritos' : 'Guardar en favoritos'}
+                aria-pressed={esFavorito}
+                className={`w-14 h-14 md:w-20 md:h-20 rounded-[1.5rem] md:rounded-[2rem] flex items-center justify-center text-xl md:text-2xl transition-all duration-500 shadow-2xl flex-shrink-0 ${esFavorito
+                  ? 'bg-brand-red text-white scale-110'
+                  : 'bg-white/10 backdrop-blur-xl text-white border border-white/20 hover:bg-white hover:text-brand-dark'
+                  }`}
+              >
+                <i className={`bi bi-heart${esFavorito ? '-fill' : ''}`} />
+              </button>
+            </div>
           </div>
         </div>
       </div>
 
       {/* ── CONTENT ──────────────────────────────────────────── */}
-      <div className="max-w-7xl mx-auto px-4 md:px-6 py-16">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
+      <div className="max-w-7xl mx-auto px-4 md:px-6 py-8 md:py-16">
+        {/* Sidebar ticket en móvil: aparece arriba del contenido para no quedar oculto */}
+        <div className="lg:hidden mb-8">
+          <div className="bg-brand-dark rounded-[2rem] p-7 text-white shadow-2xl relative overflow-hidden">
+            <div className="relative z-10">
+              <h4 className="text-brand-gold font-black uppercase italic tracking-widest text-base mb-5">
+                {isGastro ? 'Reservar' : 'Planifica tu visita'}
+              </h4>
+              <div className="flex flex-wrap gap-4 mb-6">
+                {lugar.ubicacion && (
+                  <div className="flex items-center gap-3">
+                    <i className="bi bi-geo-alt-fill text-brand-gold" />
+                    <span className="text-white/70 text-sm font-bold">{lugar.ubicacion}</span>
+                  </div>
+                )}
+                <div className="flex items-center gap-3">
+                  <i className="bi bi-clock text-white/40" />
+                  <span className="text-white/70 text-sm font-bold italic">{isGastro ? 'Consultar en local' : 'Mar–Dom 9:30–18:30 h'}</span>
+                </div>
+              </div>
+              <a
+                href={lugar.google_maps_url || `https://www.google.com/maps/search/${encodeURIComponent((lugar.nombre_es || nombre) + ' Mérida')}`}
+                target="_blank"
+                rel="noreferrer"
+                className="block w-full bg-brand-blue text-white py-4 rounded-2xl font-black text-center shadow-lg hover:bg-brand-gold hover:text-brand-dark transition-all uppercase tracking-[0.2em] text-[10px]"
+              >
+                <i className="bi bi-map mr-2" />Cómo llegar
+              </a>
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 md:gap-12">
 
           {/* ── LEFT COLUMN ─── */}
           <div className="lg:col-span-2 space-y-10">

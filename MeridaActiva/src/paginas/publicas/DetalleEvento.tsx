@@ -108,7 +108,7 @@ const DetalleEvento: React.FC = () => {
     <div className="min-h-screen bg-brand-bg">
 
       {/* ── HERO ─────────────────────────────────────────────── */}
-      <div className="relative h-[65vh] md:h-[80vh] w-full overflow-hidden">
+      <div className="relative h-[45vh] md:h-[75vh] w-full overflow-hidden">
         <LazyImg
           src={evento.imagen_url}
           alt={evento.titulo}
@@ -121,53 +121,88 @@ const DetalleEvento: React.FC = () => {
         {/* Back button */}
         <Link
           to="/eventos"
-          className="absolute top-28 left-6 md:left-20 z-20 flex items-center gap-2 text-white/70 hover:text-white font-black text-[10px] uppercase tracking-widest transition-all group"
+          className="absolute top-20 md:top-28 left-4 md:left-20 z-20 flex items-center gap-2 text-white/70 hover:text-white font-black text-[10px] uppercase tracking-widest transition-all group"
         >
           <i className="bi bi-arrow-left group-hover:-translate-x-1 transition-transform" />
-          Volver a eventos
+          <span className="hidden sm:inline">Volver a eventos</span>
+          <span className="sm:hidden">Volver</span>
         </Link>
 
-        <div className="absolute bottom-0 left-0 w-full p-6 md:p-20 z-10">
-          <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-end justify-between gap-8">
-            <div className="flex-1">
-              <div className="flex items-center gap-3 mb-6 flex-wrap">
-                <span
-                  className="text-[9px] font-black uppercase tracking-[0.3em] text-white px-5 py-2.5 rounded-full"
-                  style={{ background: accentColor }}
-                >
-                  {evento.categoria}
+        <div className="absolute bottom-0 left-0 w-full p-4 md:p-20 z-10">
+          <div className="max-w-7xl mx-auto">
+            <div className="flex items-center gap-2 mb-3 flex-wrap">
+              <span
+                className="text-[9px] font-black uppercase tracking-[0.3em] text-white px-4 py-2 rounded-full"
+                style={{ background: accentColor }}
+              >
+                {evento.categoria}
+              </span>
+              {evento.precio === 0 || evento.precio === null ? (
+                <span className="text-[9px] font-black uppercase tracking-[0.3em] text-brand-gold bg-brand-gold/10 border border-brand-gold/30 px-4 py-2 rounded-full">
+                  Entrada gratuita
                 </span>
-                {evento.precio === 0 || evento.precio === null ? (
-                  <span className="text-[9px] font-black uppercase tracking-[0.3em] text-brand-gold bg-brand-gold/10 border border-brand-gold/30 px-5 py-2.5 rounded-full">
-                    Entrada gratuita
-                  </span>
-                ) : (
-                  <span className="text-[9px] font-black uppercase tracking-[0.3em] text-white bg-white/10 border border-white/20 px-5 py-2.5 rounded-full">
-                    Desde {evento.precio}€
-                  </span>
-                )}
-              </div>
-              <h1 className="text-4xl md:text-7xl lg:text-8xl font-black text-white italic uppercase tracking-tighter leading-[0.85] mb-4 max-w-4xl">
-                {evento.titulo}
-              </h1>
-              <p className="text-white/50 font-bold text-sm">
-                <i className="bi bi-calendar3 mr-2" />
-                {fechaFormateada.charAt(0).toUpperCase() + fechaFormateada.slice(1)}
-                <span className="mx-3 text-white/20">·</span>
-                <i className="bi bi-geo-alt-fill mr-2" />
-                {evento.ubicacion}
-              </p>
+              ) : (
+                <span className="text-[9px] font-black uppercase tracking-[0.3em] text-white bg-white/10 border border-white/20 px-4 py-2 rounded-full">
+                  Desde {evento.precio}€
+                </span>
+              )}
             </div>
-            <div className="flex-shrink-0">
-              <BotonFavorito eventoId={id} tipo="evento" />
+            <div className="flex items-end justify-between gap-3">
+              <div className="flex-1 min-w-0">
+                <h1
+                  style={{ fontSize: 'clamp(1.6rem, 6vw, 5rem)' }}
+                  className="font-black text-white italic uppercase tracking-tighter leading-[0.9] mb-2 max-w-4xl"
+                >
+                  {evento.titulo}
+                </h1>
+                <p className="text-white/50 font-bold text-xs md:text-sm truncate">
+                  <i className="bi bi-calendar3 mr-2" />
+                  {fechaFormateada.charAt(0).toUpperCase() + fechaFormateada.slice(1)}
+                  <span className="mx-2 text-white/20">·</span>
+                  <i className="bi bi-geo-alt-fill mr-1" />
+                  {evento.ubicacion}
+                </p>
+              </div>
+              <div className="flex-shrink-0">
+                <BotonFavorito eventoId={id} tipo="evento" />
+              </div>
             </div>
           </div>
         </div>
       </div>
 
       {/* ── CONTENT ──────────────────────────────────────────── */}
-      <div className="max-w-7xl mx-auto px-4 md:px-6 py-16">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
+      <div className="max-w-7xl mx-auto px-4 md:px-6 py-8 md:py-16">
+
+        {/* Sidebar ticket en móvil: visible arriba del contenido */}
+        <div className="lg:hidden mb-8">
+          <div className="ticket-sidebar !sticky-none">
+            <div className="relative z-10">
+              <p className="text-white/40 text-[9px] font-black uppercase tracking-widest mb-2">Precio de entrada</p>
+              <div className="flex items-baseline gap-1 mb-6">
+                {evento.precio ? (
+                  <><p className="text-5xl font-black text-brand-gold italic tracking-tighter">{evento.precio}</p><span className="text-xl font-black text-brand-gold">€</span></>
+                ) : (
+                  <p className="text-3xl font-black text-brand-gold italic tracking-tighter">Gratis</p>
+                )}
+              </div>
+              <div className="flex flex-wrap gap-3 mb-6 text-white/60 text-sm">
+                <span><i className="bi bi-geo-alt-fill text-brand-gold mr-2" />{evento.ubicacion}</span>
+                <span><i className="bi bi-tag-fill text-brand-gold mr-2" />{evento.categoria}</span>
+              </div>
+              <a
+                href={evento.enlace_externo || 'https://merida.es/agenda'}
+                target="_blank"
+                rel="noreferrer"
+                className="block w-full bg-brand-gold text-brand-dark py-4 rounded-2xl font-black text-center shadow-lg hover:bg-white transition-all uppercase tracking-[0.2em] text-[11px]"
+              >
+                <i className="bi bi-ticket-perforated mr-2" />Conseguir Entradas
+              </a>
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 md:gap-12">
 
           {/* ── LEFT COLUMN ─── */}
           <div className="lg:col-span-2 space-y-10">

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { Link } from 'react-router-dom';
 import { supabase } from '../../supabaseClient';
@@ -6,6 +6,7 @@ import { supabase } from '../../supabaseClient';
 const MiPerfil: React.FC = () => {
   const { profile, session, loading } = useAuth();
   const [seccion, setSeccion] = useState<'perfil' | 'seguridad' | 'favoritos' | 'reseñas'>('perfil');
+  const tabsRef = useRef<HTMLDivElement>(null);
 
   // --- Estado formulario perfil ---
   const [nombre, setNombre] = useState('');
@@ -37,14 +38,12 @@ const MiPerfil: React.FC = () => {
 
   const fetchContenido = useCallback(async () => {
     if (!session?.user?.id) return;
-    // Fetch all favorites (both events and places)
     const { data: favsData } = await supabase
       .from('favoritos')
       .select('id, elemento_id, tipo_elemento')
       .eq('usuario_id', session.user.id);
 
     if (favsData && favsData.length > 0) {
-      // Resolve each favorite's detail from the correct table
       const detallesPromesas = favsData.map(async (fav: any) => {
         const tabla = fav.tipo_elemento === 'evento' ? 'eventos' : 'lugares';
         const campos = fav.tipo_elemento === 'evento' ? 'id, titulo, imagen_url' : 'id, nombre, nombre_es, imagen_url';
@@ -70,6 +69,16 @@ const MiPerfil: React.FC = () => {
   }, [session?.user?.id]);
 
   useEffect(() => { fetchContenido(); }, [fetchContenido]);
+
+  // Scroll active tab into view on mobile
+  useEffect(() => {
+    if (tabsRef.current) {
+      const activeBtn = tabsRef.current.querySelector('[data-active="true"]') as HTMLElement;
+      if (activeBtn) {
+        activeBtn.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+      }
+    }
+  }, [seccion]);
 
   // --- Subir avatar ---
   const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -177,18 +186,79 @@ const MiPerfil: React.FC = () => {
   );
 
   const menuItems = [
-    { id: 'perfil', label: 'Mi Perfil', icon: 'bi-person-circle', color: 'bg-brand-dark' },
-    { id: 'seguridad', label: 'Seguridad', icon: 'bi-shield-lock', color: 'bg-brand-red' },
-    { id: 'favoritos', label: 'Favoritos', icon: 'bi-heart-fill', color: 'bg-brand-blue' },
-    { id: 'reseñas', label: 'Mis Reseñas', icon: 'bi-chat-left-quote', color: 'bg-brand-green' },
+    { id: 'perfil',    label: 'Mi Perfil',   icon: 'bi-person-circle',    color: 'bg-brand-dark',  accent: 'border-brand-dark'  },
+    { id: 'seguridad', label: 'Seguridad',   icon: 'bi-shield-lock',      color: 'bg-brand-red',   accent: 'border-brand-red'   },
+    { id: 'favoritos', label: 'Favoritos',   icon: 'bi-heart-fill',       color: 'bg-brand-blue',  accent: 'border-brand-blue'  },
+    { id: 'reseñas',   label: 'Mis Reseñas', icon: 'bi-chat-left-quote',  color: 'bg-brand-green', accent: 'border-brand-green' },
   ];
 
   return (
-    <div className="min-h-screen bg-brand-bg pt-32 pb-20 px-6">
-      <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-10">
+    <div className="min-h-screen bg-brand-bg pt-24 pb-20">
 
-        {/* ── SIDEBAR ── */}
-        <aside className="lg:col-span-4 space-y-4">
+      {/* ── MÓVIL: avatar compacto + tabs horizontales ────────── */}
+      <div className="lg:hidden px-4 mb-6">
+        {/* Avatar card compacta en móvil */}
+        <div className="bg-white rounded-3xl p-5 shadow-md border border-slate-100 flex items-center gap-4 mb-4">
+          <div className="relative flex-shrink-0">
+            {avatarUrl ? (
+              <img src={avatarUrl} alt="Avatar" className="w-16 h-16 rounded-full object-cover shadow" />
+            ) : (
+              <div className="w-16 h-16 bg-brand-blue/10 rounded-full flex items-center justify-center text-brand-blue text-2xl font-black">
+                {nombre?.charAt(0) || session?.user?.email?.charAt(0).toUpperCase()}
+              </div>
+            )}
+            <label className="absolute -bottom-1 -right-1 w-7 h-7 bg-brand-gold rounded-full flex items-center justify-center cursor-pointer shadow">
+              {uploadingAvatar
+                ? <i className="bi bi-arrow-repeat text-brand-dark text-xs animate-spin"></i>
+                : <i className="bi bi-camera-fill text-brand-dark text-xs"></i>
+              }
+              <input type="file" accept="image/*" className="hidden" onChange={handleAvatarChange} />
+            </label>
+          </div>
+          <div className="min-w-0">
+            <h2 className="font-black text-brand-dark uppercase italic text-base truncate">{nombre || 'Usuario'}</h2>
+            <p className="text-[10px] font-bold text-slate-400 truncate">{session?.user?.email}</p>
+            <span className="inline-block mt-1 px-3 py-0.5 bg-brand-bg rounded-full text-[9px] font-black uppercase tracking-widest text-slate-400">
+              {profile?.roles?.nombre || 'Explorador'}
+            </span>
+          </div>
+        </div>
+
+        {/* ── TABS HORIZONTALES con scroll (estilo Instagram) ── */}
+        <div
+          ref={tabsRef}
+          className="flex overflow-x-auto gap-2 pb-1 hide-scrollbar"
+          role="tablist"
+          aria-label="Secciones del perfil"
+        >
+          {menuItems.map((item) => {
+            const isActive = seccion === item.id;
+            return (
+              <button
+                key={item.id}
+                role="tab"
+                aria-selected={isActive}
+                data-active={isActive}
+                onClick={() => setSeccion(item.id as any)}
+                className={`flex-shrink-0 flex items-center gap-2 px-4 py-3 rounded-2xl font-black uppercase tracking-widest text-[10px] transition-all border-2 ${
+                  isActive
+                    ? `${item.color} text-white border-transparent shadow-lg`
+                    : 'bg-white text-slate-400 border-slate-100 hover:border-slate-200'
+                }`}
+              >
+                <i className={`bi ${item.icon} text-base`}></i>
+                <span className="whitespace-nowrap">{item.label}</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* ── LAYOUT GRID: sidebar en desktop, oculto en móvil ─── */}
+      <div className="max-w-6xl mx-auto px-4 lg:px-6 grid grid-cols-1 lg:grid-cols-12 gap-8">
+
+        {/* ── SIDEBAR DESKTOP (solo visible en lg+) ── */}
+        <aside className="hidden lg:block lg:col-span-4 space-y-4">
           {/* Avatar card */}
           <div className="bg-white rounded-[2.5rem] p-8 shadow-xl border border-slate-100 text-center">
             <div className="relative w-28 h-28 mx-auto mb-4">
@@ -214,11 +284,13 @@ const MiPerfil: React.FC = () => {
             </span>
           </div>
 
-          {/* Nav */}
-          <nav className="space-y-2">
+          {/* Nav desktop */}
+          <nav className="space-y-2" role="tablist">
             {menuItems.map((item) => (
               <button
                 key={item.id}
+                role="tab"
+                aria-selected={seccion === item.id}
                 onClick={() => setSeccion(item.id as any)}
                 className={`w-full flex items-center gap-4 p-5 rounded-2xl font-black uppercase tracking-widest text-[10px] transition-all ${seccion === item.id
                   ? `${item.color} text-white shadow-lg translate-x-1`
@@ -232,13 +304,13 @@ const MiPerfil: React.FC = () => {
           </nav>
         </aside>
 
-        {/* ── CONTENIDO ── */}
-        <div className="lg:col-span-8">
+        {/* ── CONTENIDO PRINCIPAL ── */}
+        <div className="lg:col-span-8" role="tabpanel">
 
           {/* ── PERFIL ── */}
           {seccion === 'perfil' && (
-            <div className="bg-white rounded-[3rem] p-10 md:p-12 shadow-xl border border-slate-100">
-              <h3 className="text-4xl font-black text-brand-dark italic uppercase tracking-tighter mb-10">
+            <div className="bg-white rounded-[2rem] lg:rounded-[3rem] p-7 md:p-12 shadow-xl border border-slate-100">
+              <h3 className="text-3xl lg:text-4xl font-black text-brand-dark italic uppercase tracking-tighter mb-8">
                 Mi <span className="text-brand-blue">Perfil</span>
               </h3>
               <form onSubmit={handleSavePerfil} className="space-y-6">
@@ -275,7 +347,7 @@ const MiPerfil: React.FC = () => {
                 <button
                   type="submit"
                   disabled={savingPerfil}
-                  className="bg-brand-dark hover:bg-brand-blue text-white font-black uppercase tracking-widest text-[11px] py-5 px-12 rounded-2xl transition-all shadow-lg disabled:opacity-50"
+                  className="bg-brand-dark hover:bg-brand-blue text-white font-black uppercase tracking-widest text-[11px] py-4 px-10 rounded-2xl transition-all shadow-lg disabled:opacity-50"
                 >
                   {savingPerfil ? 'Guardando...' : 'Guardar Cambios'}
                 </button>
@@ -285,10 +357,9 @@ const MiPerfil: React.FC = () => {
 
           {/* ── SEGURIDAD ── */}
           {seccion === 'seguridad' && (
-            <div className="space-y-8">
-              {/* Cambiar email */}
-              <div className="bg-white rounded-[3rem] p-10 md:p-12 shadow-xl border border-slate-100">
-                <h3 className="text-3xl font-black text-brand-dark italic uppercase tracking-tighter mb-8">
+            <div className="space-y-6">
+              <div className="bg-white rounded-[2rem] lg:rounded-[3rem] p-7 md:p-12 shadow-xl border border-slate-100">
+                <h3 className="text-2xl lg:text-3xl font-black text-brand-dark italic uppercase tracking-tighter mb-8">
                   Cambiar <span className="text-brand-blue">Email</span>
                 </h3>
                 <form onSubmit={handleChangeEmail} className="space-y-6">
@@ -302,9 +373,8 @@ const MiPerfil: React.FC = () => {
                 </form>
               </div>
 
-              {/* Cambiar contraseña */}
-              <div className="bg-white rounded-[3rem] p-10 md:p-12 shadow-xl border border-slate-100">
-                <h3 className="text-3xl font-black text-brand-dark italic uppercase tracking-tighter mb-8">
+              <div className="bg-white rounded-[2rem] lg:rounded-[3rem] p-7 md:p-12 shadow-xl border border-slate-100">
+                <h3 className="text-2xl lg:text-3xl font-black text-brand-dark italic uppercase tracking-tighter mb-8">
                   Nueva <span className="text-brand-green">Contraseña</span>
                 </h3>
                 <form onSubmit={handleChangePassword} className="space-y-6">
@@ -322,7 +392,6 @@ const MiPerfil: React.FC = () => {
                 </form>
               </div>
 
-              {/* Mensajes */}
               {segMsg && (
                 <div className={`p-4 rounded-2xl text-[10px] font-black uppercase tracking-widest text-center border ${segMsg.tipo === 'ok'
                   ? 'bg-brand-green/10 text-brand-green border-brand-green/20'
@@ -332,18 +401,17 @@ const MiPerfil: React.FC = () => {
                 </div>
               )}
 
-              {/* Zona de peligro */}
-              <div className="bg-brand-red/5 border-2 border-brand-red/20 rounded-[3rem] p-10 md:p-12">
-                <h3 className="text-2xl font-black text-brand-red italic uppercase tracking-tighter mb-4">
+              <div className="bg-brand-red/5 border-2 border-brand-red/20 rounded-[2rem] lg:rounded-[3rem] p-7 md:p-12">
+                <h3 className="text-xl lg:text-2xl font-black text-brand-red italic uppercase tracking-tighter mb-4">
                   Zona de Peligro
                 </h3>
-                <p className="text-slate-500 text-sm font-medium mb-8 leading-relaxed">
+                <p className="text-slate-500 text-sm font-medium mb-6 leading-relaxed">
                   Eliminar tu cuenta borrará permanentemente todos tus datos, favoritos y reseñas. Esta acción no se puede deshacer.
                 </p>
                 <button
                   onClick={handleDeleteAccount}
                   disabled={deletingAccount}
-                  className="bg-brand-red text-white font-black uppercase tracking-widest text-[11px] py-4 px-10 rounded-2xl hover:bg-red-700 transition-all shadow-lg disabled:opacity-50"
+                  className="bg-brand-red text-white font-black uppercase tracking-widest text-[11px] py-4 px-8 rounded-2xl hover:bg-red-700 transition-all shadow-lg disabled:opacity-50"
                 >
                   {deletingAccount ? 'Eliminando...' : 'Eliminar mi cuenta'}
                 </button>
@@ -353,11 +421,11 @@ const MiPerfil: React.FC = () => {
 
           {/* ── FAVORITOS ── */}
           {seccion === 'favoritos' && (
-            <div className="bg-white rounded-[3rem] p-10 md:p-12 shadow-xl border border-slate-100">
-              <h3 className="text-4xl font-black text-brand-dark italic uppercase tracking-tighter mb-10">
+            <div className="bg-white rounded-[2rem] lg:rounded-[3rem] p-7 md:p-12 shadow-xl border border-slate-100">
+              <h3 className="text-3xl lg:text-4xl font-black text-brand-dark italic uppercase tracking-tighter mb-8">
                 Mis <span className="text-brand-blue">Favoritos</span>
               </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                 {favoritos.length > 0 ? favoritos.map((fav: any) => {
                   const titulo = fav.detalle?.titulo || fav.detalle?.nombre || fav.detalle?.nombre_es || 'Sin título';
                   const imagenUrl = fav.detalle?.imagen_url;
@@ -368,20 +436,20 @@ const MiPerfil: React.FC = () => {
                       to={ruta}
                       className="group bg-brand-bg rounded-[2rem] overflow-hidden border border-slate-100 hover:shadow-xl hover:border-brand-blue/20 transition-all"
                     >
-                      <div className="relative h-40 overflow-hidden">
+                      <div className="relative h-36 overflow-hidden">
                         {imagenUrl && <img src={imagenUrl} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" alt="" />}
                         <div className="absolute inset-0 bg-gradient-to-t from-brand-dark/50 to-transparent"></div>
                         <span className="absolute bottom-3 left-3 bg-brand-dark/80 text-white text-[8px] font-black px-3 py-1 rounded-full uppercase tracking-widest backdrop-blur-sm">
                           {fav.tipo_elemento}
                         </span>
                       </div>
-                      <div className="p-6">
+                      <div className="p-5">
                         <h4 className="font-black text-brand-dark uppercase italic text-sm group-hover:text-brand-blue transition-colors">{titulo}</h4>
                       </div>
                     </Link>
                   );
                 }) : (
-                  <div className="col-span-full py-20 text-center bg-brand-bg rounded-[2rem] border-2 border-dashed border-slate-200">
+                  <div className="col-span-full py-16 text-center bg-brand-bg rounded-[2rem] border-2 border-dashed border-slate-200">
                     <i className="bi bi-heart text-4xl text-slate-200 block mb-4"></i>
                     <p className="text-slate-400 font-bold uppercase tracking-widest text-[10px]">No tienes favoritos guardados</p>
                     <Link to="/eventos" className="text-brand-blue font-black uppercase text-[10px] tracking-widest mt-4 inline-block">Explorar Eventos →</Link>
@@ -393,32 +461,32 @@ const MiPerfil: React.FC = () => {
 
           {/* ── RESEÑAS ── */}
           {seccion === 'reseñas' && (
-            <div className="bg-white rounded-[3rem] p-10 md:p-12 shadow-xl border border-slate-100">
-              <h3 className="text-4xl font-black text-brand-dark italic uppercase tracking-tighter mb-10">
+            <div className="bg-white rounded-[2rem] lg:rounded-[3rem] p-7 md:p-12 shadow-xl border border-slate-100">
+              <h3 className="text-3xl lg:text-4xl font-black text-brand-dark italic uppercase tracking-tighter mb-8">
                 Mis <span className="text-brand-green">Reseñas</span>
               </h3>
-              <div className="space-y-6">
+              <div className="space-y-5">
                 {reseñas.length > 0 ? reseñas.map(res => (
-                  <div key={res.id} className="flex gap-6 p-6 bg-brand-bg rounded-[2rem] border border-slate-100">
+                  <div key={res.id} className="flex gap-4 p-5 bg-brand-bg rounded-[2rem] border border-slate-100">
                     {res.eventos?.imagen_url && (
-                      <img src={res.eventos.imagen_url} className="w-20 h-20 rounded-2xl object-cover shadow shrink-0" alt="" />
+                      <img src={res.eventos.imagen_url} className="w-16 h-16 rounded-2xl object-cover shadow flex-shrink-0" alt="" />
                     )}
-                    <div className="flex-1">
-                      <p className="font-black text-brand-dark uppercase italic text-sm mb-1">{res.eventos?.titulo}</p>
-                      <div className="flex gap-0.5 mb-3">
+                    <div className="flex-1 min-w-0">
+                      <p className="font-black text-brand-dark uppercase italic text-sm mb-1 truncate">{res.eventos?.titulo}</p>
+                      <div className="flex gap-0.5 mb-2">
                         {[1, 2, 3, 4, 5].map(n => (
                           <i key={n} className={`bi bi-heart${n <= res.puntuacion ? '-fill text-brand-red' : ' text-slate-200'} text-xs`}></i>
                         ))}
                       </div>
-                      <p className="text-slate-500 text-sm font-medium italic">"{res.texto}"</p>
-                      <div className="flex items-center gap-4 mt-2">
+                      <p className="text-slate-500 text-sm font-medium italic line-clamp-2">"{res.texto}"</p>
+                      <div className="flex items-center gap-3 mt-2 flex-wrap">
                         <p className="text-[9px] text-slate-300 font-bold uppercase tracking-widest">{new Date(res.created_at).toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
                         {res.nombre_usuario && <p className="text-[9px] text-brand-blue font-bold uppercase tracking-widest">por {res.nombre_usuario}</p>}
                       </div>
                     </div>
                   </div>
                 )) : (
-                  <div className="py-20 text-center bg-brand-bg rounded-[2rem] border-2 border-dashed border-slate-200">
+                  <div className="py-16 text-center bg-brand-bg rounded-[2rem] border-2 border-dashed border-slate-200">
                     <i className="bi bi-chat-left-quote text-4xl text-slate-200 block mb-4"></i>
                     <p className="text-slate-400 font-bold uppercase tracking-widest text-[10px]">Aún no has escrito ninguna reseña</p>
                   </div>

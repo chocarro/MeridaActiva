@@ -29,7 +29,7 @@ const RotatingText: React.FC<RotatingTextProps> = ({
 
     return (
         <span
-            className={`inline-block transition-all duration-300 ${visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'} ${className}`}
+            className={`inline-block pb-1 overflow-visible transition-all duration-300 ${visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'} ${className}`}
         >
             {texts[currentIndex]}
         </span>
