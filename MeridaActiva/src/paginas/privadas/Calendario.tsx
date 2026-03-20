@@ -6,6 +6,7 @@ import { useAuth } from '../../context/AuthContext';
 import { toastExito, toastError, toastAviso } from '../../utils/toast';
 import AnimatedList from '../../componentes/animaciones/AnimatedList';
 
+// ── Interfaces ───────────────────────────────────────────────────
 interface Evento {
   id: string;
   titulo: string;
@@ -22,6 +23,7 @@ interface AgendaPersonal {
   fecha: string;
   nota?: string;
   color: string;
+  hora?: string; // ← NUEVO (columna hora TEXT NULL en BD)
 }
 
 interface EventoCalendario {
@@ -30,6 +32,7 @@ interface EventoCalendario {
   fecha: string;
   color: string;
   tipo: 'plataforma' | 'personal';
+  hora?: string; // ← NUEVO
 }
 
 // ── Constantes ───────────────────────────────────────────────────
@@ -81,27 +84,28 @@ const Calendario: React.FC = () => {
   const [agendaPersonal, setAgendaPersonal] = useState<AgendaPersonal[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Modal
-  const [showModal, setShowModal] = useState(false);
+  // ── Modal FORMULARIO (crear / editar) ────────────────────────
+  const [showFormModal, setShowFormModal] = useState(false);
+  const [editandoId, setEditandoId] = useState<string | null>(null); // null = crear
   const [diaSeleccionado, setDiaSeleccionado] = useState('');
   const [newEvTitulo, setNewEvTitulo] = useState('');
   const [newEvNota, setNewEvNota] = useState('');
   const [newEvColor, setNewEvColor] = useState(COLORES[0]);
+  const [newEvHora, setNewEvHora] = useState(''); // ← NUEVO
   const [savingEv, setSavingEv] = useState(false);
+
+  // ── Modal DETALLE DEL DÍA ─────────────────────────────────────
+  const [showDayModal, setShowDayModal] = useState(false);
+  const [diaModal, setDiaModal] = useState(''); // fecha YYYY-MM-DD del día seleccionado
 
   // Confirmación inline de borrado
   const [pendienteEliminar, setPendienteEliminar] = useState<string | null>(null);
 
   // ── Fetch ──────────────────────────────────────────────────────
-  // BUG FIX: La tabla 'favoritos' usa 'elemento_id' (genérico para eventos
-  // y lugares), NO 'evento_id'. No existe foreign key directa a 'eventos',
-  // por eso el join .select('eventos(...)') devolvía 400.
-  // Solución: consulta en dos pasos — primero los IDs, luego los eventos.
   const fetchData = useCallback(async () => {
     if (!session?.user?.id) { setLoading(false); return; }
     setLoading(true);
     try {
-      // Paso 1: obtener los elemento_id de favoritos de tipo 'evento'
       const { data: favs, error: favErr } = await supabase
         .from('favoritos')
         .select('elemento_id')
@@ -110,7 +114,6 @@ const Calendario: React.FC = () => {
 
       if (favErr) throw favErr;
 
-      // Paso 2: si hay favoritos, cargar los eventos correspondientes
       if (favs && favs.length > 0) {
         const ids = favs.map((f: { elemento_id: string }) => f.elemento_id).filter(Boolean);
         if (ids.length > 0) {
@@ -118,7 +121,6 @@ const Calendario: React.FC = () => {
             .from('eventos')
             .select('id, titulo, fecha, imagen_url, categoria, ubicacion, precio')
             .in('id', ids);
-
           if (evsErr) throw evsErr;
           if (evs) setEventosPlataforma(evs as Evento[]);
         }
@@ -126,7 +128,6 @@ const Calendario: React.FC = () => {
         setEventosPlataforma([]);
       }
 
-      // Agenda personal (sin cambios)
       const { data: ag, error: agErr } = await supabase
         .from('agenda_personal')
         .select('*')
@@ -146,23 +147,88 @@ const Calendario: React.FC = () => {
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
-  // ── Guardar evento personal ────────────────────────────────────
+  // ── Abrir modal para CREAR (desde día clicado en grid) ─────────
+  const abrirFormCrear = (fecha: string) => {
+    setEditandoId(null);
+    setDiaSeleccionado(fecha);
+    setNewEvTitulo('');
+    setNewEvNota('');
+    setNewEvColor(COLORES[0]);
+    setNewEvHora('');
+    setShowDayModal(false);
+    setShowFormModal(true);
+  };
+
+  // ── Abrir modal para EDITAR evento personal ────────────────────
+  const abrirFormEditar = (ev: AgendaPersonal) => {
+    setEditandoId(ev.id);
+    setDiaSeleccionado(ev.fecha);
+    setNewEvTitulo(ev.titulo);
+    setNewEvNota(ev.nota ?? '');
+    setNewEvColor(ev.color);
+    setNewEvHora(ev.hora ?? '');
+    setShowFormModal(true);
+  };
+
+  // ── Cerrar modal formulario y resetear estado ──────────────────
+  const cerrarFormModal = () => {
+    setShowFormModal(false);
+    setEditandoId(null);
+    setNewEvTitulo('');
+    setNewEvNota('');
+    setNewEvColor(COLORES[0]);
+    setNewEvHora('');
+  };
+
+  // ── Guardar (INSERT o UPDATE) ──────────────────────────────────
   const handleSaveEvento = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!session?.user?.id || !newEvTitulo || !diaSeleccionado) return;
+
+    // ── Detector de conflictos ──────────────────────────────────
+    if (newEvHora) {
+      const conflicto = agendaPersonal.find(ev =>
+        ev.fecha === diaSeleccionado &&
+        ev.hora === newEvHora &&
+        ev.id !== editandoId
+      );
+      if (conflicto) {
+        const ok = window.confirm(
+          `Ya tienes "${conflicto.titulo}" a las ${newEvHora}. ¿Guardar de todas formas?`
+        );
+        if (!ok) return;
+      }
+    }
+
     setSavingEv(true);
     try {
-      const { error } = await supabase.from('agenda_personal').insert([{
+      const payload = {
         usuario_id: session.user.id,
         titulo: newEvTitulo.trim(),
         fecha: diaSeleccionado,
         nota: newEvNota.trim() || null,
         color: newEvColor,
-      }]);
-      if (error) throw error;
-      toastExito('¡Evento añadido a tu agenda!');
-      setShowModal(false);
-      setNewEvTitulo(''); setNewEvNota(''); setNewEvColor(COLORES[0]);
+        hora: newEvHora || null,
+      };
+
+      if (editandoId) {
+        // UPDATE
+        const { error } = await supabase
+          .from('agenda_personal')
+          .update(payload)
+          .eq('id', editandoId);
+        if (error) throw error;
+        toastExito('¡Evento actualizado!');
+      } else {
+        // INSERT
+        const { error } = await supabase
+          .from('agenda_personal')
+          .insert([payload]);
+        if (error) throw error;
+        toastExito('¡Evento añadido a tu agenda!');
+      }
+
+      cerrarFormModal();
       fetchData();
     } catch {
       toastError('No se pudo guardar el evento. Inténtalo de nuevo.');
@@ -202,12 +268,16 @@ const Calendario: React.FC = () => {
     ...agendaPersonal.map(ag => ({
       id: ag.id, titulo: ag.titulo, fecha: ag.fecha,
       color: ag.color, tipo: 'personal' as const,
+      hora: ag.hora,
     })),
   ];
 
-  const eventosDelDia = (dia: number): EventoCalendario[] => {
+  const eventosDelDia = (fechaStr: string): EventoCalendario[] =>
+    todosLosEventos.filter(ev => ev.fecha?.startsWith(fechaStr));
+
+  const eventosDelDiaNum = (dia: number): EventoCalendario[] => {
     const fechaStr = `${año}-${String(mes + 1).padStart(2, '0')}-${String(dia).padStart(2, '0')}`;
-    return todosLosEventos.filter(ev => ev.fecha?.startsWith(fechaStr));
+    return eventosDelDia(fechaStr);
   };
 
   const mesNombre = mesActual.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' });
@@ -219,6 +289,13 @@ const Calendario: React.FC = () => {
     const d = new Date(ev.fecha);
     return d.getMonth() === new Date().getMonth() && d.getFullYear() === new Date().getFullYear();
   }).length;
+
+  // Eventos del día del modal de detalle, ordenados por hora
+  const eventosDiaModal: EventoCalendario[] = eventosDelDia(diaModal)
+    .sort((a, b) => (a.hora ?? '99:99').localeCompare(b.hora ?? '99:99'));
+
+  // Datos del evento personal que se está editando (para prellenar)
+  const agendaById = (id: string) => agendaPersonal.find(ag => ag.id === id);
 
   // ── Sin sesión ─────────────────────────────────────────────────
   if (!session) {
@@ -268,7 +345,7 @@ const Calendario: React.FC = () => {
               <i className="bi bi-stars" /> Crea mi ruta ideal
             </Link>
             <button
-              onClick={() => { setDiaSeleccionado(new Date().toISOString().slice(0, 10)); setShowModal(true); }}
+              onClick={() => abrirFormCrear(new Date().toISOString().slice(0, 10))}
               className="flex items-center gap-2 bg-brand-gold text-brand-dark px-6 py-3 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-brand-blue hover:text-white transition-all shadow-lg"
             >
               <i className="bi bi-plus-lg" /> Añadir evento
@@ -403,17 +480,20 @@ const Calendario: React.FC = () => {
                   <div className="grid grid-cols-7 gap-1">
                     {Array(offset).fill(null).map((_, i) => <div key={`off-${i}`} className="h-20 md:h-24" />)}
                     {Array.from({ length: diasEnMes }, (_, i) => i + 1).map(dia => {
-                      const evsDia = eventosDelDia(dia);
+                      const evsDia = eventosDelDiaNum(dia);
                       const hoy = new Date();
                       const esHoy = hoy.getDate() === dia && hoy.getMonth() === mes && hoy.getFullYear() === año;
+                      const fechaStr = `${año}-${String(mes + 1).padStart(2, '0')}-${String(dia).padStart(2, '0')}`;
                       return (
-                        <div
+                        <button
                           key={dia}
+                          type="button"
                           onClick={() => {
-                            setDiaSeleccionado(`${año}-${String(mes + 1).padStart(2, '0')}-${String(dia).padStart(2, '0')}`);
-                            setShowModal(true);
+                            setDiaModal(fechaStr);
+                            setShowDayModal(true);
                           }}
-                          className={`h-20 md:h-24 rounded-2xl p-2 cursor-pointer transition-colors group relative flex flex-col ${esHoy ? 'bg-brand-dark' : 'bg-white border border-slate-50 hover:bg-brand-bg'}`}
+                          className={`h-20 md:h-24 rounded-2xl p-2 cursor-pointer transition-colors relative flex flex-col w-full text-left active:scale-95 ${esHoy ? 'bg-brand-dark' : 'bg-white border border-slate-50 hover:bg-brand-bg'}`}
+                          aria-label={`Día ${dia}, ${evsDia.length} evento${evsDia.length !== 1 ? 's' : ''}`}
                         >
                           <span className={`text-xs font-black ${esHoy ? 'text-brand-gold' : 'text-brand-dark'}`}>{dia}</span>
                           <div className="flex flex-wrap gap-1 mt-1">
@@ -422,24 +502,13 @@ const Calendario: React.FC = () => {
                                 key={ev.id}
                                 className="w-2 h-2 rounded-full"
                                 style={{ backgroundColor: ev.color }}
-                                title={ev.titulo}
                               />
                             ))}
                             {evsDia.length > 3 && (
                               <span className="text-[8px] font-black text-slate-400">+{evsDia.length - 3}</span>
                             )}
                           </div>
-                          {evsDia.length > 0 && (
-                            <div className="absolute left-0 bottom-full mb-2 bg-brand-dark text-white text-[9px] font-black px-3 py-2 rounded-xl shadow-xl z-10 hidden group-hover:block w-44 whitespace-normal pointer-events-none">
-                              {evsDia.map(ev => (
-                                <div key={ev.id} className="flex items-center gap-1.5 py-0.5">
-                                  <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: ev.color }} />
-                                  {ev.titulo}
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                        </div>
+                        </button>
                       );
                     })}
                   </div>
@@ -465,7 +534,7 @@ const Calendario: React.FC = () => {
                           Ver eventos
                         </Link>
                         <button
-                          onClick={() => { setDiaSeleccionado(new Date().toISOString().slice(0, 10)); setShowModal(true); }}
+                          onClick={() => abrirFormCrear(new Date().toISOString().slice(0, 10))}
                           className="bg-brand-gold text-brand-dark px-6 py-3 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:scale-105 transition-all"
                         >
                           Añadir uno
@@ -475,7 +544,12 @@ const Calendario: React.FC = () => {
                   ) : (
                     <AnimatedList className="space-y-4">
                       {todosLosEventos
-                        .sort((a, b) => new Date(a.fecha).getTime() - new Date(b.fecha).getTime())
+                        .sort((a, b) => {
+                          const fechaDiff = new Date(a.fecha).getTime() - new Date(b.fecha).getTime();
+                          if (fechaDiff !== 0) return fechaDiff;
+                          // Ordenación cronológica por hora dentro del mismo día
+                          return (a.hora ?? '99:99').localeCompare(b.hora ?? '99:99');
+                        })
                         .map(ev => (
                           <div key={ev.id} className="flex items-center gap-5 p-5 rounded-2xl bg-brand-bg border border-slate-100 hover:border-brand-blue/20 hover:bg-white transition-all group">
                             <div className="w-2 h-12 rounded-full shrink-0" style={{ backgroundColor: ev.color }} />
@@ -485,6 +559,7 @@ const Calendario: React.FC = () => {
                               </p>
                               <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-1">
                                 {new Date(ev.fecha).toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })}
+                                {ev.hora && <span className="ml-2 text-brand-gold">· {ev.hora}</span>}
                               </p>
                             </div>
                             <div className="flex items-center gap-2 shrink-0">
@@ -516,13 +591,27 @@ const Calendario: React.FC = () => {
                                   </button>
                                 </div>
                               ) : (
-                                <button
-                                  onClick={() => confirmarEliminar(ev.id)}
-                                  className="w-8 h-8 rounded-xl bg-brand-red/10 text-brand-red flex items-center justify-center hover:bg-brand-red hover:text-white transition-all text-sm"
-                                  title="Eliminar"
-                                >
-                                  <i className="bi bi-trash3" />
-                                </button>
+                                <>
+                                  {/* Botón EDITAR */}
+                                  <button
+                                    onClick={() => {
+                                      const ag = agendaById(ev.id);
+                                      if (ag) abrirFormEditar(ag);
+                                    }}
+                                    className="w-8 h-8 rounded-xl bg-brand-blue/10 text-brand-blue flex items-center justify-center hover:bg-brand-blue hover:text-white transition-all text-sm"
+                                    title="Editar"
+                                  >
+                                    <i className="bi bi-pencil" />
+                                  </button>
+                                  {/* Botón ELIMINAR */}
+                                  <button
+                                    onClick={() => confirmarEliminar(ev.id)}
+                                    className="w-8 h-8 rounded-xl bg-brand-red/10 text-brand-red flex items-center justify-center hover:bg-brand-red hover:text-white transition-all text-sm"
+                                    title="Eliminar"
+                                  >
+                                    <i className="bi bi-trash3" />
+                                  </button>
+                                </>
                               )}
                             </div>
                           </div>
@@ -536,24 +625,106 @@ const Calendario: React.FC = () => {
         </div>
       </div>
 
-      {/* ── MODAL AÑADIR EVENTO ── */}
-      {showModal && (
+      {/* ══════════════════════════════════════════════════════════
+          MODAL: DETALLE DEL DÍA (nueva UX móvil)
+      ══════════════════════════════════════════════════════════ */}
+      {showDayModal && (
         <div
-          className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-brand-dark/60 backdrop-blur-sm"
-          onClick={(e) => { if (e.target === e.currentTarget) setShowModal(false); }}
+          className="fixed inset-0 z-[150] flex items-end sm:items-center justify-center p-4 bg-brand-dark/60 backdrop-blur-sm"
+          onClick={(e) => { if (e.target === e.currentTarget) setShowDayModal(false); }}
+        >
+          <div className="bg-white rounded-t-[2.5rem] sm:rounded-[2.5rem] w-full max-w-md shadow-2xl relative max-h-[80vh] flex flex-col">
+            {/* Cabecera del modal de día */}
+            <div className="flex items-center justify-between px-8 pt-8 pb-4 border-b border-slate-50 flex-shrink-0">
+              <div>
+                <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-0.5">
+                  {diaModal
+                    ? new Date(diaModal + 'T00:00:00').toLocaleDateString('es-ES', { weekday: 'long' })
+                    : ''}
+                </p>
+                <h3 className="text-2xl font-black text-brand-dark italic uppercase tracking-tighter">
+                  {diaModal
+                    ? new Date(diaModal + 'T00:00:00').toLocaleDateString('es-ES', { day: 'numeric', month: 'long' })
+                    : ''}
+                </h3>
+              </div>
+              <button
+                onClick={() => setShowDayModal(false)}
+                className="w-10 h-10 rounded-xl bg-brand-bg hover:bg-brand-red hover:text-white transition-all flex items-center justify-center text-slate-400"
+                aria-label="Cerrar"
+              >
+                <i className="bi bi-x-lg" />
+              </button>
+            </div>
+
+            {/* Lista de eventos del día */}
+            <div className="flex-1 overflow-y-auto px-8 py-4 space-y-3">
+              {eventosDiaModal.length === 0 ? (
+                <div className="py-10 text-center">
+                  <i className="bi bi-calendar3 text-3xl text-slate-200 block mb-3" />
+                  <p className="text-slate-400 font-black text-[10px] uppercase tracking-widest">
+                    Sin eventos este día
+                  </p>
+                </div>
+              ) : (
+                eventosDiaModal.map(ev => (
+                  <div key={ev.id} className="flex items-center gap-4 p-4 rounded-2xl bg-brand-bg border border-slate-100">
+                    <span className="w-2 h-10 rounded-full shrink-0" style={{ backgroundColor: ev.color }} />
+                    <div className="flex-1 min-w-0">
+                      <p className="font-black text-brand-dark text-sm uppercase italic truncate">{ev.titulo}</p>
+                      {ev.hora && (
+                        <p className="text-[10px] font-black text-brand-gold mt-0.5">
+                          <i className="bi bi-clock mr-1" />{ev.hora}
+                        </p>
+                      )}
+                    </div>
+                    <span className={`text-[9px] font-black px-2 py-1 rounded-full uppercase tracking-widest shrink-0 ${ev.tipo === 'plataforma' ? 'bg-brand-blue/10 text-brand-blue' : 'bg-brand-gold/10 text-brand-dark'}`}>
+                      {ev.tipo === 'plataforma' ? 'Favorito' : 'Personal'}
+                    </span>
+                  </div>
+                ))
+              )}
+            </div>
+
+            {/* Botón añadir evento */}
+            <div className="px-8 pb-8 pt-4 flex-shrink-0 border-t border-slate-50">
+              <button
+                onClick={() => abrirFormCrear(diaModal)}
+                className="w-full flex items-center justify-center gap-2 bg-brand-dark text-brand-gold py-4 rounded-2xl font-black text-[11px] uppercase tracking-widest hover:bg-brand-blue hover:text-white transition-all shadow-lg"
+              >
+                <i className="bi bi-plus-lg" /> Añadir evento personal
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ══════════════════════════════════════════════════════════
+          MODAL: FORMULARIO CREAR / EDITAR
+      ══════════════════════════════════════════════════════════ */}
+      {showFormModal && (
+        <div
+          className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-brand-dark/60 backdrop-blur-sm"
+          onClick={(e) => { if (e.target === e.currentTarget) cerrarFormModal(); }}
         >
           <div className="bg-white rounded-[2.5rem] p-10 w-full max-w-md shadow-2xl relative">
             <button
-              onClick={() => setShowModal(false)}
+              onClick={cerrarFormModal}
               className="absolute top-6 right-6 w-10 h-10 rounded-xl bg-brand-bg hover:bg-brand-red hover:text-white transition-all flex items-center justify-center text-slate-400"
               aria-label="Cerrar"
             >
               <i className="bi bi-x-lg" />
             </button>
             <h3 className="text-2xl font-black text-brand-dark italic uppercase tracking-tighter mb-8">
-              Añadir a <span className="text-brand-gold">Agenda</span>
+              {editandoId ? (
+                <>Editar <span className="text-brand-blue">Evento</span></>
+              ) : (
+                <>Añadir a <span className="text-brand-gold">Agenda</span></>
+              )}
             </h3>
             <form onSubmit={handleSaveEvento} className="space-y-5">
+
+              {/* Título */}
               <div>
                 <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Título *</label>
                 <input
@@ -566,6 +737,8 @@ const Calendario: React.FC = () => {
                   required
                 />
               </div>
+
+              {/* Fecha */}
               <div>
                 <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Fecha *</label>
                 <input
@@ -576,6 +749,21 @@ const Calendario: React.FC = () => {
                   required
                 />
               </div>
+
+              {/* Hora (nuevo) */}
+              <div>
+                <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">
+                  Hora <span className="font-bold normal-case tracking-normal text-slate-300">(opcional)</span>
+                </label>
+                <input
+                  type="time"
+                  value={newEvHora}
+                  onChange={e => setNewEvHora(e.target.value)}
+                  className="input-field"
+                />
+              </div>
+
+              {/* Nota */}
               <div>
                 <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Nota (opcional)</label>
                 <textarea
@@ -587,6 +775,8 @@ const Calendario: React.FC = () => {
                   maxLength={200}
                 />
               </div>
+
+              {/* Color */}
               <div>
                 <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Color</label>
                 <div className="flex gap-2">
@@ -602,6 +792,7 @@ const Calendario: React.FC = () => {
                   ))}
                 </div>
               </div>
+
               <button
                 type="submit"
                 disabled={savingEv}
@@ -615,7 +806,7 @@ const Calendario: React.FC = () => {
                     </svg>
                     Guardando…
                   </>
-                ) : 'Guardar en mi Agenda'}
+                ) : editandoId ? 'Actualizar evento' : 'Guardar en mi Agenda'}
               </button>
             </form>
           </div>
