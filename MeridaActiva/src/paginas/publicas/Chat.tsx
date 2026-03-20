@@ -66,7 +66,7 @@ const SUGERENCIAS = [
 ];
 
 // ════════════════════════════════════════════════════════════════
-const FAQPage: React.FC = () => {
+const ChatPage: React.FC = () => {
     useSeoMeta({
         title: 'Asistente IA — MeridaActiva',
         description: 'Chatea con el asistente inteligente de MeridaActiva. Pregunta sobre eventos, monumentos, gastronomía, rutas y todo lo que necesitas saber sobre Mérida.',
@@ -165,10 +165,10 @@ const FAQPage: React.FC = () => {
     };
 
     return (
-        <div className="min-h-screen bg-brand-bg">
+        <div className="min-h-screen bg-brand-bg flex flex-col">
 
-            {/* ── HERO ── */}
-            <header className="relative h-[38vh] min-h-[260px] flex items-center justify-center overflow-hidden pt-20">
+            {/* ── HERO compacto ── */}
+            <header className="relative h-[28vh] min-h-[160px] max-h-[210px] flex items-center justify-center overflow-hidden pt-16 flex-shrink-0">
                 <div className="absolute inset-0 z-0">
                     <img
                         src="/Imagenes/acueducto-de-los-milagros-merida.jpg"
@@ -178,138 +178,151 @@ const FAQPage: React.FC = () => {
                     <div className="absolute inset-0 bg-gradient-to-b from-brand-dark/80 via-brand-dark/60 to-brand-bg" />
                 </div>
                 <div className="relative z-10 text-center px-4">
-                    <span className="text-brand-gold font-black uppercase tracking-[0.3em] text-xs mb-4 block">
+                    <span className="text-brand-gold font-black uppercase tracking-[0.3em] text-xs mb-2 block">
                         Asistente inteligente
                     </span>
-                    <h1 className="text-5xl md:text-7xl font-black tracking-tighter italic uppercase text-white leading-none">
+                    <h1 className="text-4xl md:text-6xl font-black tracking-tighter italic uppercase text-white leading-none">
                         Tu guía <span className="text-brand-gold">IA</span>
                     </h1>
-                    <p className="text-white/60 mt-4 text-sm font-medium max-w-md mx-auto">
+                    <p className="text-white/60 mt-2 text-xs font-medium max-w-md mx-auto hidden sm:block">
                         Pregunta lo que quieras sobre Mérida, sus eventos y su patrimonio
                     </p>
                 </div>
             </header>
 
-            <div className="max-w-4xl mx-auto px-4 pb-32 -mt-6 relative z-10">
-
-                {/* ── CHAT PRINCIPAL ── */}
-                <div className="bg-white rounded-[2.5rem] border border-slate-100 shadow-2xl overflow-hidden">
-
-                    {/* Header chat */}
-                    <div className="bg-brand-dark px-8 py-6 flex items-center gap-4">
-                        <div className="w-12 h-12 rounded-2xl bg-brand-gold/20 flex items-center justify-center">
-                            <i className="bi bi-robot text-brand-gold text-xl" />
-                        </div>
-                        <div>
-                            <p className="font-black text-white text-sm uppercase tracking-wide">Asistente MeridaActiva</p>
-                            <div className="flex items-center gap-2 mt-0.5">
-                                <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
-                                <span className="text-[9px] font-black text-white/50 uppercase tracking-widest">En línea · IA disponible</span>
+            {/* ── Área del chat: ocupa el resto del viewport ── */}
+            <div className="flex-1 flex flex-col overflow-hidden">
+                <div
+                    className="max-w-4xl w-full mx-auto px-3 sm:px-4 flex flex-col flex-1 overflow-hidden py-3"
+                    style={{ minHeight: 0 }}
+                >
+                    {/* ── CHAT PRINCIPAL ── */}
+                    <div
+                        className="bg-white rounded-[2rem] border border-slate-100 shadow-2xl overflow-hidden flex flex-col flex-1"
+                        style={{ minHeight: 0 }}
+                    >
+                        {/* Header chat */}
+                        <div className="bg-brand-dark px-5 py-3.5 flex items-center gap-3 flex-shrink-0">
+                            <div className="w-9 h-9 rounded-xl bg-brand-gold/20 flex items-center justify-center">
+                                <i className="bi bi-robot text-brand-gold text-base" />
                             </div>
-                        </div>
-                        {!session && (
-                            <Link
-                                to="/login"
-                                className="ml-auto text-[9px] font-black uppercase tracking-widest bg-brand-gold text-brand-dark px-4 py-2 rounded-xl hover:scale-105 transition-all"
-                            >
-                                Iniciar sesión
-                            </Link>
-                        )}
-                    </div>
-
-                    {/* Mensajes */}
-                    <div ref={chatContainerRef} className="h-[50vh] min-h-[380px] overflow-y-auto p-6 space-y-4 bg-slate-50/50">
-                        {mensajes.map((msg, i) => (
-                            <div key={i} className={`flex ${msg.rol === 'usuario' ? 'justify-end' : 'justify-start'}`}>
-                                {msg.rol === 'ia' && (
-                                    <div className="w-8 h-8 rounded-xl bg-brand-dark flex items-center justify-center mr-2 flex-shrink-0 mt-1">
-                                        <i className="bi bi-robot text-brand-gold text-sm" />
-                                    </div>
-                                )}
-                                <div
-                                    className={`max-w-[80%] px-5 py-3.5 rounded-[1.25rem] text-sm font-medium leading-relaxed ${
-                                        msg.rol === 'usuario'
-                                            ? 'bg-brand-dark text-white rounded-br-sm'
-                                            : 'bg-white text-slate-700 shadow-sm border border-slate-100 rounded-bl-sm'
-                                    }`}
+                            <div>
+                                <p className="font-black text-white text-xs uppercase tracking-wide">Asistente MeridaActiva</p>
+                                <div className="flex items-center gap-1.5 mt-0.5">
+                                    <span className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse" />
+                                    <span className="text-[9px] font-black text-white/50 uppercase tracking-widest">En línea · IA disponible</span>
+                                </div>
+                            </div>
+                            {!session && (
+                                <Link
+                                    to="/login"
+                                    className="ml-auto text-[9px] font-black uppercase tracking-widest bg-brand-gold text-brand-dark px-3 py-1.5 rounded-xl hover:scale-105 transition-all"
                                 >
-                                    {msg.rol === 'ia' ? (
-                                        <ReactMarkdown
-                                            components={{
-                                                p: ({ children }) => <p className="text-sm leading-relaxed mb-1 last:mb-0">{children}</p>,
-                                                strong: ({ children }) => <strong className="font-black text-brand-dark">{children}</strong>,
-                                                ul: ({ children }) => <ul className="list-disc list-inside space-y-1 my-1 text-sm">{children}</ul>,
-                                                ol: ({ children }) => <ol className="list-decimal list-inside space-y-1 my-1 text-sm">{children}</ol>,
-                                                li: ({ children }) => <li className="text-slate-600">{children}</li>,
-                                                code: ({ children }) => <code className="bg-slate-100 text-brand-blue px-1 rounded text-xs font-mono">{children}</code>,
-                                                h3: ({ children }) => <h3 className="font-black text-brand-dark text-sm mt-2 mb-1">{children}</h3>,
-                                            }}
-                                        >
-                                            {msg.texto}
-                                        </ReactMarkdown>
-                                    ) : msg.texto}
-                                </div>
-                            </div>
-                        ))}
+                                    Iniciar sesión
+                                </Link>
+                            )}
+                        </div>
 
-                        {pensando && (
-                            <div className="flex justify-start">
-                                <div className="w-8 h-8 rounded-xl bg-brand-dark flex items-center justify-center mr-2 flex-shrink-0">
-                                    <i className="bi bi-robot text-brand-gold text-sm" />
-                                </div>
-                                <div className="bg-white border border-slate-100 rounded-[1.25rem] rounded-bl-sm px-5 py-3.5 shadow-sm flex items-center gap-1.5">
-                                    {[0, 150, 300].map(delay => (
-                                        <span
-                                            key={delay}
-                                            className="w-2 h-2 bg-slate-300 rounded-full animate-bounce"
-                                            style={{ animationDelay: `${delay}ms` }}
-                                        />
-                                    ))}
-                                </div>
-                            </div>
-                        )}
-                    </div>
-
-                    {/* Sugerencias rápidas */}
-                    <div className="px-4 pt-4 pb-2 flex flex-wrap gap-2 border-t border-slate-100">
-                        {SUGERENCIAS.map(s => (
-                            <button
-                                key={s}
-                                type="button"
-                                disabled={pensando}
-                                onClick={() => procesarMensaje(s)}
-                                className="text-[9px] font-black px-3 py-1.5 rounded-full bg-slate-100 text-slate-500 hover:bg-brand-gold/10 hover:text-brand-dark transition-colors uppercase tracking-wide disabled:opacity-40"
-                            >
-                                {s}
-                            </button>
-                        ))}
-                    </div>
-
-                    {/* Input */}
-                    <form onSubmit={enviarMensaje} className="p-4 flex gap-3">
-                        <input
-                            type="text"
-                            value={inputChat}
-                            onChange={e => setInputChat(e.target.value)}
-                            placeholder={session ? 'Escribe tu pregunta sobre Mérida…' : 'Inicia sesión para chatear con la IA…'}
-                            maxLength={1000}
-                            className="flex-1 bg-slate-50 border border-slate-200 rounded-2xl px-5 py-3.5 text-sm font-medium outline-none focus:ring-2 focus:ring-brand-blue/20 transition-all text-brand-dark placeholder:text-slate-400"
-                            aria-label="Escribe una pregunta al asistente"
-                            disabled={pensando}
-                        />
-                        <button
-                            type="submit"
-                            disabled={pensando || !inputChat.trim()}
-                            className="w-12 h-12 rounded-2xl bg-brand-dark text-brand-gold flex items-center justify-center hover:bg-brand-blue hover:text-white transition-all disabled:opacity-40 shadow-lg flex-shrink-0"
-                            aria-label="Enviar pregunta"
+                        {/* Mensajes */}
+                        <div
+                            ref={chatContainerRef}
+                            className="flex-1 overflow-y-auto p-4 space-y-3 bg-slate-50/50"
+                            style={{ minHeight: 0 }}
                         >
-                            <i className="bi bi-send-fill" />
-                        </button>
-                    </form>
-                </div>
+                            {mensajes.map((msg, i) => (
+                                <div key={i} className={`flex ${msg.rol === 'usuario' ? 'justify-end' : 'justify-start'}`}>
+                                    {msg.rol === 'ia' && (
+                                        <div className="w-7 h-7 rounded-xl bg-brand-dark flex items-center justify-center mr-2 flex-shrink-0 mt-1">
+                                            <i className="bi bi-robot text-brand-gold text-xs" />
+                                        </div>
+                                    )}
+                                    <div
+                                        className={`max-w-[80%] px-4 py-3 rounded-[1.25rem] text-sm font-medium leading-relaxed ${
+                                            msg.rol === 'usuario'
+                                                ? 'bg-brand-dark text-white rounded-br-sm'
+                                                : 'bg-white text-slate-700 shadow-sm border border-slate-100 rounded-bl-sm'
+                                        }`}
+                                    >
+                                        {msg.rol === 'ia' ? (
+                                            <ReactMarkdown
+                                                components={{
+                                                    p: ({ children }) => <p className="text-sm leading-relaxed mb-1 last:mb-0">{children}</p>,
+                                                    strong: ({ children }) => <strong className="font-black text-brand-dark">{children}</strong>,
+                                                    ul: ({ children }) => <ul className="list-disc list-inside space-y-1 my-1 text-sm">{children}</ul>,
+                                                    ol: ({ children }) => <ol className="list-decimal list-inside space-y-1 my-1 text-sm">{children}</ol>,
+                                                    li: ({ children }) => <li className="text-slate-600">{children}</li>,
+                                                    code: ({ children }) => <code className="bg-slate-100 text-brand-blue px-1 rounded text-xs font-mono">{children}</code>,
+                                                    h3: ({ children }) => <h3 className="font-black text-brand-dark text-sm mt-2 mb-1">{children}</h3>,
+                                                }}
+                                            >
+                                                {msg.texto}
+                                            </ReactMarkdown>
+                                        ) : msg.texto}
+                                    </div>
+                                </div>
+                            ))}
 
-                {/* ── CAPACIDADES DEL ASISTENTE ── */}
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-10">
+                            {pensando && (
+                                <div className="flex justify-start">
+                                    <div className="w-7 h-7 rounded-xl bg-brand-dark flex items-center justify-center mr-2 flex-shrink-0">
+                                        <i className="bi bi-robot text-brand-gold text-xs" />
+                                    </div>
+                                    <div className="bg-white border border-slate-100 rounded-[1.25rem] rounded-bl-sm px-4 py-3 shadow-sm flex items-center gap-1.5">
+                                        {[0, 150, 300].map(delay => (
+                                            <span
+                                                key={delay}
+                                                className="w-2 h-2 bg-slate-300 rounded-full animate-bounce"
+                                                style={{ animationDelay: `${delay}ms` }}
+                                            />
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Sugerencias rápidas */}
+                        <div className="px-3 pt-2.5 pb-1.5 flex flex-wrap gap-1.5 border-t border-slate-100 flex-shrink-0">
+                            {SUGERENCIAS.map(s => (
+                                <button
+                                    key={s}
+                                    type="button"
+                                    disabled={pensando}
+                                    onClick={() => procesarMensaje(s)}
+                                    className="text-[9px] font-black px-2.5 py-1 rounded-full bg-slate-100 text-slate-500 hover:bg-brand-gold/10 hover:text-brand-dark transition-colors uppercase tracking-wide disabled:opacity-40"
+                                >
+                                    {s}
+                                </button>
+                            ))}
+                        </div>
+
+                        {/* Input */}
+                        <form onSubmit={enviarMensaje} className="p-3 flex gap-2 flex-shrink-0 border-t border-slate-100">
+                            <input
+                                type="text"
+                                value={inputChat}
+                                onChange={e => setInputChat(e.target.value)}
+                                placeholder={session ? 'Escribe tu pregunta sobre Mérida…' : 'Inicia sesión para chatear con la IA…'}
+                                maxLength={1000}
+                                className="flex-1 bg-slate-50 border border-slate-200 rounded-2xl px-4 py-2.5 text-sm font-medium outline-none focus:ring-2 focus:ring-brand-blue/20 transition-all text-brand-dark placeholder:text-slate-400"
+                                aria-label="Escribe una pregunta al asistente"
+                                disabled={pensando}
+                            />
+                            <button
+                                type="submit"
+                                disabled={pensando || !inputChat.trim()}
+                                className="w-10 h-10 rounded-2xl bg-brand-dark text-brand-gold flex items-center justify-center hover:bg-brand-blue hover:text-white transition-all disabled:opacity-40 shadow-lg flex-shrink-0"
+                                aria-label="Enviar pregunta"
+                            >
+                                <i className="bi bi-send-fill text-sm" />
+                            </button>
+                        </form>
+                    </div>{/* end CHAT PRINCIPAL */}
+                </div>{/* end max-w-4xl */}
+            </div>{/* end flex-1 */}
+
+            {/* ── CAPACIDADES + CTA — visibles al hacer scroll ── */}
+            <div className="max-w-4xl w-full mx-auto px-4 pb-16">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-4">
                     {[
                         { icon: 'bi-calendar-event', label: 'Eventos', desc: 'Agenda cultural actualizada' },
                         { icon: 'bi-building-fill', label: 'Patrimonio', desc: 'Monumentos y museos' },
@@ -324,7 +337,7 @@ const FAQPage: React.FC = () => {
                     ))}
                 </div>
 
-                {/* ── CTA CONTACTO ── */}
+                {/* CTA Contacto */}
                 <div className="mt-8 bg-brand-dark rounded-[2rem] p-8 text-center">
                     <p className="text-white/60 text-xs font-black uppercase tracking-widest mb-2">
                         ¿Necesitas hablar con una persona?
@@ -340,10 +353,9 @@ const FAQPage: React.FC = () => {
                         Ir a Contacto
                     </Link>
                 </div>
-
             </div>
         </div>
     );
 };
 
-export default FAQPage;
+export default ChatPage;

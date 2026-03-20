@@ -90,7 +90,6 @@ const GestionUsuarios: React.FC = () => {
                     >
                       <option value={1}>Administrador</option>
                       <option value={2}>Usuario Estándar</option>
-                      <option value={3}>Gestor (Editor)</option>
                     </select>
                   </td>
                   <td className="px-12 py-8 text-center">

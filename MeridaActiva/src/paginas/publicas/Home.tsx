@@ -8,6 +8,7 @@ import RotatingText from '../../componentes/animaciones/RotatingText';
 import ScrollFloat from '../../componentes/animaciones/ScrollFloat';
 import ScrollStack, { ScrollStackItem } from '../../componentes/animaciones/ScrollStack';
 import FluidGlass from '../../componentes/animaciones/FluidGlass';
+import { useAuth } from '../../context/AuthContext';
 
 import { useSeoMeta } from '../../hooks/useSeoMeta';
 
@@ -147,6 +148,7 @@ function StatCard({ num, label, icon, active }: { num: string; label: string; ic
 
 // ════════════════════════════════════════════════════════════════
 const Home: React.FC = () => {
+  const { session } = useAuth();
   const [reseñas, setReseñas] = useState<any[]>([]);
   const [totalReseñas, setTotalReseñas] = useState(0);
   const [activeCardIndex, setActiveCardIndex] = useState(0);
@@ -280,7 +282,7 @@ const Home: React.FC = () => {
               Ver Agenda
             </Link>
             <Link
-              to="/rutas"
+              to={session ? '/rutas' : '/login'}
               className="inline-flex items-center justify-center gap-3 bg-white/10 backdrop-blur-md text-white border border-white/20 px-10 py-5 rounded-2xl font-black uppercase tracking-widest text-xs hover:bg-brand-blue hover:border-brand-blue hover:scale-105 transition-all"
               style={{ opacity: 0 }}
             >
@@ -288,7 +290,7 @@ const Home: React.FC = () => {
               Crear Ruta Personalizada
             </Link>
             <Link
-              to="/faq"
+              to={session ? '/faq' : '/login'}
               className="inline-flex items-center justify-center gap-3 bg-white/10 backdrop-blur-md text-white border border-white/20 px-10 py-5 rounded-2xl font-black uppercase tracking-widest text-xs hover:bg-white/20 hover:scale-105 transition-all"
               style={{ opacity: 0 }}
             >
@@ -327,7 +329,7 @@ const Home: React.FC = () => {
       {/* ══════════════════════════════════════════
           3. BAND — Texto rotativo
       ══════════════════════════════════════════ */}
-      <section className="py-20 bg-brand-dark text-center overflow-hidden relative">
+      <section className="py-20 bg-brand-dark text-center relative">
         {/* Decorative background thread */}
         <div className="absolute inset-0 z-0 pointer-events-none">
           <img src="/Imagenes/hilo-decorativo-verde.jpg" alt="" className="w-full h-full object-cover opacity-10 select-none" aria-hidden="true" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
@@ -338,7 +340,7 @@ const Home: React.FC = () => {
           style={{ opacity: bandVisible ? 1 : 0, transform: bandVisible ? 'translateY(0)' : 'translateY(40px)' }}
         >
           <span className="text-brand-gold font-black uppercase tracking-[0.3em] text-[10px] mb-4 block">Descubre Mérida</span>
-          <h2 className="text-5xl md:text-7xl font-black text-white uppercase italic tracking-tighter leading-none mb-6">
+          <h2 className="text-5xl md:text-7xl font-black text-white uppercase italic tracking-tighter leading-[1.05] mb-6 pb-2">
             Mérida{' '}
             <span className="text-brand-gold">
               <RotatingText texts={ROTATING_TEXTS} rotationInterval={2000} className="text-5xl md:text-7xl font-black text-brand-gold uppercase italic tracking-tighter" />
@@ -432,7 +434,7 @@ const Home: React.FC = () => {
                 </div>
                 <div className="flex items-center gap-4 flex-wrap">
                   <Link
-                    to="/rutas"
+                    to={session ? '/rutas' : '/login'}
                     className="inline-flex items-center gap-3 bg-brand-gold text-brand-dark px-8 py-4 rounded-2xl font-black uppercase tracking-widest text-xs hover:bg-white hover:scale-105 transition-all shadow-xl shadow-brand-gold/20"
                   >
                     <i className="bi bi-stars" />
@@ -487,7 +489,7 @@ const Home: React.FC = () => {
                 </div>
 
                 <Link
-                  to="/faq"
+                  to={session ? '/faq' : '/login'}
                   className="inline-flex items-center gap-3 bg-brand-dark text-brand-gold px-8 py-4 rounded-2xl font-black uppercase tracking-widest text-xs hover:bg-brand-blue hover:text-white transition-all self-start"
                 >
                   <i className="bi bi-robot" />
@@ -630,11 +632,11 @@ const Home: React.FC = () => {
                   </div>
                 ))}
               </div>
-              <Link to="/rutas" className="inline-flex items-center gap-3 bg-brand-gold text-brand-dark px-10 py-5 rounded-2xl font-black uppercase tracking-widest text-xs hover:bg-white hover:scale-105 transition-all shadow-2xl shadow-brand-gold/20">
+              <Link to={session ? '/rutas' : '/login'} className="inline-flex items-center gap-3 bg-brand-gold text-brand-dark px-10 py-5 rounded-2xl font-black uppercase tracking-widest text-xs hover:bg-white hover:scale-105 transition-all shadow-2xl shadow-brand-gold/20">
                 <i className="bi bi-stars" />
                 Crear Mi Ruta Ahora
               </Link>
-              <Link to="/faq" className="inline-flex items-center gap-3 text-brand-gold/60 hover:text-brand-gold transition-colors font-black uppercase tracking-widest text-xs">
+              <Link to={session ? '/faq' : '/login'} className="inline-flex items-center gap-3 text-brand-gold/60 hover:text-brand-gold transition-colors font-black uppercase tracking-widest text-xs">
                 <i className="bi bi-robot" />
                 O pregúntale a la IA
               </Link>

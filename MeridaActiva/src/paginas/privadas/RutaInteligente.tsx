@@ -394,7 +394,7 @@ const RutaInteligente: React.FC = () => {
     if (paso === 4 && paradas.length > 0) {
         const durLabel = LABEL.duracion[duracion!];
         return (
-            <div className="min-h-screen bg-brand-bg pt-32 pb-20 px-6">
+            <div className="min-h-screen bg-brand-bg pt-20 sm:pt-28 pb-20 px-4 sm:px-6">
                 <div className="max-w-4xl mx-auto">
 
                     {/* Header */}
@@ -410,12 +410,12 @@ const RutaInteligente: React.FC = () => {
                                 {durLabel} · {LABEL.compania[compania!]} · {LABEL.ritmo[ritmo!]} · {paradas.length} paradas
                             </p>
                         </div>
-                        <div className="flex gap-3 flex-wrap">
+                        <div className="flex gap-2 flex-wrap">
                             {!guardado ? (
                                 <button
                                     onClick={guardarEnAgenda}
                                     disabled={guardando}
-                                    className="flex items-center gap-2 bg-brand-gold text-brand-dark px-7 py-3.5 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-brand-blue hover:text-white transition-all shadow-lg disabled:opacity-60"
+                                    className="flex items-center gap-2 bg-brand-gold text-brand-dark px-5 py-3 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-brand-blue hover:text-white transition-all shadow-lg disabled:opacity-60"
                                 >
                                     {guardando
                                         ? <><svg className="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" strokeOpacity="0.25" /><path d="M4 12a8 8 0 018-8" stroke="currentColor" strokeWidth="4" strokeLinecap="round" /></svg>Guardando…</>
@@ -558,7 +558,7 @@ const RutaInteligente: React.FC = () => {
     return (
         <div className="min-h-screen bg-brand-bg flex flex-col">
             {/* Hero */}
-            <div className="relative h-[38vh] min-h-[240px] flex items-center justify-center overflow-hidden pt-20">
+            <div className="relative h-[30vh] min-h-[200px] flex items-center justify-center overflow-hidden pt-16">
                 <div className="absolute inset-0">
                     <img src="/Imagenes/Puente.jpg" alt="Rutas por Mérida" className="w-full h-full object-cover" />
                     <div className="absolute inset-0 bg-gradient-to-b from-brand-dark/70 via-brand-dark/50 to-brand-bg" />
@@ -579,7 +579,7 @@ const RutaInteligente: React.FC = () => {
 
                     {/* Pantalla intro */}
                     {paso === 0 && (
-                        <div className="bg-white rounded-[2.5rem] p-10 shadow-xl border border-slate-100 text-center">
+                        <div className="bg-white rounded-[2.5rem] p-6 sm:p-10 shadow-xl border border-slate-100 text-center">
                             <div className="w-20 h-20 bg-brand-gold/10 rounded-[2rem] flex items-center justify-center mx-auto mb-6">
                                 <i className="bi bi-map text-brand-gold text-4xl" />
                             </div>
@@ -612,7 +612,7 @@ const RutaInteligente: React.FC = () => {
 
                     {/* Pasos 1–3 */}
                     {paso >= 1 && paso <= 3 && pasoActual && (
-                        <div className="bg-white rounded-[2.5rem] p-10 shadow-xl border border-slate-100 relative">
+                        <div className="bg-white rounded-[2.5rem] p-6 sm:p-10 shadow-xl border border-slate-100 relative">
                             <div className="flex gap-2 mb-10">
                                 {[1, 2, 3].map(n => (
                                     <div key={n} className={`h-1.5 flex-1 rounded-full transition-all duration-500 ${n <= paso ? 'bg-brand-gold' : 'bg-slate-100'}`} />

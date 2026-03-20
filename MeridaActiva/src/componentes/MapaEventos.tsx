@@ -130,6 +130,46 @@ function SkeletonFila() {
   );
 }
 
+// ── Helpers de fetch paginado (fuera del componente) ─────────────
+async function fetchTodosEventos(hoy: string): Promise<Evento[]> {
+  const PAGE = 1000;
+  let pagina = 0;
+  let acumulados: Evento[] = [];
+  let hayMas = true;
+  while (hayMas) {
+    const { data, error } = await supabase
+      .from('eventos')
+      .select('id, titulo, descripcion, fecha, hora, ubicacion, imagen_url, categoria, precio, latitud, longitud')
+      .gte('fecha', hoy)
+      .order('fecha', { ascending: true })
+      .range(pagina * PAGE, (pagina + 1) * PAGE - 1);
+    if (error || !data) break;
+    acumulados = [...acumulados, ...(data as Evento[])];
+    hayMas = data.length === PAGE;
+    pagina++;
+  }
+  return acumulados;
+}
+
+async function fetchTodosLugares(): Promise<Lugar[]> {
+  const PAGE = 1000;
+  let pagina = 0;
+  let acumulados: Lugar[] = [];
+  let hayMas = true;
+  while (hayMas) {
+    const { data, error } = await supabase
+      .from('lugares')
+      .select('id, nombre_es, descripcion_es, ubicacion, imagen_url, categoria, google_maps_url, latitud, longitud')
+      .order('nombre_es', { ascending: true })
+      .range(pagina * PAGE, (pagina + 1) * PAGE - 1);
+    if (error || !data) break;
+    acumulados = [...acumulados, ...(data as Lugar[])];
+    hayMas = data.length === PAGE;
+    pagina++;
+  }
+  return acumulados;
+}
+
 // ════════════════════════════════════════════════════════════════
 const MapaEventos: React.FC = () => {
   useSeoMeta({
@@ -151,30 +191,25 @@ const [capaActiva, setCapaActiva] = useState('light');
   const [panelAbierto, setPanelAbierto] = useState(false);
   const [centroMapa, setCentroMapa] = useState<{ lat: number; lng: number } | null>(null);
 
-  // ── Carga de datos ─────────────────────────────────────────────
+  // ── Carga de datos (paginada para traer todos los registros) ────
   useEffect(() => {
-    const fetchEventos = async () => {
+    const loadEventos = async () => {
       setLoadingEventos(true);
-      const { data } = await supabase
-        .from('eventos')
-        .select('id, titulo, descripcion, fecha, hora, ubicacion, imagen_url, categoria, precio, latitud, longitud')
-        .gte('fecha', new Date().toISOString().split('T')[0])
-        .order('fecha', { ascending: true });
-      if (data) setEventos((data as Evento[]).filter(ev => ev.latitud && ev.longitud));
+      const hoy = new Date().toISOString().split('T')[0];
+      const data = await fetchTodosEventos(hoy);
+      setEventos(data.filter(ev => ev.latitud && ev.longitud));
       setLoadingEventos(false);
     };
 
-    const fetchLugares = async () => {
+    const loadLugares = async () => {
       setLoadingLugares(true);
-      const { data } = await supabase
-        .from('lugares')
-        .select('id, nombre_es, descripcion_es, ubicacion, imagen_url, categoria, google_maps_url, latitud, longitud');
-      if (data) setLugares((data as Lugar[]).filter(l => l.latitud && l.longitud));
+      const data = await fetchTodosLugares();
+      setLugares(data.filter(l => l.latitud && l.longitud));
       setLoadingLugares(false);
     };
 
-    fetchEventos();
-    fetchLugares();
+    loadEventos();
+    loadLugares();
   }, []);
 
   const loading = tab === 'eventos' ? loadingEventos : loadingLugares;

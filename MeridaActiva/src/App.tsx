@@ -74,7 +74,7 @@ function App() {
 
   return (
     <AuthProvider>
-      <div className="main-layout">
+      <div className="main-layout min-h-screen flex flex-col">
         <OfflineBanner />
         <ScrollToTop />
         <NavbarCondicional />
