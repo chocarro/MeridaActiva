@@ -87,11 +87,9 @@ const LazyImg: React.FC<LazyImgProps> = ({
     const webp = getWebpSrc(src, width);
     const fallbackSrcSet = getFallbackSrcSet(src, width);
     const loading = priority ? 'eager' : 'lazy';
-    const imgClassName = `${className} transition-opacity duration-500 ${loaded ? 'opacity-100' : 'opacity-0'}`;
-
+    const imgClassName = `w-full h-full object-cover ${className} transition-opacity duration-500 ${loaded ? 'opacity-100' : 'opacity-0'}`;
     return (
-        <div className={`relative overflow-hidden ${wrapperClassName}`}>
-            {/* Placeholder shimmer mientras carga */}
+        <div className={`relative w-full h-full overflow-hidden ${wrapperClassName}`}>            {/* Placeholder shimmer mientras carga */}
             {!loaded && !error && (
                 <div
                     className="absolute inset-0 animate-pulse"
@@ -124,7 +122,7 @@ const LazyImg: React.FC<LazyImgProps> = ({
                         loading={loading}
                         decoding="async"
                         {...(priority ? { fetchPriority: 'high' } : {})}
-                        {...(width  ? { width }  : {})}
+                        {...(width ? { width } : {})}
                         {...(height ? { height } : {})}
                         onLoad={() => setLoaded(true)}
                         onError={() => setError(true)}

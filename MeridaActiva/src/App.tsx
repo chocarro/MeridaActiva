@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useLayoutEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import Navbar from './componentes/Navbar';
@@ -19,9 +19,31 @@ function FooterCondicional() {
 }
 
 // ── ScrollToTop: restablece el scroll al inicio en cada cambio de ruta ──
+// Usa useLayoutEffect para dispararse ANTES de que el navegador pinte el DOM,
+// evitando el parpadeo de scroll heredado de la ruta anterior.
+// El setTimeout de 100 ms actúa como red de seguridad para cuando Supabase
+// termina de cargar datos y re-expande el layout de forma asíncrona.
 function ScrollToTop() {
   const { pathname } = useLocation();
-  useEffect(() => { window.scrollTo({ top: 0, left: 0, behavior: 'instant' }); }, [pathname]);
+
+  useLayoutEffect(() => {
+    // Reset inmediato: cubre la mayoría de los casos
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
+    document.getElementById('main-scroll-container')?.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+
+    // Reset diferido: red de seguridad para carga asíncrona de Supabase
+    const timer = setTimeout(() => {
+      window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+      document.documentElement.scrollTop = 0;
+      document.body.scrollTop = 0;
+      document.getElementById('main-scroll-container')?.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    }, 100);
+
+    return () => clearTimeout(timer);
+  }, [pathname]);
+
   return null;
 }
 
@@ -56,7 +78,7 @@ function App() {
         <OfflineBanner />
         <ScrollToTop />
         <NavbarCondicional />
-        <main id="main-content" className="content-area">
+        <main id="main-scroll-container" className="content-area">
           <AppRoutes />
         </main>
         <FooterCondicional />

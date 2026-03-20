@@ -335,11 +335,13 @@ const LugaresDetalle: React.FC = () => {
 
             {/* Gallery placeholder — if we had multiple images */}
             <div className="bg-white rounded-[3rem] overflow-hidden border border-slate-100 shadow-sm">
-              <img
-                src={lugar.imagen_url}
-                alt={nombre}
-                className="w-full h-64 object-cover"
-              />
+              <div className="relative w-full aspect-[16/9]">
+                <img
+                  src={lugar.imagen_url}
+                  alt={nombre}
+                  className="absolute inset-0 w-full h-full object-cover"
+                />
+              </div>
               <div className="p-8">
                 <p className="text-[9px] font-black text-slate-300 uppercase tracking-widest text-center">
                   {nombre} · Mérida, Extremadura

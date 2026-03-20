@@ -282,3 +282,7 @@ main:has(.min-h-screen.flex) {
 
 /* React Hot Toast — posición y z-index global */
 /* (el Toaster se renderiza en App.tsx, solo ajustamos el contenedor) */
+
+.leaflet-control-attribution {
+  display: none !important;
+}
