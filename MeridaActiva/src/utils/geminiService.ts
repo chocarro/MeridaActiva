@@ -36,16 +36,26 @@ function esErrorReintentar(mensaje: string): boolean {
 /** Backoff en ms según el intento (1 → 1000, 2 → 2000) */
 const BACKOFF_MS = [1000, 2000];
 
+/** Detecta si el browser soporta ReadableStream desde fetch */
+function soportaStreaming(): boolean {
+    try {
+        return (
+            typeof ReadableStream !== 'undefined' &&
+            typeof Response !== 'undefined' &&
+            'body' in Response.prototype
+        );
+    } catch {
+        return false;
+    }
+}
+
 // ── Servicio de IA ────────────────────────────────────────────────
 class IAService {
     /**
-     * Chat Streaming: envía el mensaje y recibe la respuesta letra a letra (SSE).
+     * Chat: envía el mensaje y recibe la respuesta.
+     * En browsers que soportan ReadableStream usa SSE streaming.
+     * En móviles/browsers que no lo soporten usa modo JSON normal (fallback).
      * Reintenta automáticamente hasta 2 veces si la IA está saturada.
-     *
-     * @param mensajeActual  El texto del usuario
-     * @param historial      Array con el historial previo
-     * @param onChunk        Callback que se ejecuta cada vez que llega un fragmento
-     * @param onRetry        Callback opcional que se invoca antes de cada reintento
      */
     async enviarMensajeStream(
         mensajeActual: string,
@@ -62,10 +72,16 @@ class IAService {
             }
 
             try {
+                const usarStream = soportaStreaming();
+
                 const response = await fetch('/api/chat', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ mensaje: mensajeActual, historial }),
+                    body: JSON.stringify({
+                        mensaje: mensajeActual,
+                        historial,
+                        stream: usarStream,
+                    }),
                 });
 
                 if (!response.ok) {
@@ -77,15 +93,20 @@ class IAService {
                     const err = new Error(errorMsg);
                     if (esErrorReintentar(errorMsg) && intento < 2) {
                         ultimoError = err;
-                        continue; // reintenta
+                        continue;
                     }
                     throw err;
                 }
 
-                if (!response.body) {
-                    throw new Error('El servidor no devolvió un stream de datos (response.body es null).');
+                // ── Modo NO-streaming (fallback móvil) ─────────────────
+                if (!usarStream || !response.body) {
+                    const data = await response.json();
+                    if (data.error) throw new Error(data.error);
+                    if (data.text) onChunk(data.text);
+                    return;
                 }
 
+                // ── Modo streaming (desktop / browsers modernos) ────────
                 const reader = response.body.getReader();
                 const decoder = new TextDecoder('utf-8');
                 let done = false;
@@ -109,13 +130,12 @@ class IAService {
                         }
                     }
                 }
-                return; // éxito — salimos del bucle de reintentos
+                return;
             } catch (err) {
                 ultimoError = err instanceof Error ? err : new Error(String(err));
                 if (!esErrorReintentar(ultimoError.message) || intento >= 2) {
                     throw ultimoError;
                 }
-                // continúa en el siguiente intento
             }
         }
 

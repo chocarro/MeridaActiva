@@ -139,7 +139,7 @@ export default async function handler(req, res) {
         console.warn('[chat] Upstash Redis no configurado, omitiendo rate limiting');
     }
 
-    const { historial = [], mensaje } = req.body ?? {};
+    const { historial = [], mensaje, stream: clienteQuiereStream = true } = req.body ?? {};
 
     if (!mensaje || typeof mensaje !== 'string') {
         return res.status(400).json({ error: 'Falta el campo "mensaje" en el body.' });
@@ -157,6 +157,9 @@ export default async function handler(req, res) {
         { role: 'user', content: mensaje },
     ];
 
+    // Modo streaming: solo si el cliente lo soporta (desktop)
+    const usarStream = clienteQuiereStream !== false;
+
     try {
         const openRouterRes = await fetch(OPENROUTER_URL, {
             method: 'POST',
@@ -171,7 +174,7 @@ export default async function handler(req, res) {
                 messages,
                 temperature: 0.8,
                 max_tokens: 700,
-                stream: true,
+                stream: usarStream,
             }),
         });
 
@@ -183,6 +186,17 @@ export default async function handler(req, res) {
             });
         }
 
+        // ── Modo NO-streaming (fallback móvil): devolver JSON completo ──
+        if (!usarStream) {
+            const data = await openRouterRes.json();
+            const texto = data?.choices?.[0]?.message?.content ?? '';
+            if (!texto) {
+                return res.status(502).json({ error: 'La IA devolvió una respuesta vacía.' });
+            }
+            return res.status(200).json({ text: texto });
+        }
+
+        // ── Modo streaming SSE (desktop) ─────────────────────────────────
         res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
         res.setHeader('Cache-Control', 'no-cache, no-transform');
         res.setHeader('X-Accel-Buffering', 'no');
