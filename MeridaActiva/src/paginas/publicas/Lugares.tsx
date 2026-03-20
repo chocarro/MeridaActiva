@@ -5,6 +5,7 @@ import BotonFavorito from '../../componentes/BotonFavorito';
 import { toastError } from '../../utils/toast';
 import { useSeoMeta } from '../../hooks/useSeoMeta';
 import SelectCustom from '../../componentes/SelectCustom';
+import { useAuth } from '../../context/AuthContext';
 
 interface Lugar {
   id: string;
@@ -33,6 +34,7 @@ const CATEGORIAS = ['Todos', 'Sobre la ciudad', 'Gastronomía', 'Actividades'];
 const PAGE_SIZE = 9;
 
 const Lugares: React.FC = () => {
+  const { session } = useAuth();
   const [lugares, setLugares] = useState<Lugar[]>([]);
   const [categoriaActiva, setCategoriaActiva] = useState('Todos');
   const [orden, setOrden] = useState<'asc' | 'desc'>('asc');
@@ -144,11 +146,11 @@ const Lugares: React.FC = () => {
             </p>
           </div>
           <div className="flex gap-3 flex-shrink-0">
-            <Link to="/rutas" className="inline-flex items-center gap-2 bg-brand-gold text-brand-dark px-6 py-2.5 rounded-xl font-black uppercase tracking-widest text-[10px] hover:bg-white transition-all">
+            <Link to={session ? '/rutas' : '/login'} className="inline-flex items-center gap-2 bg-brand-gold text-brand-dark px-6 py-2.5 rounded-xl font-black uppercase tracking-widest text-[10px] hover:bg-white transition-all">
               <i className="bi bi-stars text-xs" />
               Ruta por Monumentos
             </Link>
-            <Link to="/faq" className="inline-flex items-center gap-2 bg-white/10 text-white px-6 py-2.5 rounded-xl font-black uppercase tracking-widest text-[10px] hover:bg-white/20 transition-all">
+            <Link to={session ? '/faq' : '/login'} className="inline-flex items-center gap-2 bg-white/10 text-white px-6 py-2.5 rounded-xl font-black uppercase tracking-widest text-[10px] hover:bg-white/20 transition-all">
               <i className="bi bi-robot text-xs" />
               Preguntar a la IA
             </Link>
@@ -223,7 +225,7 @@ const Lugares: React.FC = () => {
               >
                 Ver todos los lugares
               </button>
-              <Link to="/faq" className="inline-flex items-center justify-center gap-2 bg-brand-blue text-white px-8 py-4 rounded-2xl font-black text-xs uppercase tracking-widest hover:scale-105 transition-all">
+              <Link to={session ? '/faq' : '/login'} className="inline-flex items-center justify-center gap-2 bg-brand-blue text-white px-8 py-4 rounded-2xl font-black text-xs uppercase tracking-widest hover:scale-105 transition-all">
                 <i className="bi bi-robot" />
                 Preguntar a la IA
               </Link>

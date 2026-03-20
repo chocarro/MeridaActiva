@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
 import { useSeoMeta } from '../../hooks/useSeoMeta';
 
 // ─── Tipos ───────────────────────────────────────────────────────
@@ -45,6 +47,8 @@ const INFO_ITEMS = [
 
 // ════════════════════════════════════════════════════════════════
 const Contacto: React.FC = () => {
+    const { session } = useAuth();
+    const navigate = useNavigate();
     const [form, setForm] = useState<FormData>({ nombre: '', email: '', asunto: '', mensaje: '' });
     const [estado, setEstado] = useState<FormState>('idle');
 
@@ -117,14 +121,20 @@ const Contacto: React.FC = () => {
                         </p>
                     </div>
                     <div className="flex gap-3 flex-shrink-0">
-                        <a href="/faq" className="inline-flex items-center gap-2 bg-brand-gold text-brand-dark px-6 py-2.5 rounded-xl font-black uppercase tracking-widest text-[10px] hover:bg-white transition-all">
+                        <button
+                            onClick={() => navigate(session ? '/faq' : '/login')}
+                            className="inline-flex items-center gap-2 bg-brand-gold text-brand-dark px-6 py-2.5 rounded-xl font-black uppercase tracking-widest text-[10px] hover:bg-white transition-all"
+                        >
                             <i className="bi bi-robot text-xs" />
                             Chat IA
-                        </a>
-                        <a href="/rutas" className="inline-flex items-center gap-2 bg-white/10 text-white px-6 py-2.5 rounded-xl font-black uppercase tracking-widest text-[10px] hover:bg-white/20 transition-all">
+                        </button>
+                        <button
+                            onClick={() => navigate(session ? '/rutas' : '/login')}
+                            className="inline-flex items-center gap-2 bg-white/10 text-white px-6 py-2.5 rounded-xl font-black uppercase tracking-widest text-[10px] hover:bg-white/20 transition-all"
+                        >
                             <i className="bi bi-stars text-xs" />
                             Crear Ruta
-                        </a>
+                        </button>
                     </div>
                 </div>
             </div>
@@ -274,14 +284,14 @@ const Contacto: React.FC = () => {
                         <p className="text-slate-400 font-bold text-sm mb-6">
                             ¿Necesitas más ayuda? Nuestro asistente con inteligencia artificial responde al instante.
                         </p>
-                        <a
-                            href="/faq"
+                        <button
+                            onClick={() => navigate(session ? '/faq' : '/login')}
                             className="inline-flex items-center gap-3 bg-brand-dark text-brand-gold px-10 py-5 rounded-2xl font-black uppercase tracking-widest text-xs hover:bg-brand-blue hover:text-white transition-all shadow-xl shadow-brand-dark/10"
                         >
                             <i className="bi bi-robot text-base" />
                             Chat con IA
                             <i className="bi bi-arrow-right" />
-                        </a>
+                        </button>
                     </div>
                 </div>
 

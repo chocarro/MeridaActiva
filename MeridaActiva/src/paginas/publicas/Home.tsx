@@ -835,11 +835,11 @@ const Home: React.FC = () => {
                 <i className="bi bi-person-plus-fill" />
                 Registrarse
               </Link>
-              <Link to="/rutas" className="inline-flex items-center justify-center gap-3 px-10 py-5 rounded-2xl font-black uppercase tracking-widest text-xs border hover:scale-105 transition-all border-white/25 text-white hover:bg-white/10">
+              <Link to={session ? '/rutas' : '/login'} className="inline-flex items-center justify-center gap-3 px-10 py-5 rounded-2xl font-black uppercase tracking-widest text-xs border hover:scale-105 transition-all border-white/25 text-white hover:bg-white/10">
                 <i className="bi bi-stars" />
                 Crear Ruta Personalizada
               </Link>
-              <Link to="/faq" className="inline-flex items-center justify-center gap-3 px-10 py-5 rounded-2xl font-black uppercase tracking-widest text-xs border hover:scale-105 transition-all border-white/25 text-white hover:bg-white/10">
+              <Link to={session ? '/faq' : '/login'} className="inline-flex items-center justify-center gap-3 px-10 py-5 rounded-2xl font-black uppercase tracking-widest text-xs border hover:scale-105 transition-all border-white/25 text-white hover:bg-white/10">
                 <i className="bi bi-robot" />
                 Chat IA
               </Link>

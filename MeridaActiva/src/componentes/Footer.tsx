@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../supabaseClient';
 import Logo from './Logo';
 
 const Footer: React.FC = () => {
-  const { profile } = useAuth();
+  const { session, profile } = useAuth();
+  const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [subStatus, setSubStatus] = useState<'idle' | 'loading' | 'ok' | 'exists' | 'error'>('idle');
 
@@ -69,18 +70,24 @@ const Footer: React.FC = () => {
           <div>
             <h4 className="text-brand-gold text-[10px] font-black uppercase tracking-[0.3em] mb-10">Explorar</h4>
             <ul className="space-y-4">
-              {[
-                { label: 'Eventos', to: '/eventos' },
-                { label: 'Patrimonio', to: '/lugares' },
-                { label: 'Rutas con IA', to: '/rutas' },
-                { label: 'Preguntas frecuentes', to: '/faq' },
-              ].map((item) => (
-                <li key={item.label}>
-                  <Link to={item.to} className="text-slate-400 hover:text-white transition-colors font-bold text-sm">
-                    {item.label}
-                  </Link>
-                </li>
-              ))}
+              <li><Link to="/eventos" className="text-slate-400 hover:text-white transition-colors font-bold text-sm">Eventos</Link></li>
+              <li><Link to="/lugares" className="text-slate-400 hover:text-white transition-colors font-bold text-sm">Patrimonio</Link></li>
+              <li>
+                <button
+                  onClick={() => navigate(session ? '/rutas' : '/login')}
+                  className="text-slate-400 hover:text-white transition-colors font-bold text-sm text-left"
+                >
+                  Rutas con IA
+                </button>
+              </li>
+              <li>
+                <button
+                  onClick={() => navigate(session ? '/faq' : '/login')}
+                  className="text-slate-400 hover:text-white transition-colors font-bold text-sm text-left"
+                >
+                  Chat IA (Asistente)
+                </button>
+              </li>
             </ul>
           </div>
 

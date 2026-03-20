@@ -6,6 +6,7 @@ import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import { useSeoMeta } from '../hooks/useSeoMeta';
 import { supabase } from '../supabaseClient';
+import { useAuth } from '../context/AuthContext';
 
 // ── Fix Leaflet default icon ──────────────────────────────────────
 delete (L.Icon.Default.prototype as unknown as Record<string, unknown>)._getIconUrl;
@@ -172,6 +173,7 @@ async function fetchTodosLugares(): Promise<Lugar[]> {
 
 // ════════════════════════════════════════════════════════════════
 const MapaEventos: React.FC = () => {
+  const { session } = useAuth();
   useSeoMeta({
     title: 'Mapa de Eventos y Lugares — MeridaActiva',
     description: 'Explora en el mapa interactivo todos los eventos, monumentos y lugares de interés de Mérida. Teatro Romano, Anfiteatro, festivales y mucho más.',
@@ -302,11 +304,11 @@ const [capaActiva, setCapaActiva] = useState('light');
             </p>
           </div>
           <div className="flex gap-3 flex-shrink-0">
-            <Link to="/rutas" className="inline-flex items-center gap-2 bg-brand-gold text-brand-dark px-6 py-2.5 rounded-xl font-black uppercase tracking-widest text-[10px] hover:bg-white transition-all">
+            <Link to={session ? '/rutas' : '/login'} className="inline-flex items-center gap-2 bg-brand-gold text-brand-dark px-6 py-2.5 rounded-xl font-black uppercase tracking-widest text-[10px] hover:bg-white transition-all">
               <i className="bi bi-stars text-xs" />
               Crear Ruta
             </Link>
-            <Link to="/faq" className="inline-flex items-center gap-2 bg-white/10 text-white px-6 py-2.5 rounded-xl font-black uppercase tracking-widest text-[10px] hover:bg-white/20 transition-all">
+            <Link to={session ? '/faq' : '/login'} className="inline-flex items-center gap-2 bg-white/10 text-white px-6 py-2.5 rounded-xl font-black uppercase tracking-widest text-[10px] hover:bg-white/20 transition-all">
               <i className="bi bi-robot text-xs" />
               Chat IA
             </Link>

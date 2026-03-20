@@ -54,7 +54,7 @@ const AppRoutes = () => {
       <Route path="/reset-password" element={<ResetPassword />} />
       <Route path="/lugares/:id" element={<LugaresDetalle />} />
       <Route path="/contacto" element={<Contacto />} />
-      <Route path="/faq" element={<ChatPage />} />
+      <Route path="/faq" element={<ProtectedRoute><ChatPage /></ProtectedRoute>} />
       <Route path="/ruta/:id" element={<RutaCompartida />} />
 
       {/* Rutas Legales */}
