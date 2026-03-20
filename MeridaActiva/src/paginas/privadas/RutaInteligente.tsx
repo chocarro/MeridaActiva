@@ -579,7 +579,7 @@ const RutaInteligente: React.FC = () => {
 
                     {/* Pantalla intro */}
                     {paso === 0 && (
-                        <div className="bg-white rounded-[2.5rem] p-6 sm:p-10 shadow-xl border border-slate-100 text-center">
+                        <div className="bg-white rounded-[2.5rem] pt-10 pb-6 px-6 sm:pt-14 sm:pb-10 sm:px-10 shadow-xl border border-slate-100 text-center">
                             <div className="w-20 h-20 bg-brand-gold/10 rounded-[2rem] flex items-center justify-center mx-auto mb-6">
                                 <i className="bi bi-map text-brand-gold text-4xl" />
                             </div>
@@ -589,14 +589,14 @@ const RutaInteligente: React.FC = () => {
                             <p className="text-slate-400 font-bold text-sm leading-relaxed mb-8 max-w-md mx-auto">
                                 La IA creará un itinerario personalizado con monumentos y restaurantes reales de Mérida, horarios y descripciones de por qué encajan contigo.
                             </p>
-                            <div className="grid grid-cols-3 gap-4 mb-10">
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-10">
                                 {[
                                     { icon: 'bi-clock', label: '¿Cuánto tiempo?' },
                                     { icon: 'bi-people', label: '¿Con quién?' },
                                     { icon: 'bi-lightning-charge', label: '¿Qué ritmo?' },
                                 ].map(({ icon, label }) => (
-                                    <div key={label} className="bg-brand-bg rounded-2xl p-4 text-center">
-                                        <i className={`bi ${icon} text-3xl text-brand-gold mb-2 block`} />
+                                    <div key={label} className="bg-brand-bg rounded-2xl p-4 flex sm:flex-col items-center sm:justify-center gap-3 sm:gap-0 text-left sm:text-center">
+                                        <i className={`bi ${icon} text-3xl text-brand-gold sm:mb-2 sm:block flex-shrink-0`} />
                                         <p className="text-[10px] font-black text-brand-dark uppercase tracking-widest">{label}</p>
                                     </div>
                                 ))}
