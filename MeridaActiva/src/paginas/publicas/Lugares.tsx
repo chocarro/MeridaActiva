@@ -47,19 +47,27 @@ const Lugares: React.FC = () => {
     description: 'Explora los monumentos, restaurantes y actividades de Mérida. Teatro Romano, Anfiteatro, Templo de Diana, rutas de naturaleza y mucho más.',
   });
 
-  useEffect(() => { cargarLugares(1, true); }, []);
+  // Recargar desde Supabase cuando cambia la categoría activa
+  useEffect(() => { cargarLugares(1, true, categoriaActiva); }, [categoriaActiva]);
 
-  const cargarLugares = async (nuevaPagina: number, reiniciar = false) => {
+  const cargarLugares = async (nuevaPagina: number, reiniciar = false, categoria = categoriaActiva) => {
     if (nuevaPagina === 1) setLoading(true);
     else setCargandoMas(true);
     try {
       const desde = (nuevaPagina - 1) * PAGE_SIZE;
       const hasta = desde + PAGE_SIZE - 1;
-      const { data, error } = await supabase
+      let query = supabase
         .from('lugares')
         .select('id, nombre_es, descripcion_es, ubicacion, imagen_url, categoria, google_maps_url')
         .order('nombre_es', { ascending: true })
         .range(desde, hasta);
+
+      // Aplicar filtro de categoría case-insensitive en Supabase
+      if (categoria !== 'Todos') {
+        query = query.ilike('categoria', categoria);
+      }
+
+      const { data, error } = await query;
       if (error) throw error;
       const nuevos = (data as Lugar[]) ?? [];
       setHayMas(nuevos.length === PAGE_SIZE);
@@ -73,9 +81,13 @@ const Lugares: React.FC = () => {
     }
   };
 
+  const cambiarCategoria = (cat: string) => {
+    setCategoriaActiva(cat);
+    // el useEffect de categoriaActiva dispara cargarLugares(1, true, cat)
+  };
+
   const lugaresProcesados = lugares
     .filter(l => {
-      if (categoriaActiva !== 'Todos' && l.categoria !== categoriaActiva) return false;
       if (busqueda.trim()) {
         const t = busqueda.toLowerCase();
         if (!l.nombre_es?.toLowerCase().includes(t) && !l.descripcion_es?.toLowerCase().includes(t)) return false;
@@ -167,7 +179,7 @@ const Lugares: React.FC = () => {
         <div className="filter-toolbar">
           <div className="flex flex-wrap justify-center gap-2">
             {CATEGORIAS.map(cat => (
-              <button key={cat} onClick={() => setCategoriaActiva(cat)} className={categoriaActiva === cat ? 'filter-btn-active' : 'filter-btn'}>
+              <button key={cat} onClick={() => cambiarCategoria(cat)} className={categoriaActiva === cat ? 'filter-btn-active' : 'filter-btn'}>
                 {cat}
               </button>
             ))}
@@ -206,7 +218,7 @@ const Lugares: React.FC = () => {
             </p>
             <div className="flex flex-col sm:flex-row gap-3 justify-center">
               <button
-                onClick={() => { setBusqueda(''); setCategoriaActiva('Todos'); }}
+                onClick={() => { setBusqueda(''); cambiarCategoria('Todos'); }}
                 className="bg-brand-dark text-brand-gold px-8 py-4 rounded-2xl font-black text-xs uppercase tracking-widest hover:scale-105 transition-all"
               >
                 Ver todos los lugares

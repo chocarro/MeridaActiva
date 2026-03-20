@@ -181,13 +181,15 @@ const [capaActiva, setCapaActiva] = useState('light');
 
   // ── Filtrado ───────────────────────────────────────────────────
   const eventosFiltrados = eventos.filter(ev => {
-    const matchCat = categoriaActiva === 'Todos' || ev.categoria === categoriaActiva;
+    const normalize = (s: string) => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    const matchCat = categoriaActiva === 'Todos' || normalize(ev.categoria) === normalize(categoriaActiva);
     const matchBusq = !busqueda.trim() || ev.titulo?.toLowerCase().includes(busqueda.toLowerCase());
     return matchCat && matchBusq;
   });
 
   const lugaresFiltrados = lugares.filter(l => {
-    const matchCat = categoriaActiva === 'Todos' || l.categoria === categoriaActiva;
+    const normalize = (s: string) => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    const matchCat = categoriaActiva === 'Todos' || normalize(l.categoria) === normalize(categoriaActiva);
     const matchBusq = !busqueda.trim() || l.nombre_es?.toLowerCase().includes(busqueda.toLowerCase());
     return matchCat && matchBusq;
   });

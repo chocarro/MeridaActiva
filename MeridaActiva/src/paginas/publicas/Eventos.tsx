@@ -50,19 +50,27 @@ const Eventos: React.FC = () => {
     description: 'Descubre todos los eventos culturales, conciertos y teatro en Mérida. Filtra por fecha, categoría y busca lo que más te gusta.',
   });
 
-  useEffect(() => { cargarEventos(1, true); }, []);
+  // Recargar desde Supabase cuando cambia la categoría activa
+  useEffect(() => { cargarEventos(1, true, categoriaActiva); }, [categoriaActiva]);
 
-  const cargarEventos = async (nuevaPagina: number, reiniciar = false) => {
+  const cargarEventos = async (nuevaPagina: number, reiniciar = false, categoria = categoriaActiva) => {
     if (nuevaPagina === 1) setLoading(true);
     else setCargandoMas(true);
     try {
       const desde = (nuevaPagina - 1) * PAGE_SIZE;
       const hasta = desde + PAGE_SIZE - 1;
-      const { data, error } = await supabase
+      let query = supabase
         .from('eventos')
         .select('id, titulo, descripcion, fecha, hora, ubicacion, imagen_url, categoria, precio')
         .order('fecha', { ascending: true })
         .range(desde, hasta);
+
+      // Aplicar filtro de categoría case-insensitive en Supabase
+      if (categoria !== 'Todos') {
+        query = query.ilike('categoria', categoria);
+      }
+
+      const { data, error } = await query;
       if (error) throw error;
       const nuevos = (data as Evento[]) ?? [];
       setHayMas(nuevos.length === PAGE_SIZE);
@@ -76,9 +84,13 @@ const Eventos: React.FC = () => {
     }
   };
 
+  const cambiarCategoria = (cat: string) => {
+    setCategoriaActiva(cat);
+    // el useEffect de categoriaActiva dispara cargarEventos(1, true, cat)
+  };
+
   const eventosProcesados = eventos
     .filter(ev => {
-      if (categoriaActiva !== 'Todos' && ev.categoria !== categoriaActiva) return false;
       if (busqueda.trim()) {
         const t = busqueda.toLowerCase();
         if (!ev.titulo?.toLowerCase().includes(t) && !ev.descripcion?.toLowerCase().includes(t)) return false;
@@ -208,7 +220,7 @@ const Eventos: React.FC = () => {
         <div className="filter-toolbar">
           <div className="flex flex-wrap justify-center gap-2">
             {CATEGORIAS.map(cat => (
-              <button key={cat} onClick={() => setCategoriaActiva(cat)} className={categoriaActiva === cat ? 'filter-btn-active' : 'filter-btn'}>
+              <button key={cat} onClick={() => cambiarCategoria(cat)} className={categoriaActiva === cat ? 'filter-btn-active' : 'filter-btn'}>
                 {cat}
               </button>
             ))}
@@ -248,7 +260,7 @@ const Eventos: React.FC = () => {
             </p>
             <div className="flex flex-col sm:flex-row gap-3 justify-center">
               <button
-                onClick={() => { setBusqueda(''); setCategoriaActiva('Todos'); setFiltroRapido('Todos'); }}
+                onClick={() => { setBusqueda(''); cambiarCategoria('Todos'); setFiltroRapido('Todos'); }}
                 className="bg-brand-dark text-brand-gold px-8 py-4 rounded-2xl font-black text-xs uppercase tracking-widest hover:scale-105 transition-all"
               >
                 Ver todos los eventos
