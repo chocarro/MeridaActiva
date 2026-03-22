@@ -54,11 +54,25 @@ export const forceNuclearLogout = async (): Promise<void> => {
   } catch (e) {
     console.warn('[NuclearLogout] signOut falló (esperado si token corrupto):', e);
   } finally {
-    // Barrer todas las claves de Supabase del localStorage
     const keysToDelete = Object.keys(localStorage).filter(k => k.startsWith('sb-'));
     keysToDelete.forEach(k => localStorage.removeItem(k));
-    // Redirigir con recarga total de la app
     window.location.href = '/';
+  }
+};
+
+// ─────────────────────────────────────────────
+// Limpieza forzosa de sesión → /login
+// Más agresiva que Nuclear: borra TODO el storage
+// ─────────────────────────────────────────────
+const limpiezaForzosa = async (): Promise<void> => {
+  try {
+    await supabase.auth.signOut();
+  } catch (e) {
+    console.warn('[AuthContext] limpiezaForzosa: signOut falló:', e);
+  } finally {
+    localStorage.clear();
+    sessionStorage.clear();
+    window.location.href = '/login';
   }
 };
 
@@ -108,21 +122,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           return;
         }
 
-        // Caso 2: otro tipo de error en getSession
+        // Caso 2: otro tipo de error en getSession → limpiezaForzosa
         if (error) {
-          // Silenciamos errores de Lock/Storage para no romper el render
-          if (isLockOrStorageError(error)) {
-            console.warn('[AuthContext] Error de storage/lock ignorado:', error.message);
-          } else {
-            console.error('[AuthContext] Error en getSession:', error.message);
-          }
-          await supabase.auth.signOut().catch(() => {});
-          if (isMounted) {
-            setSession(null);
-            setProfile(null);
-            clearTimeout(safetyTimer);
-            setLoading(false);
-          }
+          console.error('[AuthContext] Error en getSession — ejecutando limpiezaForzosa:', error.message);
+          await limpiezaForzosa();
           return;
         }
 
@@ -160,12 +163,17 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     // ── LISTENER DE CAMBIOS DE AUTENTICACIÓN ─────────────────────────────
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event, session) => {
+      async (event, session) => {
         if (!isMounted) return;
         setSession(session);
-        if (session) {
+        if (session && session.user) {
           await fetchProfile(session.user.id, isMounted, safetyTimer);
         } else {
+          // SIGNED_OUT o usuario nulo → limpiar storages para evitar estados zombi
+          if (event === 'SIGNED_OUT' || !session) {
+            localStorage.clear();
+            sessionStorage.clear();
+          }
           setProfile(null);
           clearTimeout(safetyTimer);
           setLoading(false);

@@ -28,6 +28,7 @@
     "react-hot-toast": "^2.6.0",
     "react-leaflet": "^5.0.0",
     "react-markdown": "^10.1.0",
+    "react-quill": "^2.0.0",
     "react-router-dom": "^6.30.3",
     "three": "^0.183.0",
     "vite-plugin-pwa": "^1.2.0"

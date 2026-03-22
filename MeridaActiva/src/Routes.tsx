@@ -15,6 +15,7 @@ import ResetPassword from './paginas/auth/ResetPassword';
 import MiPerfil from './paginas/privadas/MiPerfil';
 import GestionEventos from './paginas/admin/GestionEventos';
 import GestionUsuarios from './paginas/admin/GestionUsuarios';
+import ModeracionResenas from './paginas/admin/ModeracionResenas';
 import MapaEventos from './componentes/MapaEventos';
 import AvisoLegal from './legales/AvisoLegal';
 import Privacidad from './legales/Privacidad';
@@ -101,6 +102,11 @@ const AppRoutes = () => {
       <Route path="/admin/usuarios" element={
         <ProtectedRoute allowedRoles={['Administrador']}>
           <GestionUsuarios />
+        </ProtectedRoute>
+      } />
+      <Route path="/admin/resenas" element={
+        <ProtectedRoute allowedRoles={['Administrador', 'Gestor (Editor)']}>
+          <ModeracionResenas />
         </ProtectedRoute>
       } />
 
