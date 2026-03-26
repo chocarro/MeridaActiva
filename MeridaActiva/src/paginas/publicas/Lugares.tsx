@@ -15,6 +15,7 @@ interface Lugar {
   imagen_url: string;
   categoria: string;
   google_maps_url: string | null;
+  animales_permitidos?: boolean | null;
 }
 
 function SkeletonTarjeta() {

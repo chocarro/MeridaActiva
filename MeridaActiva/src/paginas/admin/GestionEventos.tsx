@@ -28,6 +28,7 @@ const FORM_INICIAL = {
   imagen_url: '',
   enlace_externo: '',
   categoria: 'Cultural',
+  animales_permitidos: '', // '' = null (no configurado)
 };
 
 // ── Extrae el nombre de archivo de una URL de Supabase Storage ──
@@ -106,7 +107,12 @@ const GestionEventos: React.FC = () => {
         url = await manejarSubidaImagen(archivo);
       }
 
-      const payload = { ...formData, imagen_url: url };
+      // Convertir el string de animales_permitidos a booleano o null
+      let animalesFormat = null;
+      if (formData.animales_permitidos === 'true') animalesFormat = true;
+      if (formData.animales_permitidos === 'false') animalesFormat = false;
+
+      const payload = { ...formData, imagen_url: url, animales_permitidos: animalesFormat };
 
       if (editandoId) {
         await supabase.from('eventos').update(payload).eq('id', editandoId);
@@ -132,7 +138,12 @@ const GestionEventos: React.FC = () => {
   };
 
   const prepararEdicion = (ev: any) => {
-    setFormData(ev);
+    // Formatear el valor para que el select ('', 'true', 'false') lo entienda
+    const formEvent = {
+      ...ev,
+      animales_permitidos: ev.animales_permitidos === true ? 'true' : ev.animales_permitidos === false ? 'false' : ''
+    };
+    setFormData(formEvent);
     setEditandoId(ev.id);
     setMostrarForm(true);
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -275,6 +286,20 @@ const GestionEventos: React.FC = () => {
                     onChange={e => setFormData({ ...formData, categoria: e.target.value })}
                   >
                     {CATEGORIAS.map(c => <option key={c}>{c}</option>)}
+                  </select>
+                </div>
+
+                {/* Animales */}
+                <div>
+                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 block">Acceso de Animales</label>
+                  <select
+                    className="w-full bg-brand-bg border-none rounded-2xl px-6 py-4 font-bold text-brand-dark outline-none appearance-none"
+                    value={formData.animales_permitidos}
+                    onChange={e => setFormData({ ...formData, animales_permitidos: e.target.value })}
+                  >
+                    <option value="">No configurado / Consultar</option>
+                    <option value="true">Permitido (🐾)</option>
+                    <option value="false">No permitido (🚫)</option>
                   </select>
                 </div>
 

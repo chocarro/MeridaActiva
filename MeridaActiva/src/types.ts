@@ -22,6 +22,7 @@ export interface Evento {
   precio: number | null;         // null = gratuito
   latitud: number | null;        // para el mapa Leaflet
   longitud: number | null;
+  animales_permitidos?: boolean | null; // null = no configurado
   created_at: string;
 }
 

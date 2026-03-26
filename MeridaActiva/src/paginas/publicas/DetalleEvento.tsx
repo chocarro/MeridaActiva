@@ -233,7 +233,47 @@ const DetalleEvento: React.FC = () => {
                   </p>
                 </div>
 
+                {/* Animales */}
                 <div className="bg-brand-bg rounded-[2rem] p-8 border border-slate-100">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className={`w-10 h-10 rounded-2xl flex items-center justify-center ${
+                      evento.animales_permitidos === true
+                        ? 'bg-green-100'
+                        : evento.animales_permitidos === false
+                        ? 'bg-red-100'
+                        : 'bg-slate-100'
+                    }`}>
+                      <i className={`bi bi-${
+                        evento.animales_permitidos === true
+                          ? 'check-circle-fill text-green-600'
+                          : evento.animales_permitidos === false
+                          ? 'x-circle-fill text-red-500'
+                          : 'question-circle text-slate-400'
+                      } text-lg`} />
+                    </div>
+                    <h4 className="font-black text-brand-dark text-[10px] uppercase tracking-widest">Acceso con animales</h4>
+                  </div>
+                  <p className={`text-sm font-bold ${
+                    evento.animales_permitidos === true
+                      ? 'text-green-600'
+                      : evento.animales_permitidos === false
+                      ? 'text-red-500'
+                      : 'text-slate-400'
+                  }`}>
+                    {evento.animales_permitidos === true
+                      ? '🐾 Se permiten animales de compañía'
+                      : evento.animales_permitidos === false
+                      ? '🚫 No se permiten animales'
+                      : 'Consulta con el organizador'}
+                  </p>
+                  {evento.animales_permitidos === true && (
+                    <p className="text-slate-400 text-xs mt-2 font-medium leading-relaxed">
+                      Deben ir con correa y al cuidado de su dueño en todo momento.
+                    </p>
+                  )}
+                </div>
+
+                <div className="bg-brand-bg rounded-[2rem] p-8 border border-slate-100 md:col-span-2">
                   <div className="flex items-center gap-3 mb-4">
                     <div className="w-10 h-10 bg-brand-gold/10 rounded-2xl flex items-center justify-center">
                       <i className="bi bi-lightbulb-fill text-brand-gold text-lg" />
@@ -283,6 +323,24 @@ const DetalleEvento: React.FC = () => {
                   <p className="font-black text-brand-dark text-sm leading-tight">{chip.value}</p>
                 </div>
               ))}
+              {/* Chip animales */}
+              <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm hover:shadow-md transition-shadow">
+                <i className={`bi bi-${
+                  evento.animales_permitidos === true
+                    ? 'check-circle-fill text-green-500'
+                    : evento.animales_permitidos === false
+                    ? 'x-circle-fill text-red-500'
+                    : 'question-circle text-slate-300'
+                } text-2xl mb-3 block`} />
+                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Animales</p>
+                <p className="font-black text-brand-dark text-sm leading-tight">
+                  {evento.animales_permitidos === true
+                    ? 'Permitidos'
+                    : evento.animales_permitidos === false
+                    ? 'No permitidos'
+                    : 'Consultar'}
+                </p>
+              </div>
             </div>
 
             {/* Comentarios */}
@@ -370,6 +428,32 @@ const DetalleEvento: React.FC = () => {
                   <div className="flex items-center gap-3 text-white/60">
                     <i className="bi bi-tag-fill text-brand-gold text-lg" />
                     <span className="font-bold text-sm">{evento.categoria}</span>
+                  </div>
+                  {/* Animales en sidebar */}
+                  <div className="flex items-center gap-3">
+                    <i className={`bi bi-${
+                      evento.animales_permitidos === true
+                        ? 'check-circle-fill text-green-400'
+                        : evento.animales_permitidos === false
+                        ? 'x-circle-fill text-red-400'
+                        : 'question-circle text-white/30'
+                    } text-lg`} />
+                    <div>
+                      <p className="text-white/40 text-[9px] font-black uppercase tracking-widest leading-none mb-0.5">Animales</p>
+                      <span className={`font-bold text-sm ${
+                        evento.animales_permitidos === true
+                          ? 'text-green-400'
+                          : evento.animales_permitidos === false
+                          ? 'text-red-400'
+                          : 'text-white/50'
+                      }`}>
+                        {evento.animales_permitidos === true
+                          ? '🐾 Permitidos'
+                          : evento.animales_permitidos === false
+                          ? 'No permitidos'
+                          : 'Consultar'}
+                      </span>
+                    </div>
                   </div>
                 </div>
 

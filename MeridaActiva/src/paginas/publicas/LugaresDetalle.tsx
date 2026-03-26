@@ -316,6 +316,46 @@ const LugaresDetalle: React.FC = () => {
                     : 'Los monumentos del conjunto arqueológico de Mérida disponen de itinerarios adaptados para personas con movilidad reducida. Algunos espacios pueden presentar desniveles propios de su antigüedad histórica.'}
                 </p>
               </div>
+
+              {/* Animales */}
+              <div className="mt-6 rounded-[2rem] p-8 border-2 border-dashed border-slate-200 bg-white">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className={`w-10 h-10 rounded-2xl flex items-center justify-center ${
+                    lugar.animales_permitidos === true
+                      ? 'bg-green-100'
+                      : lugar.animales_permitidos === false
+                      ? 'bg-red-100'
+                      : 'bg-slate-100'
+                  }`}>
+                    <i className={`bi bi-${
+                      lugar.animales_permitidos === true
+                        ? 'check-circle-fill text-green-600'
+                        : lugar.animales_permitidos === false
+                        ? 'x-circle-fill text-red-500'
+                        : 'question-circle text-slate-400'
+                    } text-lg`} />
+                  </div>
+                  <h4 className="font-black text-brand-dark text-[10px] uppercase tracking-widest">Acceso con animales</h4>
+                </div>
+                <p className={`text-sm font-bold ${
+                  lugar.animales_permitidos === true
+                    ? 'text-green-600'
+                    : lugar.animales_permitidos === false
+                    ? 'text-red-500'
+                    : 'text-slate-400'
+                }`}>
+                  {lugar.animales_permitidos === true
+                    ? '🐾 Se permiten animales de compañía'
+                    : lugar.animales_permitidos === false
+                    ? '🚫 No se permiten animales'
+                    : 'Consulta con el establecimiento'}
+                </p>
+                {lugar.animales_permitidos === true && (
+                  <p className="text-slate-400 text-xs mt-2 font-medium leading-relaxed">
+                    Los animales deben ir con correa y al cuidado de su dueño en todo momento.
+                  </p>
+                )}
+              </div>
             </div>
 
             {/* Quick info chips */}
@@ -331,6 +371,24 @@ const LugaresDetalle: React.FC = () => {
                   <p className="font-black text-brand-dark text-sm leading-tight">{chip.value}</p>
                 </div>
               ))}
+              {/* Chip animales */}
+              <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm hover:shadow-md transition-shadow">
+                <i className={`bi bi-${
+                  lugar.animales_permitidos === true
+                    ? 'check-circle-fill text-green-500'
+                    : lugar.animales_permitidos === false
+                    ? 'x-circle-fill text-red-500'
+                    : 'question-circle text-slate-300'
+                } text-2xl mb-3 block`} />
+                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Animales</p>
+                <p className="font-black text-brand-dark text-sm leading-tight">
+                  {lugar.animales_permitidos === true
+                    ? 'Permitidos'
+                    : lugar.animales_permitidos === false
+                    ? 'No permitidos'
+                    : 'Consultar'}
+                </p>
+              </div>
             </div>
 
             {/* Gallery placeholder — if we had multiple images */}
@@ -392,6 +450,41 @@ const LugaresDetalle: React.FC = () => {
                       <p className="text-white/40 text-[9px] font-black uppercase tracking-widest">Horario</p>
                       <p className="font-bold text-white text-sm italic">
                         {isGastro ? 'Consultar en local' : 'Mar–Dom 9:30–18:30 h'}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Animales en sidebar */}
+                  <div className="flex items-center gap-4">
+                    <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${
+                      lugar.animales_permitidos === true
+                        ? 'bg-green-900/30'
+                        : lugar.animales_permitidos === false
+                        ? 'bg-red-900/30'
+                        : 'bg-white/10'
+                    }`}>
+                      <i className={`bi bi-${
+                        lugar.animales_permitidos === true
+                          ? 'check-circle-fill text-green-400'
+                          : lugar.animales_permitidos === false
+                          ? 'x-circle-fill text-red-400'
+                          : 'question-circle text-white/30'
+                      } text-xl`} />
+                    </div>
+                    <div>
+                      <p className="text-white/40 text-[9px] font-black uppercase tracking-widest">Animales</p>
+                      <p className={`font-bold text-sm ${
+                        lugar.animales_permitidos === true
+                          ? 'text-green-400'
+                          : lugar.animales_permitidos === false
+                          ? 'text-red-400'
+                          : 'text-white/50 italic'
+                      }`}>
+                        {lugar.animales_permitidos === true
+                          ? '🐾 Permitidos'
+                          : lugar.animales_permitidos === false
+                          ? 'No permitidos'
+                          : 'Consultar'}
                       </p>
                     </div>
                   </div>

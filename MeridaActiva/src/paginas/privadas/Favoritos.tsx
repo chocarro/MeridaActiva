@@ -2,11 +2,18 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '../../supabaseClient';
 import { useAuth } from '../../context/AuthContext';
+import { useSeoMeta } from '../../hooks/useSeoMeta';
 
 const Favoritos: React.FC = () => {
   const { session } = useAuth();
   const [favoritos, setFavoritos] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // ── SEO ────────────────────────────────────────────────────────
+  useSeoMeta({
+    title: 'Mis Favoritos | Mérida Activa',
+    description: 'Tus eventos y monumentos favoritos de Mérida guardados en un solo lugar. Organiza tu visita a la capital extremeña.',
+  });
 
   useEffect(() => {
     if (session?.user?.id) {

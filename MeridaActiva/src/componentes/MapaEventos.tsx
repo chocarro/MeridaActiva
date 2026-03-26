@@ -29,6 +29,7 @@ interface Evento {
   precio: string | null;
   latitud: number;
   longitud: number;
+  animales_permitidos?: boolean | null;
 }
 
 interface Lugar {
@@ -41,6 +42,7 @@ interface Lugar {
   google_maps_url: string | null;
   latitud: number | null;
   longitud: number | null;
+  animales_permitidos?: boolean | null;
 }
 
 // ── Colores por categoría ─────────────────────────────────────────

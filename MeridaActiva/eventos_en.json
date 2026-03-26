@@ -1,0 +1,32 @@
+[
+  {
+    "id": "4405f92c-0ad5-40cb-a099-fb2ce57233a1",
+    "titulo": "Alchemy Project — Homenaje a Dire Straits",
+    "categoria": "musica",
+    "descripcion": "El mejor tributo a Dire Straits llega al Palacio de Congresos de Mérida. Alchemy Project recrea fielmente los grandes éxitos de la legendaria banda británica: Sultans of Swing, Money for Nothing, Romeo and Juliet y mucho más.",
+    "fecha": "2026-03-27",
+    "ubicacion": "Palacio de Congresos de Mérida, Avda. del Río s/n, Mérida",
+    "precio": "Consultar",
+    "imagen_url": "https://www.palcongrex.es/sites/default/files/styles/card_event/public/2026-03/Web%20y%20T%C3%B3tems%20904x1280_0.JPG.webp",
+    "enlace_externo": null,
+    "created_at": "2026-03-16T23:32:48.179905+00:00",
+    "latitud": 38.9071,
+    "longitud": -6.3512,
+    "hora": "20:30"
+  },
+  {
+    "id": "db41ca93-82de-4766-a90a-c0441acac83f",
+    "titulo": "Orquesta de Extremadura — Symphony of Dance",
+    "categoria": "musica",
+    "descripcion": "La Orquesta de Extremadura presenta \"Symphony of Dance\", un espectáculo que fusiona música sinfónica y danza. Un programa que recorre los grandes momentos de la música para ballet y danza de la historia.",
+    "fecha": "2026-04-17",
+    "ubicacion": "Palacio de Congresos de Mérida, Avda. del Río s/n, Mérida",
+    "precio": "Consultar",
+    "imagen_url": "https://www.palcongrex.es/sites/default/files/styles/card_event/public/2025-09/mer-20260417%20%281%29.jpg.webp",
+    "enlace_externo": null,
+    "created_at": "2026-03-16T23:32:48.179905+00:00",
+    "latitud": 38.9071,
+    "longitud": -6.3512,
+    "hora": "20:00"
+  }
+]

@@ -9,4 +9,4 @@ Disallow: /calendario
 Disallow: /reset-password
 
 # Sitemap
-Sitemap: https://meridaactiva.es/sitemap.xml
+Sitemap: https://meridaactiva.vercel.app/sitemap.xml
