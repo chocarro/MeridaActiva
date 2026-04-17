@@ -204,6 +204,11 @@ export default async function handler(req, res) {
 
     } catch (err) {
         console.error('[generar-ruta] Excepción inesperada:', err);
-        return res.status(500).json({ error: err.message || 'Error interno del servidor. Inténtalo más tarde.' });
+        const causeCode = err?.cause?.code;
+        const causaHost = err?.cause?.hostname;
+        const errorLegible = causeCode === 'ENOTFOUND'
+            ? `No se pudo resolver el dominio ${causaHost ?? 'openrouter.ai'}. Revisa DNS/red o firewall.`
+            : (err.message || 'Error interno del servidor. Inténtalo más tarde.');
+        return res.status(500).json({ error: errorLegible });
     }
 }

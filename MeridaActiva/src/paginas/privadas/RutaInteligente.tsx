@@ -194,11 +194,6 @@ const RutaInteligente: React.FC = () => {
         setMensajeEstado('');
 
         const servicio = getGeminiService();
-        if (!servicio) {
-            toastError('Configura VITE_GEMINI_API_KEY en .env para generar rutas con IA');
-            setGenerando(false);
-            return;
-        }
 
         try {
             // Mejora 9: onRetry callback para mostrar estado de reintento

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { supabase } from '../../supabaseClient';
 import Logo from '../../componentes/Logo';
+import { forceNuclearLogout } from '../../context/AuthContext';
 type Mode = 'login' | 'recovery';
 
 const Login: React.FC = () => {
@@ -13,7 +14,7 @@ const Login: React.FC = () => {
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [mode, setMode] = useState<Mode>('login');
   const navigate = useNavigate();
-
+ 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -48,6 +49,12 @@ const Login: React.FC = () => {
       setSuccessMsg('¡Email enviado! Revisa tu bandeja de entrada y sigue el enlace para crear una nueva contraseña.');
     }
     setLoading(false);
+  };
+
+  const handleResetSesionBloqueada = async () => {
+    setErrorMsg(null);
+    setSuccessMsg(null);
+    await forceNuclearLogout();
   };
 
   return (
@@ -203,6 +210,14 @@ const Login: React.FC = () => {
                       Regístrate gratis
                     </Link>
                   </p>
+                  <button
+                    type="button"
+                    onClick={handleResetSesionBloqueada}
+                    className="mt-4 text-[10px] font-black uppercase tracking-widest transition-colors hover:opacity-70"
+                    style={{ color: '#D00000' }}
+                  >
+                    Reiniciar sesión bloqueada
+                  </button>
                 </div>
               </>
             ) : (

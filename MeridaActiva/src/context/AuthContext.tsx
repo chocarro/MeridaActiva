@@ -27,6 +27,30 @@ const isInvalidTokenError = (msg?: string): boolean => {
   );
 };
 
+const AUTH_STORAGE_KEY_PREFIX = 'sb-';
+const SUPABASE_REF_KEY = 'meridaactiva_supabase_ref';
+
+const limpiarAuthStorage = () => {
+  Object.keys(localStorage)
+    .filter((k) => k.startsWith(AUTH_STORAGE_KEY_PREFIX))
+    .forEach((k) => localStorage.removeItem(k));
+};
+
+const obtenerSupabaseRefActual = (): string => {
+  const url = import.meta.env.VITE_SUPABASE_URL as string | undefined;
+  if (!url) return 'unknown';
+  try {
+    return new URL(url).host;
+  } catch {
+    return url;
+  }
+};
+
+const tokenCaducado = (session: Session | null): boolean => {
+  if (!session?.expires_at) return false;
+  return session.expires_at * 1000 <= Date.now();
+};
+
 // ─────────────────────────────────────────────
 // Tipos y contexto
 // ─────────────────────────────────────────────
@@ -54,8 +78,7 @@ export const forceNuclearLogout = async (): Promise<void> => {
   } catch (e) {
     console.warn('[NuclearLogout] signOut falló (esperado si token corrupto):', e);
   } finally {
-    const keysToDelete = Object.keys(localStorage).filter(k => k.startsWith('sb-'));
-    keysToDelete.forEach(k => localStorage.removeItem(k));
+    limpiarAuthStorage();
     window.location.href = '/';
   }
 };
@@ -70,7 +93,7 @@ const limpiezaForzosa = async (): Promise<void> => {
   } catch (e) {
     console.warn('[AuthContext] limpiezaForzosa: signOut falló:', e);
   } finally {
-    localStorage.clear();
+    limpiarAuthStorage();
     sessionStorage.clear();
     window.location.href = '/login';
   }
@@ -86,6 +109,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   useEffect(() => {
     let isMounted = true;
+    const supabaseRefActual = obtenerSupabaseRefActual();
+
+    const supabaseRefGuardada = localStorage.getItem(SUPABASE_REF_KEY);
+    if (supabaseRefGuardada && supabaseRefGuardada !== supabaseRefActual) {
+      // Si se cambió de proyecto/URL de Supabase, purgamos sesiones antiguas para evitar estados zombi.
+      limpiarAuthStorage();
+    }
+    localStorage.setItem(SUPABASE_REF_KEY, supabaseRefActual);
 
     // ── VÁLVULA DE ESCAPE: timeout de 5 segundos ──────────────────────────
     // Si algo falla silenciosamente y loading sigue en true, forzamos
@@ -111,7 +142,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         if (error && isInvalidTokenError(error.message)) {
           console.warn('[AuthContext] Token inválido detectado — ejecutando Nuclear Logout.');
           // Limpiar claves sb- del localStorage directamente (no esperamos a signOut)
-          Object.keys(localStorage).filter(k => k.startsWith('sb-')).forEach(k => localStorage.removeItem(k));
+          limpiarAuthStorage();
           await supabase.auth.signOut().catch(() => {});
           if (isMounted) {
             setSession(null);
@@ -126,6 +157,20 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         if (error) {
           console.error('[AuthContext] Error en getSession — ejecutando limpiezaForzosa:', error.message);
           await limpiezaForzosa();
+          return;
+        }
+
+        // Sesión presente pero caducada localmente (evita estado "logueado" zombi)
+        if (tokenCaducado(session)) {
+          console.warn('[AuthContext] Sesión expirada detectada localmente — limpiando estado auth.');
+          limpiarAuthStorage();
+          await supabase.auth.signOut().catch(() => {});
+          if (isMounted) {
+            setSession(null);
+            setProfile(null);
+            clearTimeout(safetyTimer);
+            setLoading(false);
+          }
           return;
         }
 
@@ -171,7 +216,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         } else {
           // SIGNED_OUT o usuario nulo → limpiar storages para evitar estados zombi
           if (event === 'SIGNED_OUT' || !session) {
-            localStorage.clear();
+            limpiarAuthStorage();
             sessionStorage.clear();
           }
           setProfile(null);

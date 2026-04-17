@@ -35,6 +35,22 @@ function esErrorReintentar(mensaje: string): boolean {
 
 /** Backoff en ms según el intento (1 → 1000, 2 → 2000) */
 const BACKOFF_MS = [1000, 2000];
+const API_BASE = (import.meta.env.VITE_API_BASE_URL ?? '').replace(/\/$/, '');
+
+function buildApiUrl(path: string): string {
+    return API_BASE ? `${API_BASE}${path}` : path;
+}
+
+function mapearErrorConexion(err: unknown): Error {
+    const msg = err instanceof Error ? err.message : String(err);
+    if (msg.toLowerCase().includes('failed to fetch')) {
+        if (import.meta.env.DEV) {
+            return new Error('No se pudo conectar con la API local. Inicia la app con `npm run dev:full` para levantar frontend + API.');
+        }
+        return new Error('No se pudo conectar con el servidor de IA. Revisa tu conexión e inténtalo de nuevo.');
+    }
+    return err instanceof Error ? err : new Error(String(err));
+}
 
 /** Detecta si el browser soporta ReadableStream desde fetch */
 function soportaStreaming(): boolean {
@@ -74,7 +90,7 @@ class IAService {
             try {
                 const usarStream = soportaStreaming();
 
-                const response = await fetch('/api/chat', {
+                const response = await fetch(buildApiUrl('/api/chat'), {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -132,7 +148,7 @@ class IAService {
                 }
                 return;
             } catch (err) {
-                ultimoError = err instanceof Error ? err : new Error(String(err));
+                ultimoError = mapearErrorConexion(err);
                 if (!esErrorReintentar(ultimoError.message) || intento >= 2) {
                     throw ultimoError;
                 }
@@ -162,7 +178,7 @@ class IAService {
             }
 
             try {
-                const response = await fetch('/api/generar-ruta', {
+                const response = await fetch(buildApiUrl('/api/generar-ruta'), {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(params),
@@ -188,7 +204,7 @@ class IAService {
 
                 return (data as { paradas: ParadaRuta[] }).paradas;
             } catch (err) {
-                ultimoError = err instanceof Error ? err : new Error(String(err));
+                ultimoError = mapearErrorConexion(err);
                 if (!esErrorReintentar(ultimoError.message) || intento >= 2) {
                     throw ultimoError;
                 }

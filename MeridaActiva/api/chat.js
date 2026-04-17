@@ -237,10 +237,15 @@ export default async function handler(req, res) {
 
     } catch (err) {
         console.error('[chat] Excepción inesperada:', err);
+        const causeCode = err?.cause?.code;
+        const causaHost = err?.cause?.hostname;
+        const errorLegible = causeCode === 'ENOTFOUND'
+            ? `No se pudo resolver el dominio ${causaHost ?? 'openrouter.ai'}. Revisa DNS/red o firewall.`
+            : (err.message || 'Error interno del servidor.');
         if (!res.headersSent) {
-            return res.status(500).json({ error: err.message || 'Error interno del servidor.' });
+            return res.status(500).json({ error: errorLegible });
         }
-        res.write(`data: ${JSON.stringify({ error: err.message || 'Error interno del servidor.' })}\n\n`);
+        res.write(`data: ${JSON.stringify({ error: errorLegible })}\n\n`);
         res.end();
     }
 }

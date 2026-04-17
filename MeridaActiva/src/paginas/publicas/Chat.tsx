@@ -123,21 +123,6 @@ const ChatPage: React.FC = () => {
 
         const servicio = getGeminiService();
 
-        if (!servicio) {
-            await new Promise(r => setTimeout(r, 800 + Math.random() * 500));
-            const respuesta = responderIA(texto);
-            setMensajes(prev => [
-                ...prev,
-                {
-                    rol: 'ia',
-                    texto: respuesta + '\n\n* Añade `VITE_GEMINI_API_KEY` en `.env` para activar la IA real.*',
-                    ts: Date.now(),
-                },
-            ]);
-            setPensando(false);
-            return;
-        }
-
         try {
             const idMensajeIA = Date.now();
             setMensajes(prev => [...prev, { rol: 'ia', texto: '', ts: idMensajeIA }]);

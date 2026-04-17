@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth, forceNuclearLogout } from '../../context/AuthContext';
 import { Link } from 'react-router-dom';
 import { supabase } from '../../supabaseClient';
 
@@ -171,8 +171,7 @@ const MiPerfil: React.FC = () => {
         await supabase.from('comentarios').delete().eq('usuario_id', session.user.id);
         await supabase.from('usuarios').delete().eq('id', session.user.id);
       }
-      await supabase.auth.signOut();
-      window.location.href = '/';
+      await forceNuclearLogout();
     } catch (err: any) {
       setSegMsg({ tipo: 'err', texto: 'Error al eliminar: ' + err.message });
       setDeletingAccount(false);
