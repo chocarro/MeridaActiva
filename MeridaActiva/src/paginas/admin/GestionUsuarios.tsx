@@ -12,19 +12,29 @@ interface Usuario {
   roles?: { nombre: string };
 }
 
+interface Rol {
+  id: number;
+  nombre: string;
+}
+
 const POR_PAGINA = 10;
 
 const GestionUsuarios: React.FC = () => {
   const [usuarios, setUsuarios] = useState<Usuario[]>([]);
+  const [roles, setRoles] = useState<Rol[]>([]);
   const [totalUsuarios, setTotalUsuarios] = useState(0);
   const [paginaActual, setPaginaActual] = useState(0);
   const [busqueda, setBusqueda] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [cambiando, setCambiando] = useState<string | null>(null);
 
   const totalPaginas = Math.ceil(totalUsuarios / POR_PAGINA);
 
   // ── Fetch paginado con búsqueda ─────────────────────────────
-  const fetchUsuarios = async (pagina = paginaActual) => {
+  const fetchUsuarios = async (pagina = paginaActual, q = busqueda) => {
+    setLoading(true);
+    setErrorMsg(null);
     const from = pagina * POR_PAGINA;
     const to = from + POR_PAGINA - 1;
 
@@ -34,12 +44,35 @@ const GestionUsuarios: React.FC = () => {
       .order('nombre', { ascending: true })
       .range(from, to);
 
-    const { data, count } = await query;
+    if (q.trim()) {
+      const safe = q.trim();
+      query = query.or(`nombre.ilike.%${safe}%,email.ilike.%${safe}%`);
+    }
+
+    const { data, count, error } = await query;
+    if (error) {
+      setErrorMsg('No se pudieron cargar los usuarios.');
+      setLoading(false);
+      return;
+    }
+
     if (data) setUsuarios(data as Usuario[]);
     if (count !== null) setTotalUsuarios(count);
+    setLoading(false);
   };
 
-  useEffect(() => { fetchUsuarios(paginaActual); }, [paginaActual]);
+  const fetchRoles = async () => {
+    const { data } = await supabase.from('roles').select('id,nombre').order('id', { ascending: true });
+    if (data) setRoles(data as Rol[]);
+  };
+
+  useEffect(() => {
+    fetchRoles();
+  }, []);
+
+  useEffect(() => {
+    fetchUsuarios(paginaActual, busqueda);
+  }, [paginaActual, busqueda]);
 
   const cambiarPagina = (nueva: number) => {
     if (nueva < 0 || nueva >= totalPaginas) return;
@@ -48,7 +81,10 @@ const GestionUsuarios: React.FC = () => {
 
   // ── Cambiar rol ─────────────────────────────────────────────
   const cambiarRol = async (id: string, nuevoRolId: number) => {
-    await supabase.from('usuarios').update({ rol_id: nuevoRolId }).eq('id', id);
+    setCambiando(id);
+    const { error } = await supabase.from('usuarios').update({ rol_id: nuevoRolId }).eq('id', id);
+    if (error) setErrorMsg('No se pudo actualizar el rol.');
+    setCambiando(null);
     fetchUsuarios(paginaActual);
   };
 
@@ -65,7 +101,7 @@ const GestionUsuarios: React.FC = () => {
         .from('usuarios')
         .update({ estado: nuevoEstado })
         .eq('id', user.id);
-      fetchUsuarios(paginaActual);
+      fetchUsuarios(paginaActual, busqueda);
     } catch {
       alert('No se pudo cambiar el estado del usuario.');
     } finally {
@@ -74,11 +110,6 @@ const GestionUsuarios: React.FC = () => {
   };
 
   // ── Filtro local por búsqueda ───────────────────────────────
-  const filtrados = usuarios.filter(u =>
-    u.nombre?.toLowerCase().includes(busqueda.toLowerCase()) ||
-    u.email?.toLowerCase().includes(busqueda.toLowerCase())
-  );
-
   return (
     <div className="min-h-screen bg-brand-dark pt-32 pb-20 px-6">
       <div className="max-w-7xl mx-auto">
@@ -118,7 +149,7 @@ const GestionUsuarios: React.FC = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-white/5">
-              {filtrados.map(user => {
+              {usuarios.map(user => {
                 const suspendido = user.estado === 'Suspendido';
                 return (
                   <tr key={user.id} className={`group transition-colors ${suspendido ? 'opacity-50' : 'hover:bg-white/[0.02]'}`}>
@@ -131,7 +162,7 @@ const GestionUsuarios: React.FC = () => {
                         <div>
                           <p className="font-[900] text-white uppercase italic text-lg leading-none mb-1">{user.nombre}</p>
                           <p className="text-[10px] text-white/40 font-bold uppercase tracking-tighter italic">
-                            {user.id.substring(0, 20)}…
+                            {user.email || `${user.id.substring(0, 20)}…`}
                           </p>
                         </div>
                       </div>
@@ -164,11 +195,19 @@ const GestionUsuarios: React.FC = () => {
                       <select
                         className="bg-brand-dark border border-white/10 rounded-xl px-4 py-3 text-[10px] font-black text-white uppercase tracking-widest outline-none focus:border-brand-gold transition-all disabled:opacity-40"
                         value={user.rol_id}
-                        disabled={suspendido}
+                        disabled={suspendido || cambiando === user.id}
                         onChange={e => cambiarRol(user.id, parseInt(e.target.value))}
                       >
-                        <option value={1}>Administrador</option>
-                        <option value={2}>Usuario Estándar</option>
+                        {roles.length > 0 ? (
+                          roles.map((rol) => (
+                            <option key={rol.id} value={rol.id}>{rol.nombre}</option>
+                          ))
+                        ) : (
+                          <>
+                            <option value={1}>Administrador</option>
+                            <option value={2}>Usuario Estándar</option>
+                          </>
+                        )}
                       </select>
                     </td>
 
@@ -200,7 +239,19 @@ const GestionUsuarios: React.FC = () => {
             </tbody>
           </table>
 
-          {filtrados.length === 0 && (
+          {loading && (
+            <div className="py-16 text-center">
+              <p className="text-white/30 font-black uppercase tracking-widest text-xs">Cargando usuarios…</p>
+            </div>
+          )}
+
+          {!loading && errorMsg && (
+            <div className="py-12 text-center">
+              <p className="text-brand-red font-black uppercase tracking-widest text-xs">{errorMsg}</p>
+            </div>
+          )}
+
+          {!loading && !errorMsg && usuarios.length === 0 && (
             <div className="py-20 text-center">
               <i className="bi bi-person-exclamation text-5xl text-white/10 mb-4 block" />
               <p className="text-white/20 font-black uppercase tracking-widest text-xs">No se han encontrado perfiles</p>
@@ -208,7 +259,7 @@ const GestionUsuarios: React.FC = () => {
           )}
 
           {/* ── PAGINACIÓN ── */}
-          {totalPaginas > 1 && !busqueda && (
+          {totalPaginas > 1 && !loading && (
             <div className="flex items-center justify-between px-12 py-6 border-t border-white/5">
               <button
                 onClick={() => cambiarPagina(paginaActual - 1)}

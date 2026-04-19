@@ -48,16 +48,44 @@ interface Lugar {
 // ── Colores por categoría ─────────────────────────────────────────
 const COLORS_EVENTOS: Record<string, string> = {
   Cultural: '#032B43',
-  Música:   '#3F88C5',
-  Teatro:   '#D00000',
-  default:  '#6B7280',
+  Música: '#3F88C5',
+  Teatro: '#D00000',
+  Deporte: '#16a34a',
+  Infantil: '#f59e0b',
+  Gastronomía: '#ea580c',
+  Patrimonio: '#7c3aed',
+  Festividad: '#be123c',
+  Exposición: '#0f766e',
+  Otro: '#6B7280',
+  default: '#6B7280',
 };
 
 const COLORS_LUGARES: Record<string, string> = {
   'Gastronomía': '#16a34a',
-  'Actividades':  '#0891b2',
+  'Actividades': '#0891b2',
   'Sobre la ciudad': '#032B43',
-  default:        '#6B7280',
+  default: '#6B7280',
+};
+
+const normalizeText = (value: string) =>
+  (value || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim();
+
+const normalizeCategoriaEvento = (categoria: string): string => {
+  const c = normalizeText(categoria);
+  if (c.includes('teatro') || c.includes('danza')) return 'Teatro';
+  if (c.includes('musica') || c.includes('jazz') || c.includes('zarzuela') || c.includes('concierto')) return 'Música';
+  if (c.includes('deporte') || c.includes('ciclismo') || c.includes('ultra')) return 'Deporte';
+  if (c.includes('infantil') || c.includes('familiar')) return 'Infantil';
+  if (c.includes('gastr')) return 'Gastronomía';
+  if (c.includes('patrimonio') || c.includes('turismo') || c.includes('romano')) return 'Patrimonio';
+  if (c.includes('festividad') || c.includes('feria') || c.includes('carnaval') || c.includes('semana santa')) return 'Festividad';
+  if (c.includes('expo')) return 'Exposición';
+  if (c.includes('cultural') || c.includes('charla') || c.includes('literatura')) return 'Cultural';
+  return 'Otro';
 };
 
 function getColor(categoria: string, tipo: 'evento' | 'lugar'): string {
@@ -110,7 +138,7 @@ const CAPAS = [
 ];
 
 // ── Categorías de eventos (alineadas con la BD) ───────────────────
-const CATS_EVENTOS = ['Todos', 'Cultural', 'Música', 'Teatro'];
+const CATS_EVENTOS = ['Todos', 'Cultural', 'Música', 'Teatro', 'Deporte', 'Infantil', 'Gastronomía', 'Patrimonio', 'Festividad', 'Exposición', 'Otro'];
 const CATS_LUGARES = ['Todos', 'Gastronomía', 'Actividades', 'Sobre la ciudad'];
 // ── Helper: formatear fecha ───────────────────────────────────────
 function formatFecha(fecha: string) {
@@ -201,14 +229,14 @@ const [capaActiva, setCapaActiva] = useState('light');
       setLoadingEventos(true);
       const hoy = new Date().toISOString().split('T')[0];
       const data = await fetchTodosEventos(hoy);
-      setEventos(data.filter(ev => ev.latitud && ev.longitud));
+      setEventos(data.filter(ev => ev.latitud != null && ev.longitud != null));
       setLoadingEventos(false);
     };
 
     const loadLugares = async () => {
       setLoadingLugares(true);
       const data = await fetchTodosLugares();
-      setLugares(data.filter(l => l.latitud && l.longitud));
+      setLugares(data.filter(l => l.latitud != null && l.longitud != null));
       setLoadingLugares(false);
     };
 
@@ -220,15 +248,13 @@ const [capaActiva, setCapaActiva] = useState('light');
 
   // ── Filtrado ───────────────────────────────────────────────────
   const eventosFiltrados = eventos.filter(ev => {
-    const normalize = (s: string) => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-    const matchCat = categoriaActiva === 'Todos' || normalize(ev.categoria) === normalize(categoriaActiva);
+    const matchCat = categoriaActiva === 'Todos' || normalizeCategoriaEvento(ev.categoria) === categoriaActiva;
     const matchBusq = !busqueda.trim() || ev.titulo?.toLowerCase().includes(busqueda.toLowerCase());
     return matchCat && matchBusq;
   });
 
   const lugaresFiltrados = lugares.filter(l => {
-    const normalize = (s: string) => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-    const matchCat = categoriaActiva === 'Todos' || normalize(l.categoria) === normalize(categoriaActiva);
+    const matchCat = categoriaActiva === 'Todos' || normalizeText(l.categoria) === normalizeText(categoriaActiva);
     const matchBusq = !busqueda.trim() || l.nombre_es?.toLowerCase().includes(busqueda.toLowerCase());
     return matchCat && matchBusq;
   });
@@ -459,9 +485,9 @@ const [capaActiva, setCapaActiva] = useState('light');
                     <div className="min-w-0 flex-1">
                       <span
                         className="text-[8px] font-black uppercase tracking-widest px-2 py-1 rounded-lg inline-block mb-1"
-                        style={{ backgroundColor: `${getColor(ev.categoria, 'evento')}20`, color: getColor(ev.categoria, 'evento') }}
+                        style={{ backgroundColor: `${getColor(normalizeCategoriaEvento(ev.categoria), 'evento')}20`, color: getColor(normalizeCategoriaEvento(ev.categoria), 'evento') }}
                       >
-                        {ev.categoria}
+                        {normalizeCategoriaEvento(ev.categoria)}
                       </span>
                       <h4 className="text-xs font-black text-brand-dark uppercase italic tracking-tight leading-tight line-clamp-2">
                         {ev.titulo}
@@ -531,7 +557,7 @@ const [capaActiva, setCapaActiva] = useState('light');
                 <Marker
                   key={ev.id}
                   position={[ev.latitud, ev.longitud]}
-                  icon={crearIcono(ev.categoria, 'evento')}
+                  icon={crearIcono(normalizeCategoriaEvento(ev.categoria), 'evento')}
                   eventHandlers={{ click: () => handleClick(ev) }}
                 >
                   <Popup>
@@ -568,7 +594,7 @@ const [capaActiva, setCapaActiva] = useState('light');
               ))}
 
               {/* Marcadores lugares */}
-              {tab === 'lugares' && lugaresFiltrados.map(l => l.latitud && l.longitud ? (
+              {tab === 'lugares' && lugaresFiltrados.map(l => l.latitud != null && l.longitud != null ? (
                 <Marker
                   key={l.id}
                   position={[l.latitud, l.longitud]}
@@ -650,11 +676,11 @@ const [capaActiva, setCapaActiva] = useState('light');
             <span
               className="text-[9px] font-black uppercase tracking-widest px-3 py-1.5 rounded-xl inline-block mb-4"
               style={{
-                backgroundColor: `${getColor(seleccionado.categoria, tab === 'eventos' ? 'evento' : 'lugar')}20`,
-                color: getColor(seleccionado.categoria, tab === 'eventos' ? 'evento' : 'lugar'),
+                backgroundColor: `${getColor(tab === 'eventos' ? normalizeCategoriaEvento(seleccionado.categoria) : seleccionado.categoria, tab === 'eventos' ? 'evento' : 'lugar')}20`,
+                color: getColor(tab === 'eventos' ? normalizeCategoriaEvento(seleccionado.categoria) : seleccionado.categoria, tab === 'eventos' ? 'evento' : 'lugar'),
               }}
             >
-              {seleccionado.categoria}
+              {tab === 'eventos' ? normalizeCategoriaEvento(seleccionado.categoria) : seleccionado.categoria}
             </span>
 
             {/* Título */}
