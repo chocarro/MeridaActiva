@@ -3,8 +3,16 @@ export const maxDuration = 60;
 import { Ratelimit } from '@upstash/ratelimit';
 import { Redis } from '@upstash/redis';
 
-const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
-const MODEL = 'google/gemini-2.5-flash';
+const OPENROUTER_URLS = [
+    'https://openrouter.ai/api/v1/chat/completions',
+    'https://api.openrouter.ai/api/v1/chat/completions',
+];
+const MODEL_CANDIDATES = [
+    process.env.OPENROUTER_MODEL,
+    'google/gemini-2.5-flash',
+    'openai/gpt-4o-mini',
+    'meta-llama/llama-3.1-8b-instruct:free',
+].filter(Boolean);
 
 
 // ── BUG FIX: Inicialización LAZY del rate limiter ─────────────────────────
@@ -96,6 +104,48 @@ Sin embargo, después de responder de forma breve y útil, SIEMPRE debes encontr
 - Gastronomía: migas extremeñas, caldereta, jamón ibérico, Torta del Casar, vinos de Ribera del Guadiana.
 - Monumentos: entrada conjunta. Primer domingo: gratis para ciudadanos UE.`;
 
+async function fetchOpenRouterWithFallback({ apiKey, baseBody, referer, title }) {
+    let lastStatus = 0;
+    let lastErrorText = '';
+    let lastException = null;
+
+    for (const endpoint of OPENROUTER_URLS) {
+        for (const model of MODEL_CANDIDATES) {
+            try {
+                const response = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${apiKey}`,
+                        'Content-Type': 'application/json',
+                        'HTTP-Referer': referer,
+                        'X-Title': title,
+                    },
+                    body: JSON.stringify({ ...baseBody, model }),
+                });
+
+                if (response.ok) {
+                    return { response, model };
+                }
+
+                lastStatus = response.status;
+                lastErrorText = await response.text();
+                console.error(`[chat] Endpoint ${endpoint}, modelo ${model} falló (${response.status}).`);
+
+                if (response.status >= 500 || response.status === 429 || response.status === 408) {
+                    continue;
+                }
+                if (response.status === 400 || response.status === 401 || response.status === 403 || response.status === 404) {
+                    continue;
+                }
+            } catch (err) {
+                lastException = err;
+            }
+        }
+    }
+
+    return { response: null, model: null, lastStatus, lastErrorText, lastException };
+}
+
 export default async function handler(req, res) {
     console.log(">>> [chat.js] Petición recibida en el servidor local");
 
@@ -159,32 +209,30 @@ export default async function handler(req, res) {
 
     // Modo streaming: solo si el cliente lo soporta (desktop)
     const usarStream = clienteQuiereStream !== false;
+    const fallbackText = 'Ahora mismo no puedo conectar con el proveedor de IA, pero sigo operativo en modo básico. Recomendación rápida en Mérida: comienza en el Teatro Romano, sigue al Templo de Diana y termina en el Puente Romano al atardecer. Si me preguntas de nuevo en unos minutos, intentaré darte una respuesta IA completa.';
 
     try {
-        const openRouterRes = await fetch(OPENROUTER_URL, {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${apiKey}`,
-                'Content-Type': 'application/json',
-                'HTTP-Referer': ALLOWED_ORIGIN,
-                'X-Title': 'MeridaActiva Chat',
-            },
-            body: JSON.stringify({
-                model: MODEL,
-                messages,
-                temperature: 0.8,
-                max_tokens: 700,
-                stream: usarStream,
-            }),
-        });
+        const { response: openRouterRes, model: modeloUsado, lastStatus, lastErrorText, lastException } =
+            await fetchOpenRouterWithFallback({
+                apiKey,
+                referer: ALLOWED_ORIGIN,
+                title: 'MeridaActiva Chat',
+                baseBody: {
+                    messages,
+                    temperature: 0.8,
+                    max_tokens: 700,
+                    stream: usarStream,
+                },
+            });
 
-        if (!openRouterRes.ok) {
-            const errorText = await openRouterRes.text();
-            console.error('[chat] Error OpenRouter:', openRouterRes.status, errorText);
+        if (!openRouterRes) {
+            console.error('[chat] Error OpenRouter (todos los modelos):', lastStatus, lastErrorText);
+            if (lastException) throw lastException;
             return res.status(500).json({
-                error: `Error de la IA (${openRouterRes.status}): ${errorText}`,
+                error: `Error de la IA (${lastStatus || 'sin estado'}). Revisa la clave de OpenRouter o el acceso a modelos.`,
             });
         }
+        console.info(`[chat] Modelo usado: ${modeloUsado}`);
 
         // ── Modo NO-streaming (fallback móvil): devolver JSON completo ──
         if (!usarStream) {
@@ -239,6 +287,15 @@ export default async function handler(req, res) {
         console.error('[chat] Excepción inesperada:', err);
         const causeCode = err?.cause?.code;
         const causaHost = err?.cause?.hostname;
+        if (causeCode === 'ENOTFOUND') {
+            if (!res.headersSent) {
+                return res.status(200).json({ text: fallbackText, degraded: true });
+            }
+            res.write(`data: ${JSON.stringify({ text: fallbackText, degraded: true })}\n\n`);
+            res.write('data: [DONE]\n\n');
+            res.end();
+            return;
+        }
         const errorLegible = causeCode === 'ENOTFOUND'
             ? `No se pudo resolver el dominio ${causaHost ?? 'openrouter.ai'}. Revisa DNS/red o firewall.`
             : (err.message || 'Error interno del servidor.');

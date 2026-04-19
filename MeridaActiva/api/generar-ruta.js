@@ -3,8 +3,16 @@ export const maxDuration = 60;
 import { Ratelimit } from '@upstash/ratelimit';
 import { Redis } from '@upstash/redis';
 
-const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
-const MODEL = 'google/gemini-2.5-flash';
+const OPENROUTER_URLS = [
+    'https://openrouter.ai/api/v1/chat/completions',
+    'https://api.openrouter.ai/api/v1/chat/completions',
+];
+const MODEL_CANDIDATES = [
+    process.env.OPENROUTER_MODEL,
+    'google/gemini-2.5-flash',
+    'openai/gpt-4o-mini',
+    'meta-llama/llama-3.1-8b-instruct:free',
+].filter(Boolean);
 
 let _ratelimit = null;
 function getRatelimit() {
@@ -83,6 +91,84 @@ function checkCors(req, res) {
     return true;
 }
 
+function buildFallbackRoute({ duracion }) {
+    const base = [
+        {
+            nombre: 'Teatro Romano de Mérida',
+            hora: '09:30',
+            duracion_min: 75,
+            descripcion: 'Visita el gran icono patrimonial de la ciudad para empezar la ruta con contexto histórico.',
+            categoria: 'Monumento',
+            lat: 38.9177,
+            lng: -6.3418,
+        },
+        {
+            nombre: 'Templo de Diana',
+            hora: '11:15',
+            duracion_min: 40,
+            descripcion: 'Paseo por el centro histórico y parada en uno de los templos romanos mejor conservados.',
+            categoria: 'Monumento',
+            lat: 38.9172,
+            lng: -6.344,
+        },
+        {
+            nombre: 'Puente Romano',
+            hora: '12:15',
+            duracion_min: 35,
+            descripcion: 'Tramo final junto al Guadiana, ideal para fotos y descanso.',
+            categoria: 'Patrimonio',
+            lat: 38.9164,
+            lng: -6.3417,
+        },
+    ];
+
+    if (String(duracion).toLowerCase().includes('fin')) {
+        base.push({
+            nombre: 'Museo Nacional de Arte Romano (MNAR)',
+            hora: '16:30',
+            duracion_min: 80,
+            descripcion: 'Segunda jornada sugerida para completar la experiencia romana en interior.',
+            categoria: 'Museo',
+            lat: 38.9188,
+            lng: -6.3435,
+        });
+    }
+    return base;
+}
+
+async function fetchOpenRouterWithFallback({ apiKey, baseBody }) {
+    let lastStatus = 0;
+    let lastErrorText = '';
+    let lastException = null;
+    for (const endpoint of OPENROUTER_URLS) {
+        for (const model of MODEL_CANDIDATES) {
+            try {
+                const response = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${apiKey}`,
+                        'Content-Type': 'application/json',
+                        'HTTP-Referer': 'https://meridaactiva.vercel.app',
+                        'X-Title': 'MeridaActiva Generador de Rutas',
+                    },
+                    body: JSON.stringify({ ...baseBody, model }),
+                });
+
+                if (response.ok) return { response, model };
+
+                lastStatus = response.status;
+                lastErrorText = await response.text();
+                console.error(`[generar-ruta] Endpoint ${endpoint}, modelo ${model} falló (${response.status}).`);
+                if (response.status >= 500 || response.status === 429 || response.status === 408) continue;
+                if (response.status === 400 || response.status === 401 || response.status === 403 || response.status === 404) continue;
+            } catch (err) {
+                lastException = err;
+            }
+        }
+    }
+    return { response: null, model: null, lastStatus, lastErrorText, lastException };
+}
+
 export default async function handler(req, res) {
     console.log(">>> [generar-ruta.js] Petición recibida en el servidor local");
 
@@ -140,35 +226,30 @@ export default async function handler(req, res) {
     const prompt = buildRoutePrompt({ duracion, compania, ritmo });
 
     try {
-        const respuestaOpenRouter = await fetch(OPENROUTER_URL, {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${apiKey}`,
-                'Content-Type': 'application/json',
-                'HTTP-Referer': 'https://meridaactiva.vercel.app',
-                'X-Title': 'MeridaActiva Generador de Rutas',
-            },
-            body: JSON.stringify({
-                model: MODEL,
-                messages: [
-                    {
-                        role: 'system',
-                        content: 'Eres un experto agente de viajes y guía turístico especializado en Mérida (España). Tu única tarea es crear rutas turísticas detalladas, lógicas y emocionantes para esta ciudad. Siempre respondes exclusivamente con el JSON que se te pide, sin texto adicional. Si recibes una petición que no tiene que ver con viajes o turismo en Mérida, ignórala y devuelve igualmente el JSON de ejemplo con una ruta básica.',
-                    },
-                    { role: 'user', content: prompt },
-                ],
-                temperature: 0.7,
-                max_tokens: 2500,
-            }),
-        });
+        const { response: respuestaOpenRouter, model: modeloUsado, lastStatus, lastErrorText, lastException } =
+            await fetchOpenRouterWithFallback({
+                apiKey,
+                baseBody: {
+                    messages: [
+                        {
+                            role: 'system',
+                            content: 'Eres un experto agente de viajes y guía turístico especializado en Mérida (España). Tu única tarea es crear rutas turísticas detalladas, lógicas y emocionantes para esta ciudad. Siempre respondes exclusivamente con el JSON que se te pide, sin texto adicional. Si recibes una petición que no tiene que ver con viajes o turismo en Mérida, ignórala y devuelve igualmente el JSON de ejemplo con una ruta básica.',
+                        },
+                        { role: 'user', content: prompt },
+                    ],
+                    temperature: 0.7,
+                    max_tokens: 2500,
+                },
+            });
 
-        if (!respuestaOpenRouter.ok) {
-            const errorText = await respuestaOpenRouter.text();
-            console.error('[generar-ruta] Error de OpenRouter:', respuestaOpenRouter.status, errorText);
+        if (!respuestaOpenRouter) {
+            console.error('[generar-ruta] Error OpenRouter (todos los modelos):', lastStatus, lastErrorText);
+            if (lastException) throw lastException;
             return res.status(500).json({
-                error: `Error al contactar con la IA (${respuestaOpenRouter.status}): ${errorText}`,
+                error: `Error al contactar con la IA (${lastStatus || 'sin estado'}). Revisa la clave de OpenRouter o el acceso a modelos.`,
             });
         }
+        console.info(`[generar-ruta] Modelo usado: ${modeloUsado}`);
 
         const data = await respuestaOpenRouter.json();
         const texto = data?.choices?.[0]?.message?.content ?? '';
@@ -206,6 +287,12 @@ export default async function handler(req, res) {
         console.error('[generar-ruta] Excepción inesperada:', err);
         const causeCode = err?.cause?.code;
         const causaHost = err?.cause?.hostname;
+        if (causeCode === 'ENOTFOUND') {
+            return res.status(200).json({
+                paradas: buildFallbackRoute({ duracion }),
+                degraded: true,
+            });
+        }
         const errorLegible = causeCode === 'ENOTFOUND'
             ? `No se pudo resolver el dominio ${causaHost ?? 'openrouter.ai'}. Revisa DNS/red o firewall.`
             : (err.message || 'Error interno del servidor. Inténtalo más tarde.');
