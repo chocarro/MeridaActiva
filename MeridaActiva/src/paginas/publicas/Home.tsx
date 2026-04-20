@@ -9,10 +9,21 @@ import ScrollFloat from '../../componentes/animaciones/ScrollFloat';
 import ScrollStack, { ScrollStackItem } from '../../componentes/animaciones/ScrollStack';
 import FluidGlass from '../../componentes/animaciones/FluidGlass';
 import { useAuth } from '../../context/AuthContext';
-
 import { useSeoMeta } from '../../hooks/useSeoMeta';
 
 gsap.registerPlugin(ScrollTrigger);
+
+// Tipo para reseñas con join a eventos
+interface HomeReseña {
+  id: string;
+  texto: string;
+  puntuacion: number;
+  created_at: string;
+  nombre_usuario?: string;
+  evento_id?: string;
+  titulo_evento?: string; // campo calculado en el fetch (join manual)
+  eventos?: { titulo: string; imagen_url?: string } | null;
+}
 
 // ── Datos ────────────────────────────────────────────────────────
 const CATEGORIAS = [
@@ -149,7 +160,7 @@ function StatCard({ num, label, icon, active }: { num: string; label: string; ic
 // ════════════════════════════════════════════════════════════════
 const Home: React.FC = () => {
   const { session } = useAuth();
-  const [reseñas, setReseñas] = useState<any[]>([]);
+  const [reseñas, setReseñas] = useState<HomeReseña[]>([]);
   const [totalReseñas, setTotalReseñas] = useState(0);
   const [activeCardIndex, setActiveCardIndex] = useState(0);
   const reseñasScrollRef = useRef<HTMLDivElement>(null);

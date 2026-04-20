@@ -29,3 +29,15 @@ dist-ssr
 .env.local
 .env.*.local
 .vercel
+
+# Archivos de datos crudos de migración — solo para uso local
+data_eventos.json
+data_lugares.json
+lugares_en.json
+eventos_en.json
+
+# Scripts de mantenimiento / migración — no forman parte del build
+fix_supabase.cjs
+get_texts.cjs
+update_lugares.cjs
+*.migration.cjs

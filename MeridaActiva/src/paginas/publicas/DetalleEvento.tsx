@@ -115,7 +115,7 @@ const DetalleEvento: React.FC = () => {
         <div className="flex gap-3 justify-center">
           {error && (
             <button
-              onClick={fetchEventoData}
+              onClick={() => fetchEventoData(0)}
               className="bg-brand-gold text-brand-dark px-6 py-3 rounded-2xl font-black text-xs uppercase tracking-widest hover:scale-105 transition-all"
               aria-label="Reintentar carga del evento"
             >
@@ -306,7 +306,7 @@ const DetalleEvento: React.FC = () => {
                     Mérida, Patrimonio de la Humanidad — UNESCO 1993. El recinto de este evento se encuentra en {evento.ubicacion}.
                   </p>
                   <a
-                    href={`https://www.google.com/maps/search/${encodeURIComponent(evento.ubicacion + ' Mérida, Extremadura')}`}
+                    href={`https://www.google.com/maps/search/${encodeURIComponent((evento.ubicacion ?? 'Mérida') + ', Mérida, Extremadura')}`}
                     target="_blank"
                     rel="noreferrer"
                     className="inline-flex items-center gap-2 mt-4 text-brand-gold font-black text-[10px] uppercase tracking-widest hover:text-white transition-colors"
@@ -492,7 +492,7 @@ const DetalleEvento: React.FC = () => {
                 </a>
 
                 <a
-                  href={`https://www.google.com/maps/search/${encodeURIComponent(evento.ubicacion + ' Mérida')}`}
+                  href={`https://www.google.com/maps/search/${encodeURIComponent((evento.ubicacion ?? 'Mérida') + ', Mérida')}`}
                   target="_blank"
                   rel="noreferrer"
                   className="block w-full bg-white/10 text-white border border-white/20 py-4 rounded-[1.5rem] font-black text-center hover:bg-white/20 transition-all uppercase tracking-[0.2em] text-[10px]"

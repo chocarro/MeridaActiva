@@ -29,6 +29,7 @@ const GestionUsuarios: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [cambiando, setCambiando] = useState<string | null>(null);
+  const [pendienteToggle, setPendienteToggle] = useState<string | null>(null);
 
   const totalPaginas = Math.ceil(totalUsuarios / POR_PAGINA);
 
@@ -92,10 +93,7 @@ const GestionUsuarios: React.FC = () => {
   // ── SOFT DELETE: Suspender / Reactivar ──────────────────────
   const toggleEstado = async (user: Usuario) => {
     const nuevoEstado: EstadoUsuario = user.estado === 'Suspendido' ? 'Activo' : 'Suspendido';
-    const accion = nuevoEstado === 'Suspendido' ? 'suspender' : 'reactivar';
-
-    if (!window.confirm(`¿Quieres ${accion} la cuenta de ${user.nombre}?`)) return;
-
+    setPendienteToggle(null);
     setCambiando(user.id);
     try {
       await supabase
@@ -104,7 +102,7 @@ const GestionUsuarios: React.FC = () => {
         .eq('id', user.id);
       fetchUsuarios(paginaActual, busqueda);
     } catch {
-      alert('No se pudo cambiar el estado del usuario.');
+      setErrorMsg('No se pudo cambiar el estado del usuario.');
     } finally {
       setCambiando(null);
     }
@@ -212,27 +210,49 @@ const GestionUsuarios: React.FC = () => {
                       </select>
                     </td>
 
-                    {/* Acción suspender / reactivar */}
+                    {/* Acción suspender / reactivar — confirmación inline */}
                     <td className="px-12 py-8 text-center">
-                      <button
-                        onClick={() => toggleEstado(user)}
-                        disabled={cambiando === user.id}
-                        title={suspendido ? 'Reactivar cuenta' : 'Suspender cuenta'}
-                        className={`w-12 h-12 rounded-2xl transition-all shadow-lg active:scale-90 disabled:opacity-40 ${
-                          suspendido
-                            ? 'bg-brand-green/10 text-brand-green hover:bg-brand-green hover:text-white'
-                            : 'bg-white/5 text-white/30 hover:bg-brand-red hover:text-white'
-                        }`}
-                      >
-                        {cambiando === user.id ? (
-                          <svg className="animate-spin w-4 h-4 mx-auto" viewBox="0 0 24 24" fill="none">
-                            <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" strokeOpacity="0.25" />
-                            <path d="M4 12a8 8 0 018-8" stroke="currentColor" strokeWidth="4" strokeLinecap="round" />
-                          </svg>
-                        ) : (
-                          <i className={`bi ${suspendido ? 'bi-person-check-fill' : 'bi-person-slash'}`} />
-                        )}
-                      </button>
+                      {pendienteToggle === user.id ? (
+                        <span className="inline-flex gap-1 items-center">
+                          <button
+                            onClick={() => toggleEstado(user)}
+                            disabled={cambiando === user.id}
+                            className={`px-3 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest hover:scale-105 transition-all disabled:opacity-40 ${
+                              suspendido
+                                ? 'bg-brand-green text-white'
+                                : 'bg-brand-red text-white'
+                            }`}
+                          >
+                            {suspendido ? 'Sí, reactivar' : 'Sí, suspender'}
+                          </button>
+                          <button
+                            onClick={() => setPendienteToggle(null)}
+                            className="px-3 py-2 rounded-xl bg-white/10 text-white/50 text-[9px] font-black uppercase tracking-widest hover:bg-white/20 transition-all"
+                          >
+                            No
+                          </button>
+                        </span>
+                      ) : (
+                        <button
+                          onClick={() => setPendienteToggle(user.id)}
+                          disabled={cambiando === user.id}
+                          title={suspendido ? 'Reactivar cuenta' : 'Suspender cuenta'}
+                          className={`w-12 h-12 rounded-2xl transition-all shadow-lg active:scale-90 disabled:opacity-40 ${
+                            suspendido
+                              ? 'bg-brand-green/10 text-brand-green hover:bg-brand-green hover:text-white'
+                              : 'bg-white/5 text-white/30 hover:bg-brand-red hover:text-white'
+                          }`}
+                        >
+                          {cambiando === user.id ? (
+                            <svg className="animate-spin w-4 h-4 mx-auto" viewBox="0 0 24 24" fill="none">
+                              <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" strokeOpacity="0.25" />
+                              <path d="M4 12a8 8 0 018-8" stroke="currentColor" strokeWidth="4" strokeLinecap="round" />
+                            </svg>
+                          ) : (
+                            <i className={`bi ${suspendido ? 'bi-person-check-fill' : 'bi-person-slash'}`} />
+                          )}
+                        </button>
+                      )}
                     </td>
                   </tr>
                 );

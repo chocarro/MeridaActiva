@@ -5,6 +5,16 @@ import { supabase } from '../../supabaseClient';
 import { getNombreRolUsuario } from '../../utils/perfilUsuario';
 import { useFavoritos } from '../../hooks/useFavoritos';
 
+// Tipo para reseñas con join a eventos
+interface ReseñaConEvento {
+  id: string;
+  texto: string;
+  puntuacion: number;
+  created_at: string;
+  nombre_usuario?: string;
+  eventos?: { titulo: string; imagen_url?: string } | null;
+}
+
 const MiPerfil: React.FC = () => {
   const { profile, session, loading } = useAuth();
   const navigate = useNavigate();
@@ -25,12 +35,13 @@ const MiPerfil: React.FC = () => {
   const [savingSeg, setSavingSeg] = useState(false);
   const [segMsg, setSegMsg] = useState<{ tipo: 'ok' | 'err'; texto: string } | null>(null);
   const [deletingAccount, setDeletingAccount] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState(false);
 
   // --- Favoritos via hook centralizado ---
   const { favoritos } = useFavoritos(session?.user?.id);
 
   // --- Reseñas ---
-  const [reseñas, setReseñas] = useState<Record<string, unknown>[]>([]);
+  const [reseñas, setReseñas] = useState<ReseñaConEvento[]>([]);
 
   // Sync perfil cuando carga
   useEffect(() => {
@@ -49,7 +60,7 @@ const MiPerfil: React.FC = () => {
       .select('id, texto, puntuacion, created_at, nombre_usuario, eventos(titulo, imagen_url)')
       .eq('usuario_id', session.user.id)
       .order('created_at', { ascending: false });
-    if (comms) setReseñas(comms as Record<string, unknown>[]);
+    if (comms) setReseñas(comms as unknown as ReseñaConEvento[]);
   }, [session?.user?.id]);
 
   useEffect(() => { fetchContenido(); }, [fetchContenido]);
@@ -151,7 +162,11 @@ const MiPerfil: React.FC = () => {
 
   // --- Eliminar cuenta ---
   const handleDeleteAccount = async () => {
-    if (!window.confirm('¿Estás segura? Esta acción es irreversible y eliminará todos tus datos.')) return;
+    if (!deleteConfirm) {
+      setDeleteConfirm(true);
+      return;
+    }
+    setDeleteConfirm(false);
     setDeletingAccount(true);
     try {
       // Obtenemos el token de sesión para autenticar el endpoint
@@ -185,7 +200,7 @@ const MiPerfil: React.FC = () => {
     </div>
   );
 
-  const menuItems = [
+  const menuItems: Array<{ id: 'perfil' | 'seguridad' | 'favoritos' | 'reseñas'; label: string; icon: string; color: string; accent: string }> = [
     { id: 'perfil',    label: 'Mi Perfil',   icon: 'bi-person-circle',    color: 'bg-brand-dark',  accent: 'border-brand-dark'  },
     { id: 'seguridad', label: 'Seguridad',   icon: 'bi-shield-lock',      color: 'bg-brand-red',   accent: 'border-brand-red'   },
     { id: 'favoritos', label: 'Favoritos',   icon: 'bi-heart-fill',       color: 'bg-brand-blue',  accent: 'border-brand-blue'  },

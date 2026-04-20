@@ -148,7 +148,7 @@ const Contacto: React.FC = () => {
             {/* ── BANNER IA ── */}
             <div className="bg-brand-dark border-b border-white/5 relative z-10 overflow-hidden">
                 <div className="absolute inset-0 pointer-events-none z-0">
-                    <img  alt="" className="w-full h-full object-cover opacity-[0.08] select-none" aria-hidden="true" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                    <img src="/Imagenes/acueducto-de-los-milagros-merida.jpg" alt="" className="w-full h-full object-cover opacity-[0.08] select-none" aria-hidden="true" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
                 </div>
                 <div className="max-w-7xl mx-auto px-6 py-4 flex flex-col sm:flex-row items-center justify-between gap-4 relative z-10">
                     <div className="flex items-center gap-3">

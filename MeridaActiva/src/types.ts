@@ -27,6 +27,8 @@ export interface Evento {
   latitud?: number | null;            // para el mapa Leaflet
   longitud?: number | null;
   animales_permitidos?: boolean | null;
+  /** URL externa del evento (tickets, web oficial, etc.) */
+  enlace_externo?: string | null;
   created_at?: string;
 }
 
@@ -79,7 +81,14 @@ export interface Favorito {
   created_at: string;
   // join opcional con la tabla correspondiente
   evento?: Evento;
-  detalle?: Record<string, unknown>;
+  /** Detalle del item favorito (evento o lugar) — tipado por FavoritoConDetalle en el hook */
+  detalle?: {
+    id: string;
+    titulo?: string;
+    nombre?: string;
+    nombre_es?: string;
+    imagen_url?: string;
+  } | null;
 }
 
 // ── Agenda Personal ───────────────────────────────────────────────

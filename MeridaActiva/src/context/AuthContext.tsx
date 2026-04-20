@@ -88,7 +88,7 @@ const tokenCaducado = (session: Session | null): boolean => {
 };
 
 const PROFILE_FETCH_MS = 10_000;
-const LOADING_SAFETY_MS = 18_000;
+const LOADING_SAFETY_MS = 10_000; // Reducido de 18s → 10s para mejor UX
 const REVALIDATE_DEBOUNCE_MS = 1_200;
 
 async function withTimeout<T>(promiseLike: PromiseLike<T>, ms: number): Promise<T> {

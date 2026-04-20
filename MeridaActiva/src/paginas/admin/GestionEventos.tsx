@@ -1,4 +1,4 @@
-import React, { useEffect, useState, lazy, Suspense } from 'react';
+import React, { useEffect, useState, useCallback, useRef, lazy, Suspense } from 'react';
 import { supabase } from '../../supabaseClient';
 import 'react-quill/dist/quill.snow.css';
 import type { Evento } from '../../types';
@@ -7,7 +7,6 @@ import type { Evento } from '../../types';
 const ReactQuill = lazy(() => import('react-quill'));
 
 const CATEGORIAS = ['Cultural', 'Teatro', 'Música', 'Deportes', 'Infantil', 'Gastronomía', 'Patrimonio'];
-const POR_PAGINA = 10;
 
 const QUILL_MODULES = {
   toolbar: [
@@ -48,8 +47,16 @@ const GestionEventos: React.FC = () => {
   const [eventos, setEventos] = useState<Evento[]>([]);
   const [totalEventos, setTotalEventos] = useState(0);
   const [paginaActual, setPaginaActual] = useState(0);
+  const [porPagina, setPorPagina] = useState(10);
   const [busqueda, setBusqueda] = useState('');
   const [mensaje, setMensaje] = useState<string | null>(null);
+  const mensajeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const mostrarMensaje = useCallback((texto: string) => {
+    setMensaje(texto);
+    if (mensajeTimerRef.current) clearTimeout(mensajeTimerRef.current);
+    mensajeTimerRef.current = setTimeout(() => setMensaje(null), 5000);
+  }, []);
 
   const [mostrarForm, setMostrarForm] = useState(false);
   const [editandoId, setEditandoId] = useState<string | null>(null);
@@ -60,12 +67,15 @@ const GestionEventos: React.FC = () => {
 
   const [formData, setFormData] = useState(FORM_INICIAL);
 
-  const totalPaginas = Math.ceil(totalEventos / POR_PAGINA);
+  const totalPaginas = Math.ceil(totalEventos / porPagina);
+
+  // Limpiar timer al desmontar
+  useEffect(() => { return () => { if (mensajeTimerRef.current) clearTimeout(mensajeTimerRef.current); }; }, []);
 
   // ── Fetch paginado ──────────────────────────────────────────
-  const fetchEventos = async (pagina = paginaActual, q = busqueda) => {
-    const from = pagina * POR_PAGINA;
-    const to = from + POR_PAGINA - 1;
+  const fetchEventos = useCallback(async (pagina = paginaActual, q = busqueda, pp = porPagina) => {
+    const from = pagina * pp;
+    const to = from + pp - 1;
 
     let query = supabase
       .from('eventos')
@@ -80,17 +90,17 @@ const GestionEventos: React.FC = () => {
 
     const { data, count, error } = await query;
     if (error) {
-      setMensaje('No se pudieron cargar los eventos.');
+      mostrarMensaje('No se pudieron cargar los eventos.');
       return;
     }
 
     if (data) setEventos(data);
     if (count !== null) setTotalEventos(count);
-  };
+  }, [paginaActual, busqueda, porPagina, mostrarMensaje]);
 
   useEffect(() => {
-    fetchEventos(paginaActual, busqueda);
-  }, [paginaActual, busqueda]);
+    fetchEventos(paginaActual, busqueda, porPagina);
+  }, [paginaActual, busqueda, porPagina, fetchEventos]);
 
   const cambiarPagina = (nueva: number) => {
     if (nueva < 0 || nueva >= totalPaginas) return;
@@ -134,17 +144,17 @@ const GestionEventos: React.FC = () => {
 
       if (editandoId) {
         await supabase.from('eventos').update(payload).eq('id', editandoId);
-        setMensaje('Evento actualizado correctamente.');
+        mostrarMensaje('Evento actualizado correctamente.');
       } else {
         await supabase.from('eventos').insert([payload]);
-        setMensaje('Evento creado correctamente.');
+        mostrarMensaje('Evento creado correctamente.');
       }
 
       cerrarFormulario();
       fetchEventos(0, busqueda);
       setPaginaActual(0);
     } catch {
-      setMensaje('Error al guardar el evento. Comprueba los datos e inténtalo de nuevo.');
+      mostrarMensaje('Error al guardar el evento. Comprueba los datos e inténtalo de nuevo.');
     } finally {
       setSubiendo(false);
     }
@@ -164,7 +174,7 @@ const GestionEventos: React.FC = () => {
       precio: ev.precio?.toString() ?? '',
       animales_permitidos: ev.animales_permitidos === true ? 'true' : ev.animales_permitidos === false ? 'false' : ''
     };
-    setFormData(formEvent as typeof FORM_INICIAL);
+    setFormData(formEvent as unknown as typeof FORM_INICIAL);
     setEditandoId(ev.id);
     setMostrarForm(true);
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -185,9 +195,9 @@ const GestionEventos: React.FC = () => {
       // 2. Borrar fila de BD
       await supabase.from('eventos').delete().eq('id', id);
       fetchEventos(paginaActual, busqueda);
-      setMensaje('Evento eliminado correctamente.');
+      mostrarMensaje('Evento eliminado correctamente.');
     } catch {
-      setMensaje('Error al eliminar el evento.');
+      mostrarMensaje('Error al eliminar el evento.');
     } finally {
       setEliminando(null);
     }
@@ -412,7 +422,12 @@ const GestionEventos: React.FC = () => {
                   <td className="px-12 py-6">
                     <div className="flex items-center gap-4">
                       {ev.imagen_url ? (
-                        <img src={ev.imagen_url} className="w-14 h-14 rounded-2xl object-cover shadow-sm flex-shrink-0" alt="" />
+                        <img
+                          src={ev.imagen_url}
+                          className="w-14 h-14 rounded-2xl object-cover shadow-sm flex-shrink-0"
+                          alt=""
+                          onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                        />
                       ) : (
                         <div className="w-14 h-14 rounded-2xl bg-slate-100 flex items-center justify-center flex-shrink-0">
                           <i className="bi bi-image text-slate-300" />
@@ -478,7 +493,7 @@ const GestionEventos: React.FC = () => {
 
           {/* ── PAGINACIÓN ── */}
           {totalPaginas > 1 && (
-            <div className="flex items-center justify-between px-12 py-6 border-t border-slate-50">
+            <div className="flex items-center justify-between px-12 py-6 border-t border-slate-50 flex-wrap gap-4">
               <button
                 onClick={() => cambiarPagina(paginaActual - 1)}
                 disabled={paginaActual === 0}
@@ -487,16 +502,29 @@ const GestionEventos: React.FC = () => {
                 <i className="bi bi-chevron-left" /> Anterior
               </button>
 
-              <div className="flex items-center gap-1">
-                {Array.from({ length: totalPaginas }, (_, i) => (
-                  <button
-                    key={i}
-                    onClick={() => cambiarPagina(i)}
-                    className={`w-8 h-8 rounded-lg font-black text-[10px] transition-all ${i === paginaActual ? 'bg-brand-dark text-white' : 'text-slate-400 hover:bg-brand-bg'}`}
-                  >
-                    {i + 1}
-                  </button>
-                ))}
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-1">
+                  {Array.from({ length: totalPaginas }, (_, i) => (
+                    <button
+                      key={i}
+                      onClick={() => cambiarPagina(i)}
+                      className={`w-8 h-8 rounded-lg font-black text-[10px] transition-all ${i === paginaActual ? 'bg-brand-dark text-white' : 'text-slate-400 hover:bg-brand-bg'}`}
+                    >
+                      {i + 1}
+                    </button>
+                  ))}
+                </div>
+                {/* Selector de tamaño de página — fix #19 */}
+                <select
+                  value={porPagina}
+                  onChange={e => { setPorPagina(Number(e.target.value)); setPaginaActual(0); }}
+                  className="bg-brand-bg border border-slate-200 rounded-xl px-3 py-2 text-[10px] font-black text-brand-dark uppercase tracking-widest outline-none focus:border-brand-dark transition-all"
+                  title="Eventos por página"
+                >
+                  <option value={10}>10 / pág</option>
+                  <option value={25}>25 / pág</option>
+                  <option value={50}>50 / pág</option>
+                </select>
               </div>
 
               <button

@@ -34,7 +34,7 @@ export function useFavoritos(usuarioId: string | undefined) {
     try {
       const { data: favsData } = await supabase
         .from('favoritos')
-        .select('id, elemento_id, tipo_elemento, usuario_id')
+        .select('id, elemento_id, tipo_elemento, usuario_id, created_at')
         .eq('usuario_id', usuarioId);
 
       if (!favsData || favsData.length === 0) {

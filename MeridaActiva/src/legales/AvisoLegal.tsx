@@ -27,7 +27,7 @@ const AvisoLegal: React.FC = () => {
                 ['Titular', 'Proyecto MéridaActiva'],
                 ['Naturaleza', 'Proyecto educativo — DAW (Desarrollo de Aplicaciones Web)'],
                 ['Centro', 'IES Mérida, Extremadura, España'],
-                ['Email de contacto', 'info@meridaactiva.com'],
+                ['Email de contacto', 'info@meridaactiva.es'],
                 ['URL', 'https://meridaactiva.vercel.app'],
               ].map(([label, value]) => (
                 <div key={label} className="flex flex-col md:flex-row gap-2 text-sm">

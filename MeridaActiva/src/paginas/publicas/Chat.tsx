@@ -212,6 +212,9 @@ const ChatPage: React.FC = () => {
                             ref={chatContainerRef}
                             className="flex-1 overflow-y-auto p-4 space-y-3 bg-slate-50/50"
                             style={{ minHeight: 0 }}
+                            aria-live="polite"
+                            aria-label="Conversación con el asistente"
+                            role="log"
                         >
                             {mensajes.map((msg, i) => (
                                 <div key={i} className={`flex ${msg.rol === 'usuario' ? 'justify-end' : 'justify-start'}`}>

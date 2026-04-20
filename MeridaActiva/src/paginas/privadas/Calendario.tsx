@@ -186,7 +186,7 @@ const Calendario: React.FC = () => {
     setSavingEv(true);
     try {
       const payload = {
-        usuario_id: session.user.id,
+        usuario_id: session!.user.id,
         titulo: newEvTitulo.trim(),
         fecha: diaSeleccionado,
         nota: newEvNota.trim() || null,
@@ -279,6 +279,75 @@ const Calendario: React.FC = () => {
 
   // Datos del evento personal que se está editando (para prellenar)
   const agendaById = (id: string) => agendaPersonal.find(ag => ag.id === id);
+
+  // ── Fix #6: Función de render extraída de la IIFE ─────────────
+  // Evita tener lógica compleja inline dentro del JSX.
+  const renderListaEventos = () => {
+    const hoy = new Date(); hoy.setHours(0, 0, 0, 0);
+    const ordenados = [...todosLosEventos].sort((a, b) => {
+      const fechaDiff = new Date(a.fecha).getTime() - new Date(b.fecha).getTime();
+      if (fechaDiff !== 0) return fechaDiff;
+      return (a.hora ?? '99:99').localeCompare(b.hora ?? '99:99');
+    });
+    const proximos = ordenados.filter(ev => new Date(ev.fecha) >= hoy);
+    const pasados  = ordenados.filter(ev => new Date(ev.fecha) <  hoy);
+
+    const renderItem = (ev: EventoCalendario, esPassado = false) => (
+      <div key={ev.id} className={`flex items-center gap-5 p-5 rounded-2xl border transition-all group ${esPassado ? 'bg-slate-50/60 border-slate-100 opacity-60 hover:opacity-100' : 'bg-brand-bg border-slate-100 hover:border-brand-blue/20 hover:bg-white'}`}>
+        <div className="w-2 h-12 rounded-full shrink-0" style={{ backgroundColor: ev.color }} />
+        <div className="flex-1 min-w-0">
+          <p className={`font-black uppercase italic text-sm truncate transition-colors ${esPassado ? 'text-slate-400 line-through decoration-slate-300' : 'text-brand-dark group-hover:text-brand-blue'}`}>
+            {ev.titulo}
+          </p>
+          <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-1">
+            {new Date(ev.fecha).toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })}
+            {ev.hora && <span className="ml-2 text-brand-gold">· {ev.hora}</span>}
+          </p>
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          <span className={`text-[9px] font-black px-3 py-1 rounded-full uppercase tracking-widest ${ev.tipo === 'plataforma' ? 'bg-brand-blue/10 text-brand-blue' : 'bg-brand-gold/10 text-brand-dark'}`}>
+            {ev.tipo === 'plataforma' ? 'Favorito' : 'Personal'}
+          </span>
+          {ev.tipo === 'plataforma' ? (
+            <Link to={`/eventos/${ev.id}`} className="w-8 h-8 rounded-xl bg-brand-blue/10 text-brand-blue flex items-center justify-center hover:bg-brand-blue hover:text-white transition-all text-sm" title="Ver evento">
+              <i className="bi bi-arrow-right" />
+            </Link>
+          ) : pendienteEliminar === ev.id ? (
+            <div className="flex items-center gap-1">
+              <button onClick={() => eliminarEvPersonal(ev.id)} className="px-3 py-1.5 rounded-xl bg-brand-red text-white text-[9px] font-black uppercase tracking-widest hover:scale-105 transition-all">Sí, borrar</button>
+              <button onClick={() => setPendienteEliminar(null)} className="px-3 py-1.5 rounded-xl bg-slate-100 text-slate-500 text-[9px] font-black uppercase tracking-widest hover:scale-105 transition-all">No</button>
+            </div>
+          ) : (
+            <>
+              <button onClick={() => { const ag = agendaById(ev.id); if (ag) abrirFormEditar(ag); }} className="w-8 h-8 rounded-xl bg-brand-blue/10 text-brand-blue flex items-center justify-center hover:bg-brand-blue hover:text-white transition-all text-sm" title="Editar"><i className="bi bi-pencil" /></button>
+              <button onClick={() => confirmarEliminar(ev.id)} className="w-8 h-8 rounded-xl bg-brand-red/10 text-brand-red flex items-center justify-center hover:bg-brand-red hover:text-white transition-all text-sm" title="Eliminar"><i className="bi bi-trash3" /></button>
+            </>
+          )}
+        </div>
+      </div>
+    );
+
+    return (
+      <>
+        {proximos.length > 0 && (
+          <>
+            <p className="text-[9px] font-black uppercase tracking-[0.3em] text-brand-blue px-1 mb-2"><i className="bi bi-calendar-check mr-1" />Próximos ({proximos.length})</p>
+            {proximos.map(ev => renderItem(ev, false))}
+          </>
+        )}
+        {pasados.length > 0 && (
+          <>
+            <div className="flex items-center gap-3 my-4">
+              <div className="flex-1 h-px bg-slate-200" />
+              <p className="text-[9px] font-black uppercase tracking-[0.3em] text-slate-400 whitespace-nowrap"><i className="bi bi-clock-history mr-1" />Pasados ({pasados.length})</p>
+              <div className="flex-1 h-px bg-slate-200" />
+            </div>
+            {pasados.map(ev => renderItem(ev, true))}
+          </>
+        )}
+      </>
+    );
+  };
 
   // ── Sin sesión ─────────────────────────────────────────────────
   if (!session) {
@@ -526,103 +595,7 @@ const Calendario: React.FC = () => {
                     </div>
                   ) : (
                     <AnimatedList className="space-y-4">
-                      {(() => {
-                        const hoy = new Date(); hoy.setHours(0, 0, 0, 0);
-                        const ordenados = [...todosLosEventos].sort((a, b) => {
-                          const fechaDiff = new Date(a.fecha).getTime() - new Date(b.fecha).getTime();
-                          if (fechaDiff !== 0) return fechaDiff;
-                          return (a.hora ?? '99:99').localeCompare(b.hora ?? '99:99');
-                        });
-                        const proximos = ordenados.filter(ev => new Date(ev.fecha) >= hoy);
-                        const pasados  = ordenados.filter(ev => new Date(ev.fecha) < hoy);
-
-                        const renderItem = (ev: EventoCalendario, esPassado = false) => (
-                          <div key={ev.id} className={`flex items-center gap-5 p-5 rounded-2xl border transition-all group ${esPassado ? 'bg-slate-50/60 border-slate-100 opacity-60 hover:opacity-100' : 'bg-brand-bg border-slate-100 hover:border-brand-blue/20 hover:bg-white'}`}>
-                            <div className="w-2 h-12 rounded-full shrink-0" style={{ backgroundColor: ev.color }} />
-                            <div className="flex-1 min-w-0">
-                              <p className={`font-black uppercase italic text-sm truncate transition-colors ${esPassado ? 'text-slate-400 line-through decoration-slate-300' : 'text-brand-dark group-hover:text-brand-blue'}`}>
-                                {ev.titulo}
-                              </p>
-                              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-1">
-                                {new Date(ev.fecha).toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })}
-                                {ev.hora && <span className="ml-2 text-brand-gold">· {ev.hora}</span>}
-                              </p>
-                            </div>
-                            <div className="flex items-center gap-2 shrink-0">
-                              <span className={`text-[9px] font-black px-3 py-1 rounded-full uppercase tracking-widest ${ev.tipo === 'plataforma' ? 'bg-brand-blue/10 text-brand-blue' : 'bg-brand-gold/10 text-brand-dark'}`}>
-                                {ev.tipo === 'plataforma' ? 'Favorito' : 'Personal'}
-                              </span>
-
-                              {ev.tipo === 'plataforma' ? (
-                                <Link
-                                  to={`/eventos/${ev.id}`}
-                                  className="w-8 h-8 rounded-xl bg-brand-blue/10 text-brand-blue flex items-center justify-center hover:bg-brand-blue hover:text-white transition-all text-sm"
-                                  title="Ver evento"
-                                >
-                                  <i className="bi bi-arrow-right" />
-                                </Link>
-                              ) : pendienteEliminar === ev.id ? (
-                                <div className="flex items-center gap-1">
-                                  <button
-                                    onClick={() => eliminarEvPersonal(ev.id)}
-                                    className="px-3 py-1.5 rounded-xl bg-brand-red text-white text-[9px] font-black uppercase tracking-widest hover:scale-105 transition-all"
-                                  >
-                                    Sí, borrar
-                                  </button>
-                                  <button
-                                    onClick={() => setPendienteEliminar(null)}
-                                    className="px-3 py-1.5 rounded-xl bg-slate-100 text-slate-500 text-[9px] font-black uppercase tracking-widest hover:scale-105 transition-all"
-                                  >
-                                    No
-                                  </button>
-                                </div>
-                              ) : (
-                                <>
-                                  <button
-                                    onClick={() => { const ag = agendaById(ev.id); if (ag) abrirFormEditar(ag); }}
-                                    className="w-8 h-8 rounded-xl bg-brand-blue/10 text-brand-blue flex items-center justify-center hover:bg-brand-blue hover:text-white transition-all text-sm"
-                                    title="Editar"
-                                  >
-                                    <i className="bi bi-pencil" />
-                                  </button>
-                                  <button
-                                    onClick={() => confirmarEliminar(ev.id)}
-                                    className="w-8 h-8 rounded-xl bg-brand-red/10 text-brand-red flex items-center justify-center hover:bg-brand-red hover:text-white transition-all text-sm"
-                                    title="Eliminar"
-                                  >
-                                    <i className="bi bi-trash3" />
-                                  </button>
-                                </>
-                              )}
-                            </div>
-                          </div>
-                        );
-
-                        return (
-                          <>
-                            {proximos.length > 0 && (
-                              <>
-                                <p className="text-[9px] font-black uppercase tracking-[0.3em] text-brand-blue px-1 mb-2">
-                                  <i className="bi bi-calendar-check mr-1" />Próximos ({proximos.length})
-                                </p>
-                                {proximos.map(ev => renderItem(ev, false))}
-                              </>
-                            )}
-                            {pasados.length > 0 && (
-                              <>
-                                <div className="flex items-center gap-3 my-4">
-                                  <div className="flex-1 h-px bg-slate-200" />
-                                  <p className="text-[9px] font-black uppercase tracking-[0.3em] text-slate-400 whitespace-nowrap">
-                                    <i className="bi bi-clock-history mr-1" />Pasados ({pasados.length})
-                                  </p>
-                                  <div className="flex-1 h-px bg-slate-200" />
-                                </div>
-                                {pasados.map(ev => renderItem(ev, true))}
-                              </>
-                            )}
-                          </>
-                        );
-                      })()}
+                      {[renderListaEventos()]}
                     </AnimatedList>
                   )}
                 </div>

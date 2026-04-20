@@ -84,14 +84,16 @@ export default defineConfig({
             },
           },
 
-          // ── Supabase GET (StaleWhileRevalidate) ───────────────────────
-          // Los datos de eventos y lugares se sirven desde caché (última
-          // versión conocida) mientras se actualiza en segundo plano.
-          // Garantiza que la app funcione aunque el usuario pierda
-          // cobertura dentro de un monumento.
+          // ── Supabase REST GET (StaleWhileRevalidate) ──────────────────
+          // Solo cachea datos REST (eventos, lugares, etc.).
+          // EXCLUYE /auth/v1/ para evitar cachear tokens de autenticación
+          // caducados, lo que causaría sesiones zombi offline.
           {
-            urlPattern: /^https:\/\/[a-z0-9]+\.supabase\.co\/rest\/.*/i,
-            handler: 'StaleWhileRevalidate',
+            urlPattern: ({ url }: { url: URL }) =>
+              url.hostname.match(/[a-z0-9]+\.supabase\.co/) !== null &&
+              url.pathname.startsWith('/rest/') &&
+              !url.pathname.startsWith('/auth/'),
+            handler: 'StaleWhileRevalidate' as const,
             options: {
               cacheName: 'supabase-rest-cache',
               expiration: {
@@ -163,7 +165,6 @@ export default defineConfig({
         manualChunks: {
           'vendor-react': ['react', 'react-dom', 'react-router-dom'],
           'vendor-leaflet': ['leaflet', 'react-leaflet'],
-          'vendor-three': ['three'],
           'vendor-supabase': ['@supabase/supabase-js'],
         },
       },

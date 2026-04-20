@@ -21,7 +21,7 @@ const Privacidad: React.FC = () => {
               Responsable del tratamiento
             </h2>
             <div className="bg-brand-bg rounded-2xl p-6 space-y-2">
-              {[['Titular', 'Proyecto MéridaActiva (DAW Mérida)'], ['Email', 'info@meridaactiva.com'], ['Ubicación', 'Mérida, Extremadura, España']].map(([label, value]) => (
+              {[['Titular', 'Proyecto MéridaActiva (DAW Mérida)'], ['Email', 'info@meridaactiva.es'], ['Ubicación', 'Mérida, Extremadura, España']].map(([label, value]) => (
                 <div key={label} className="flex gap-3 text-sm">
                   <span className="text-slate-400 font-black uppercase tracking-widest text-[10px] w-20 flex-shrink-0 pt-0.5">{label}</span>
                   <span className="text-brand-dark font-bold">{value}</span>
@@ -75,7 +75,7 @@ const Privacidad: React.FC = () => {
               <span className="w-6 h-6 rounded-lg bg-brand-gold/10 flex items-center justify-center text-brand-gold text-xs font-black">4</span>
               Tus derechos
             </h2>
-            <p className="text-slate-600 leading-relaxed font-medium mb-4">Puedes ejercer en cualquier momento los siguientes derechos escribiéndonos a <strong className="text-brand-dark">info@meridaactiva.com</strong>:</p>
+            <p className="text-slate-600 leading-relaxed font-medium mb-4">Puedes ejercer en cualquier momento los siguientes derechos escribiéndonos a <strong className="text-brand-dark">info@meridaactiva.es</strong>:</p>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
               {['Acceso', 'Rectificación', 'Supresión', 'Oposición', 'Portabilidad', 'Limitación'].map((derecho) => (
                 <div key={derecho} className="bg-brand-bg rounded-xl p-3 text-center">
