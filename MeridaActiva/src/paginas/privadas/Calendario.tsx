@@ -5,35 +5,7 @@ import { supabase } from '../../supabaseClient';
 import { useAuth } from '../../context/AuthContext';
 import { toastExito, toastError, toastAviso } from '../../utils/toast';
 import AnimatedList from '../../componentes/animaciones/AnimatedList';
-
-// ── Interfaces ───────────────────────────────────────────────────
-interface Evento {
-  id: string;
-  titulo: string;
-  fecha: string;
-  imagen_url: string;
-  categoria: string;
-  ubicacion?: string;
-  precio?: string;
-}
-
-interface AgendaPersonal {
-  id: string;
-  titulo: string;
-  fecha: string;
-  nota?: string;
-  color: string;
-  hora?: string; // ← NUEVO (columna hora TEXT NULL en BD)
-}
-
-interface EventoCalendario {
-  id: string;
-  titulo: string;
-  fecha: string;
-  color: string;
-  tipo: 'plataforma' | 'personal';
-  hora?: string; // ← NUEVO
-}
+import type { Evento, AgendaPersonal, EventoCalendario } from '../../types';
 
 // ── Constantes ───────────────────────────────────────────────────
 const COLORES = ['#FFBA08', '#3F88C5', '#136F63', '#D00000', '#032B43'];
@@ -100,6 +72,10 @@ const Calendario: React.FC = () => {
 
   // Confirmación inline de borrado
   const [pendienteEliminar, setPendienteEliminar] = useState<string | null>(null);
+
+  // Confirmación de conflicto de hora (substituye a window.confirm)
+  const [conflictoHora, setConflictoHora] = useState<{ titulo: string; hora: string } | null>(null);
+  const continuarConflictoRef = React.useRef<(() => void) | null>(null);
 
   // ── Fetch ──────────────────────────────────────────────────────
   const fetchData = useCallback(async () => {
@@ -193,13 +169,20 @@ const Calendario: React.FC = () => {
         ev.id !== editandoId
       );
       if (conflicto) {
-        const ok = window.confirm(
-          `Ya tienes "${conflicto.titulo}" a las ${newEvHora}. ¿Guardar de todas formas?`
-        );
-        if (!ok) return;
+        // En lugar de window.confirm() bloqueante, mostramos alerta inline
+        setConflictoHora({ titulo: conflicto.titulo, hora: newEvHora });
+        continuarConflictoRef.current = () => guardarEvento();
+        return;
       }
     }
 
+    guardarEvento();
+  };
+
+  // Lógica de guardado extraida para poder invocarla tras confirmación
+  const guardarEvento = async () => {
+    setConflictoHora(null);
+    continuarConflictoRef.current = null;
     setSavingEv(true);
     try {
       const payload = {
@@ -543,18 +526,21 @@ const Calendario: React.FC = () => {
                     </div>
                   ) : (
                     <AnimatedList className="space-y-4">
-                      {todosLosEventos
-                        .sort((a, b) => {
+                      {(() => {
+                        const hoy = new Date(); hoy.setHours(0, 0, 0, 0);
+                        const ordenados = [...todosLosEventos].sort((a, b) => {
                           const fechaDiff = new Date(a.fecha).getTime() - new Date(b.fecha).getTime();
                           if (fechaDiff !== 0) return fechaDiff;
-                          // Ordenación cronológica por hora dentro del mismo día
                           return (a.hora ?? '99:99').localeCompare(b.hora ?? '99:99');
-                        })
-                        .map(ev => (
-                          <div key={ev.id} className="flex items-center gap-5 p-5 rounded-2xl bg-brand-bg border border-slate-100 hover:border-brand-blue/20 hover:bg-white transition-all group">
+                        });
+                        const proximos = ordenados.filter(ev => new Date(ev.fecha) >= hoy);
+                        const pasados  = ordenados.filter(ev => new Date(ev.fecha) < hoy);
+
+                        const renderItem = (ev: EventoCalendario, esPassado = false) => (
+                          <div key={ev.id} className={`flex items-center gap-5 p-5 rounded-2xl border transition-all group ${esPassado ? 'bg-slate-50/60 border-slate-100 opacity-60 hover:opacity-100' : 'bg-brand-bg border-slate-100 hover:border-brand-blue/20 hover:bg-white'}`}>
                             <div className="w-2 h-12 rounded-full shrink-0" style={{ backgroundColor: ev.color }} />
                             <div className="flex-1 min-w-0">
-                              <p className="font-black text-brand-dark uppercase italic text-sm truncate group-hover:text-brand-blue transition-colors">
+                              <p className={`font-black uppercase italic text-sm truncate transition-colors ${esPassado ? 'text-slate-400 line-through decoration-slate-300' : 'text-brand-dark group-hover:text-brand-blue'}`}>
                                 {ev.titulo}
                               </p>
                               <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-1">
@@ -592,18 +578,13 @@ const Calendario: React.FC = () => {
                                 </div>
                               ) : (
                                 <>
-                                  {/* Botón EDITAR */}
                                   <button
-                                    onClick={() => {
-                                      const ag = agendaById(ev.id);
-                                      if (ag) abrirFormEditar(ag);
-                                    }}
+                                    onClick={() => { const ag = agendaById(ev.id); if (ag) abrirFormEditar(ag); }}
                                     className="w-8 h-8 rounded-xl bg-brand-blue/10 text-brand-blue flex items-center justify-center hover:bg-brand-blue hover:text-white transition-all text-sm"
                                     title="Editar"
                                   >
                                     <i className="bi bi-pencil" />
                                   </button>
-                                  {/* Botón ELIMINAR */}
                                   <button
                                     onClick={() => confirmarEliminar(ev.id)}
                                     className="w-8 h-8 rounded-xl bg-brand-red/10 text-brand-red flex items-center justify-center hover:bg-brand-red hover:text-white transition-all text-sm"
@@ -615,7 +596,33 @@ const Calendario: React.FC = () => {
                               )}
                             </div>
                           </div>
-                        ))}
+                        );
+
+                        return (
+                          <>
+                            {proximos.length > 0 && (
+                              <>
+                                <p className="text-[9px] font-black uppercase tracking-[0.3em] text-brand-blue px-1 mb-2">
+                                  <i className="bi bi-calendar-check mr-1" />Próximos ({proximos.length})
+                                </p>
+                                {proximos.map(ev => renderItem(ev, false))}
+                              </>
+                            )}
+                            {pasados.length > 0 && (
+                              <>
+                                <div className="flex items-center gap-3 my-4">
+                                  <div className="flex-1 h-px bg-slate-200" />
+                                  <p className="text-[9px] font-black uppercase tracking-[0.3em] text-slate-400 whitespace-nowrap">
+                                    <i className="bi bi-clock-history mr-1" />Pasados ({pasados.length})
+                                  </p>
+                                  <div className="flex-1 h-px bg-slate-200" />
+                                </div>
+                                {pasados.map(ev => renderItem(ev, true))}
+                              </>
+                            )}
+                          </>
+                        );
+                      })()}
                     </AnimatedList>
                   )}
                 </div>
@@ -775,6 +782,35 @@ const Calendario: React.FC = () => {
                   maxLength={200}
                 />
               </div>
+
+              {/* ── Aviso de conflicto de horario ── */}
+              {conflictoHora && (
+                <div className="rounded-2xl bg-amber-50 border border-amber-200 p-4 flex flex-col gap-3">
+                  <div className="flex items-start gap-2">
+                    <i className="bi bi-exclamation-triangle-fill text-amber-500 mt-0.5 flex-shrink-0" />
+                    <p className="text-[10px] font-black text-amber-700 uppercase tracking-widest leading-relaxed">
+                      Ya tienes &ldquo;{conflictoHora.titulo}&rdquo; a las {conflictoHora.hora}.<br />
+                      <span className="font-bold normal-case">¿Quieres guardar de todas formas?</span>
+                    </p>
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setConflictoHora(null)}
+                      className="flex-1 bg-white border border-slate-200 text-slate-600 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-50 transition-all"
+                    >
+                      Cancelar
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => continuarConflictoRef.current?.()}
+                      className="flex-1 bg-amber-500 text-white py-2 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-amber-600 transition-all"
+                    >
+                      Guardar igualmente
+                    </button>
+                  </div>
+                </div>
+              )}
 
               {/* Color */}
               <div>

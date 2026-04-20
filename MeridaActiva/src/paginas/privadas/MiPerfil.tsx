@@ -1,10 +1,13 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth, forceNuclearLogout } from '../../context/AuthContext';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '../../supabaseClient';
+import { getNombreRolUsuario } from '../../utils/perfilUsuario';
+import { useFavoritos } from '../../hooks/useFavoritos';
 
 const MiPerfil: React.FC = () => {
   const { profile, session, loading } = useAuth();
+  const navigate = useNavigate();
   const [seccion, setSeccion] = useState<'perfil' | 'seguridad' | 'favoritos' | 'reseñas'>('perfil');
   const tabsRef = useRef<HTMLDivElement>(null);
 
@@ -23,9 +26,11 @@ const MiPerfil: React.FC = () => {
   const [segMsg, setSegMsg] = useState<{ tipo: 'ok' | 'err'; texto: string } | null>(null);
   const [deletingAccount, setDeletingAccount] = useState(false);
 
-  // --- Estado contenido ---
-  const [favoritos, setFavoritos] = useState<any[]>([]);
-  const [reseñas, setReseñas] = useState<any[]>([]);
+  // --- Favoritos via hook centralizado ---
+  const { favoritos } = useFavoritos(session?.user?.id);
+
+  // --- Reseñas ---
+  const [reseñas, setReseñas] = useState<Record<string, unknown>[]>([]);
 
   // Sync perfil cuando carga
   useEffect(() => {
@@ -38,34 +43,13 @@ const MiPerfil: React.FC = () => {
 
   const fetchContenido = useCallback(async () => {
     if (!session?.user?.id) return;
-    const { data: favsData } = await supabase
-      .from('favoritos')
-      .select('id, elemento_id, tipo_elemento')
-      .eq('usuario_id', session.user.id);
-
-    if (favsData && favsData.length > 0) {
-      const detallesPromesas = favsData.map(async (fav: any) => {
-        const tabla = fav.tipo_elemento === 'evento' ? 'eventos' : 'lugares';
-        const campos = fav.tipo_elemento === 'evento' ? 'id, titulo, imagen_url' : 'id, nombre, nombre_es, imagen_url';
-        const { data: detalle } = await supabase
-          .from(tabla)
-          .select(campos)
-          .eq('id', fav.elemento_id)
-          .maybeSingle();
-        return { ...fav, detalle };
-      });
-      const resultados = await Promise.all(detallesPromesas);
-      setFavoritos(resultados.filter((f: any) => f.detalle));
-    } else {
-      setFavoritos([]);
-    }
-
+    // Solo cargar reseñas (los favoritos los gestiona useFavoritos)
     const { data: comms } = await supabase
       .from('comentarios')
       .select('id, texto, puntuacion, created_at, nombre_usuario, eventos(titulo, imagen_url)')
       .eq('usuario_id', session.user.id)
       .order('created_at', { ascending: false });
-    if (comms) setReseñas(comms);
+    if (comms) setReseñas(comms as Record<string, unknown>[]);
   }, [session?.user?.id]);
 
   useEffect(() => { fetchContenido(); }, [fetchContenido]);
@@ -92,8 +76,9 @@ const MiPerfil: React.FC = () => {
       if (upErr) throw upErr;
       const { data: { publicUrl } } = supabase.storage.from('avatares').getPublicUrl(path);
       setAvatarUrl(publicUrl);
-    } catch (err: any) {
-      setPerfilMsg({ tipo: 'err', texto: 'Error al subir imagen: ' + err.message });
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Error desconocido';
+      setPerfilMsg({ tipo: 'err', texto: 'Error al subir imagen: ' + msg });
     } finally {
       setUploadingAvatar(false);
     }
@@ -112,8 +97,9 @@ const MiPerfil: React.FC = () => {
         .eq('id', session.user.id);
       if (error) throw error;
       setPerfilMsg({ tipo: 'ok', texto: '¡Perfil actualizado correctamente!' });
-    } catch (err: any) {
-      setPerfilMsg({ tipo: 'err', texto: err.message });
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Error al guardar';
+      setPerfilMsg({ tipo: 'err', texto: msg });
     } finally {
       setSavingPerfil(false);
     }
@@ -128,8 +114,9 @@ const MiPerfil: React.FC = () => {
       const { error } = await supabase.auth.updateUser({ email: nuevoEmail });
       if (error) throw error;
       setSegMsg({ tipo: 'ok', texto: 'Revisa tu nuevo email para confirmar el cambio.' });
-    } catch (err: any) {
-      setSegMsg({ tipo: 'err', texto: err.message });
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Error al cambiar email';
+      setSegMsg({ tipo: 'err', texto: msg });
     } finally {
       setSavingSeg(false);
     }
@@ -154,8 +141,9 @@ const MiPerfil: React.FC = () => {
       setSegMsg({ tipo: 'ok', texto: '¡Contraseña actualizada!' });
       setNuevaPassword('');
       setConfirmPassword('');
-    } catch (err: any) {
-      setSegMsg({ tipo: 'err', texto: err.message });
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Error al actualizar contraseña';
+      setSegMsg({ tipo: 'err', texto: msg });
     } finally {
       setSavingSeg(false);
     }
@@ -166,14 +154,27 @@ const MiPerfil: React.FC = () => {
     if (!window.confirm('¿Estás segura? Esta acción es irreversible y eliminará todos tus datos.')) return;
     setDeletingAccount(true);
     try {
-      if (session?.user?.id) {
-        await supabase.from('favoritos').delete().eq('usuario_id', session.user.id);
-        await supabase.from('comentarios').delete().eq('usuario_id', session.user.id);
-        await supabase.from('usuarios').delete().eq('id', session.user.id);
+      // Obtenemos el token de sesión para autenticar el endpoint
+      const { data: { session: sess } } = await supabase.auth.getSession();
+      const token = sess?.access_token;
+      if (!token) throw new Error('No hay sesión activa.');
+
+      const res = await fetch('/api/eliminar-cuenta', {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error((body as { error?: string }).error ?? `Error ${res.status}`);
       }
+
+      // Limpieza local y cierre de sesión
       await forceNuclearLogout();
-    } catch (err: any) {
-      setSegMsg({ tipo: 'err', texto: 'Error al eliminar: ' + err.message });
+      navigate('/');
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Error al eliminar la cuenta';
+      setSegMsg({ tipo: 'err', texto: 'Error al eliminar: ' + msg });
       setDeletingAccount(false);
     }
   };
@@ -218,7 +219,7 @@ const MiPerfil: React.FC = () => {
             <h2 className="font-black text-brand-dark uppercase italic text-base truncate">{nombre || 'Usuario'}</h2>
             <p className="text-[10px] font-bold text-slate-400 truncate">{session?.user?.email}</p>
             <span className="inline-block mt-1 px-3 py-0.5 bg-brand-bg rounded-full text-[9px] font-black uppercase tracking-widest text-slate-400">
-              {profile?.roles?.nombre || 'Explorador'}
+              {getNombreRolUsuario(profile) || 'Explorador'}
             </span>
           </div>
         </div>
@@ -279,7 +280,7 @@ const MiPerfil: React.FC = () => {
             <h2 className="font-black text-brand-dark uppercase italic text-xl">{nombre || 'Usuario'}</h2>
             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">{session?.user?.email}</p>
             <span className="inline-block mt-3 px-4 py-1 bg-brand-bg rounded-full text-[9px] font-black uppercase tracking-widest text-slate-400">
-              {profile?.roles?.nombre || 'Explorador'}
+              {getNombreRolUsuario(profile) || 'Explorador'}
             </span>
           </div>
 
@@ -421,11 +422,19 @@ const MiPerfil: React.FC = () => {
           {/* ── FAVORITOS ── */}
           {seccion === 'favoritos' && (
             <div className="bg-white rounded-[2rem] lg:rounded-[3rem] p-7 md:p-12 shadow-xl border border-slate-100">
-              <h3 className="text-3xl lg:text-4xl font-black text-brand-dark italic uppercase tracking-tighter mb-8">
-                Mis <span className="text-brand-blue">Favoritos</span>
-              </h3>
+              <div className="flex items-center justify-between mb-8">
+                <h3 className="text-3xl lg:text-4xl font-black text-brand-dark italic uppercase tracking-tighter">
+                  Mis <span className="text-brand-blue">Favoritos</span>
+                </h3>
+                <Link
+                  to="/favoritos"
+                  className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-brand-blue hover:text-brand-dark transition-colors"
+                >
+                  Ver todos <i className="bi bi-arrow-right" />
+                </Link>
+              </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                {favoritos.length > 0 ? favoritos.map((fav: any) => {
+                {favoritos.slice(0, 4).length > 0 ? favoritos.slice(0, 4).map((fav) => {
                   const titulo = fav.detalle?.titulo || fav.detalle?.nombre || fav.detalle?.nombre_es || 'Sin título';
                   const imagenUrl = fav.detalle?.imagen_url;
                   const ruta = fav.tipo_elemento === 'evento' ? `/eventos/${fav.elemento_id}` : `/lugares/${fav.elemento_id}`;
@@ -455,6 +464,16 @@ const MiPerfil: React.FC = () => {
                   </div>
                 )}
               </div>
+              {favoritos.length > 4 && (
+                <div className="mt-6 text-center">
+                  <Link
+                    to="/favoritos"
+                    className="inline-flex items-center gap-2 bg-brand-bg text-brand-dark border border-slate-200 px-6 py-3 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-brand-dark hover:text-white transition-all"
+                  >
+                    Ver todos los {favoritos.length} favoritos <i className="bi bi-arrow-right" />
+                  </Link>
+                </div>
+              )}
             </div>
           )}
 

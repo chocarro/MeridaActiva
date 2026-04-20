@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../supabaseClient';
 import Logo from './Logo';
+import { getNombreRolUsuario } from '../utils/perfilUsuario';
 
 const Footer: React.FC = () => {
   const { session, profile } = useAuth();
@@ -100,6 +101,11 @@ const Footer: React.FC = () => {
               <li><Link to="/cookies" className="text-slate-400 hover:text-white transition-colors font-bold text-sm">Política de Cookies</Link></li>
               <li><Link to="/aviso-legal" className="text-slate-400 hover:text-white transition-colors font-bold text-sm">Aviso Legal</Link></li>
               <li><Link to="/contacto" className="text-slate-400 hover:text-white transition-colors font-bold text-sm">Contacto</Link></li>
+              <li>
+                <Link to="/recuperar-sesion" className="text-slate-400 hover:text-white transition-colors font-bold text-sm">
+                  Problemas con la sesión
+                </Link>
+              </li>
             </ul>
           </div>
 
@@ -154,8 +160,8 @@ const Footer: React.FC = () => {
               )}
             </form>
 
-            {['Administrador', 'Gestor (Editor)'].includes(profile?.roles?.nombre) && (
-              <Link to="/admin" className="block text-center bg-brand-blue/20 text-brand-blue border border-brand-blue/30 py-4 rounded-2xl text-[9px] font-black uppercase tracking-widest hover:bg-brand-blue hover:text-white transition-all">
+            {['Administrador', 'Gestor (Editor)'].includes(getNombreRolUsuario(profile) || '') && (
+              <Link to="/dashboard" className="block text-center bg-brand-blue/20 text-brand-blue border border-brand-blue/30 py-4 rounded-2xl text-[9px] font-black uppercase tracking-widest hover:bg-brand-blue hover:text-white transition-all">
                 <i className="bi bi-speedometer2 mr-2" />Panel Admin
               </Link>
             )}

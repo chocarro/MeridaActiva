@@ -2,10 +2,11 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { supabase } from '../../supabaseClient';
 import Logo from '../../componentes/Logo';
-import { forceNuclearLogout } from '../../context/AuthContext';
+import { useAuth, forceNuclearLogout } from '../../context/AuthContext';
 type Mode = 'login' | 'recovery';
 
 const Login: React.FC = () => {
+  const { refreshProfile } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -31,8 +32,14 @@ const Login: React.FC = () => {
       }
       setLoading(false);
     } else {
+      try {
+        await refreshProfile();
+      } catch {
+        /* el listener de auth acabará de sincronizar; seguimos al inicio */
+      }
       navigate('/');
     }
+    setLoading(false);
   };
 
   const handleRecovery = async (e: React.FormEvent) => {
@@ -210,14 +217,23 @@ const Login: React.FC = () => {
                       Regístrate gratis
                     </Link>
                   </p>
-                  <button
-                    type="button"
-                    onClick={handleResetSesionBloqueada}
-                    className="mt-4 text-[10px] font-black uppercase tracking-widest transition-colors hover:opacity-70"
-                    style={{ color: '#D00000' }}
-                  >
-                    Reiniciar sesión bloqueada
-                  </button>
+                  <div className="mt-6 flex flex-col items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={handleResetSesionBloqueada}
+                      className="text-[9px] font-bold uppercase tracking-widest opacity-20 hover:opacity-60 transition-opacity"
+                      style={{ color: '#64748b' }}
+                    >
+                      Reiniciar sesión bloqueada
+                    </button>
+                    <Link
+                      to="/recuperar-sesion"
+                      className="text-[9px] font-bold uppercase tracking-widest opacity-20 hover:opacity-60 transition-opacity"
+                      style={{ color: '#64748b' }}
+                    >
+                      Página de recuperación
+                    </Link>
+                  </div>
                 </div>
               </>
             ) : (

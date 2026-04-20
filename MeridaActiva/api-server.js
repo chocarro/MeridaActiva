@@ -83,6 +83,8 @@ function createVercelAdapter(req, res, body) {
 const routes = {
   '/api/chat': () => import('./api/chat.js'),
   '/api/generar-ruta': () => import('./api/generar-ruta.js'),
+  '/api/contacto': () => import('./api/contacto.js'),
+  '/api/eliminar-cuenta': () => import('./api/eliminar-cuenta.js'),
 };
 
 // ── Servidor HTTP ─────────────────────────────────────────────────
@@ -91,8 +93,8 @@ const server = createServer(async (req, res) => {
 
   // CORS para desarrollo local
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
 
   if (req.method === 'OPTIONS') {
     res.writeHead(204);

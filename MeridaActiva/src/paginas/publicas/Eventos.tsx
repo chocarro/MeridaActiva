@@ -6,18 +6,7 @@ import { toastError } from '../../utils/toast';
 import { useSeoMeta } from '../../hooks/useSeoMeta';
 import SelectCustom from '../../componentes/SelectCustom';
 import { useAuth } from '../../context/AuthContext';
-
-interface Evento {
-  id: string;
-  titulo: string;
-  descripcion: string;
-  fecha: string;
-  hora: string | null;
-  ubicacion: string;
-  imagen_url: string;
-  categoria: string;
-  precio: string | null;
-}
+import type { Evento } from '../../types';
 
 function SkeletonTarjeta() {
   return (
@@ -43,6 +32,7 @@ const Eventos: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [cargandoMas, setCargandoMas] = useState(false);
   const [busqueda, setBusqueda] = useState('');
+  const [busquedaDebounced, setBusquedaDebounced] = useState('');
   const [filtroRapido, setFiltroRapido] = useState<'Todos' | 'Hoy' | 'Finde'>('Todos');
   const [pagina, setPagina] = useState(1);
   const [hayMas, setHayMas] = useState(true);
@@ -52,10 +42,16 @@ const Eventos: React.FC = () => {
     description: 'Descubre todos los eventos culturales, conciertos y teatro en Mérida. Filtra por fecha, categoría y busca lo que más te gusta.',
   });
 
-  // Recargar desde Supabase cuando cambia la categoría activa
-  useEffect(() => { cargarEventos(1, true, categoriaActiva); }, [categoriaActiva]);
+  // Debounce de la búsqueda (350ms) para no saturar Supabase
+  useEffect(() => {
+    const timer = setTimeout(() => setBusquedaDebounced(busqueda), 350);
+    return () => clearTimeout(timer);
+  }, [busqueda]);
 
-  const cargarEventos = async (nuevaPagina: number, reiniciar = false, categoria = categoriaActiva) => {
+  // Recargar cuando cambia la categoría o la búsqueda debounced
+  useEffect(() => { cargarEventos(1, true, categoriaActiva, busquedaDebounced); }, [categoriaActiva, busquedaDebounced]);
+
+  const cargarEventos = async (nuevaPagina: number, reiniciar = false, categoria = categoriaActiva, textoBusqueda = busquedaDebounced) => {
     if (nuevaPagina === 1) setLoading(true);
     else setCargandoMas(true);
     try {
@@ -67,9 +63,15 @@ const Eventos: React.FC = () => {
         .order('fecha', { ascending: true })
         .range(desde, hasta);
 
-      // Aplicar filtro de categoría case-insensitive en Supabase
+      // Filtro de categoría en Supabase
       if (categoria !== 'Todos') {
         query = query.ilike('categoria', categoria);
+      }
+
+      // Búsqueda de texto en Supabase (busca en título y descripción)
+      if (textoBusqueda.trim()) {
+        const t = textoBusqueda.trim();
+        query = query.or(`titulo.ilike.%${t}%,descripcion.ilike.%${t}%`);
       }
 
       const { data, error } = await query;
@@ -88,15 +90,11 @@ const Eventos: React.FC = () => {
 
   const cambiarCategoria = (cat: string) => {
     setCategoriaActiva(cat);
-    // el useEffect de categoriaActiva dispara cargarEventos(1, true, cat)
   };
 
+  // filtros locales solo para Hoy/Finde (necesitan la fecha actual, no afectan la paginación)
   const eventosProcesados = eventos
     .filter(ev => {
-      if (busqueda.trim()) {
-        const t = busqueda.toLowerCase();
-        if (!ev.titulo?.toLowerCase().includes(t) && !ev.descripcion?.toLowerCase().includes(t)) return false;
-      }
       if (filtroRapido === 'Hoy') {
         const hoy = new Date();
         const fechaEv = new Date(ev.fecha);

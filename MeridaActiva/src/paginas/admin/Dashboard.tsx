@@ -2,43 +2,53 @@ import React, { useEffect, useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { Navigate, Link } from 'react-router-dom';
 import { supabase } from '../../supabaseClient';
+import { getNombreRolUsuario } from '../../utils/perfilUsuario';
 
 const DashboardAdmin: React.FC = () => {
   const { profile, loading } = useAuth();
   const [stats, setStats] = useState({ eventos: 0, usuarios: 0, reseñas: 0, alertas: 0 });
   const [loadingStats, setLoadingStats] = useState(true);
+  const [errorStats, setErrorStats] = useState<string | null>(null);
+
+  const fetchStats = async () => {
+    setLoadingStats(true);
+    setErrorStats(null);
+    try {
+      const hoy = new Date().toISOString().slice(0, 10);
+
+      const [
+        { count: ev, error: evErr },
+        { count: us, error: usErr },
+        { count: re, error: reErr },
+        { count: sinImagen, error: imgErr },
+        { count: hoy_count, error: hoyErr },
+      ] = await Promise.all([
+        supabase.from('eventos').select('id', { count: 'exact', head: true }),
+        supabase.from('usuarios').select('id', { count: 'exact', head: true }),
+        supabase.from('comentarios').select('id', { count: 'exact', head: true }),
+        supabase.from('eventos').select('id', { count: 'exact', head: true }).or('imagen_url.is.null,imagen_url.eq.'),
+        supabase.from('eventos').select('id', { count: 'exact', head: true }).eq('fecha', hoy),
+      ]);
+
+      if (evErr || usErr || reErr || imgErr || hoyErr) {
+        throw new Error('No se pudieron cargar todas las métricas.');
+      }
+
+      setStats({
+        eventos: ev ?? 0,
+        usuarios: us ?? 0,
+        reseñas: re ?? 0,
+        alertas: (sinImagen ?? 0) + (hoy_count ?? 0),
+      });
+    } catch (e) {
+      console.error('[Dashboard] Error cargando stats:', e);
+      setErrorStats('No se pudieron actualizar las métricas. Reintenta.');
+    } finally {
+      setLoadingStats(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchStats = async () => {
-      try {
-        const hoy = new Date().toISOString().slice(0, 10);
-
-        const [
-          { count: ev },
-          { count: us },
-          { count: re },
-          { count: sinImagen },
-          { count: hoy_count },
-        ] = await Promise.all([
-          supabase.from('eventos').select('id', { count: 'exact', head: true }),
-          supabase.from('usuarios').select('id', { count: 'exact', head: true }),
-          supabase.from('comentarios').select('id', { count: 'exact', head: true }),
-          supabase.from('eventos').select('id', { count: 'exact', head: true }).or('imagen_url.is.null,imagen_url.eq.'),
-          supabase.from('eventos').select('id', { count: 'exact', head: true }).eq('fecha', hoy),
-        ]);
-
-        setStats({
-          eventos: ev ?? 0,
-          usuarios: us ?? 0,
-          reseñas: re ?? 0,
-          alertas: (sinImagen ?? 0) + (hoy_count ?? 0),
-        });
-      } catch (e) {
-        console.error('[Dashboard] Error cargando stats:', e);
-      } finally {
-        setLoadingStats(false);
-      }
-    };
     fetchStats();
   }, []);
 
@@ -48,8 +58,9 @@ const DashboardAdmin: React.FC = () => {
     </div>
   );
 
-  if (!['Administrador', 'Gestor (Editor)'].includes(profile?.roles?.nombre)) {
-    return <Navigate to="/" />;
+  const nombreRol = getNombreRolUsuario(profile);
+  if (!['Administrador', 'Gestor (Editor)'].includes(nombreRol || '')) {
+    return <Navigate to="/" replace />;
   }
 
   const alertaColor = stats.alertas > 0 ? 'text-brand-red' : 'text-slate-300';
@@ -82,11 +93,11 @@ const DashboardAdmin: React.FC = () => {
             <div className="flex items-center gap-2 bg-white px-4 py-2 rounded-full border border-slate-100 shadow-sm">
               <span className="w-2 h-2 bg-brand-green rounded-full animate-pulse" />
               <p className="text-slate-400 font-black uppercase text-[10px] tracking-[0.3em]">
-                ADMIN: <span className="text-brand-dark">{profile.nombre}</span>
+                ADMIN: <span className="text-brand-dark">{profile?.nombre ?? 'Administrador'}</span>
               </p>
             </div>
             <span className="text-slate-300 text-[10px] font-black uppercase tracking-widest px-4 py-2 bg-brand-bg border border-slate-100 rounded-full">
-              {profile.roles.nombre}
+              {nombreRol}
             </span>
           </div>
         </header>
@@ -117,7 +128,7 @@ const DashboardAdmin: React.FC = () => {
           </div>
 
           {/* Tarjeta 2: Usuarios (solo admin) */}
-          {profile.roles.nombre === 'Administrador' && (
+          {nombreRol === 'Administrador' && (
             <div className="bg-brand-dark p-12 rounded-[4rem] shadow-2xl border border-white/5 relative overflow-hidden group flex flex-col justify-between">
               <div className="relative z-10">
                 <div className="w-20 h-20 bg-white/10 rounded-[2rem] flex items-center justify-center text-brand-gold text-4xl mb-12 group-hover:bg-brand-gold group-hover:text-brand-dark transition-all duration-500">
@@ -166,12 +177,42 @@ const DashboardAdmin: React.FC = () => {
             <div className="absolute -bottom-20 -right-20 w-80 h-80 bg-brand-gold/5 rounded-full blur-[100px] group-hover:bg-brand-gold/10 transition-all" />
           </div>
 
-          {/* Placeholder: Próximamente */}
-          <div className="bg-brand-bg rounded-[4rem] border border-slate-100 p-12 flex flex-col items-center justify-center text-center gap-4">
-            <i className="bi bi-plus-circle text-4xl text-slate-200" />
-            <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest">Próximamente</p>
+          {/* Acciones rápidas */}
+          <div className="bg-brand-bg rounded-[4rem] border border-slate-100 p-12 flex flex-col justify-between gap-5">
+            <div>
+              <h4 className="text-xl font-black text-brand-dark uppercase italic tracking-tight mb-2">Acciones rápidas</h4>
+              <p className="text-slate-400 text-[10px] font-black uppercase tracking-widest">Herramientas del panel</p>
+            </div>
+            <div className="space-y-3">
+              <Link to="/admin/eventos" className="block bg-white border border-slate-200 rounded-2xl px-4 py-3 text-[10px] font-black uppercase tracking-widest text-brand-dark hover:border-brand-blue hover:text-brand-blue transition-all">
+                <i className="bi bi-calendar-check mr-2" />Eventos
+              </Link>
+              <Link to="/admin/resenas" className="block bg-white border border-slate-200 rounded-2xl px-4 py-3 text-[10px] font-black uppercase tracking-widest text-brand-dark hover:border-brand-gold hover:text-brand-gold transition-all">
+                <i className="bi bi-chat-left-text mr-2" />Reseñas
+              </Link>
+              {nombreRol === 'Administrador' && (
+                <Link to="/admin/usuarios" className="block bg-white border border-slate-200 rounded-2xl px-4 py-3 text-[10px] font-black uppercase tracking-widest text-brand-dark hover:border-brand-red hover:text-brand-red transition-all">
+                  <i className="bi bi-people mr-2" />Usuarios
+                </Link>
+              )}
+            </div>
+            <button
+              onClick={fetchStats}
+              disabled={loadingStats}
+              className="bg-brand-dark text-white rounded-2xl px-4 py-3 text-[10px] font-black uppercase tracking-widest hover:bg-brand-blue transition-all disabled:opacity-50"
+            >
+              <i className={`bi ${loadingStats ? 'bi-arrow-repeat animate-spin' : 'bi-arrow-clockwise'} mr-2`} />
+              Recargar métricas
+            </button>
           </div>
         </div>
+
+        {errorStats && (
+          <div className="mb-6 flex items-center gap-3 bg-brand-red/5 border border-brand-red/20 rounded-2xl px-6 py-4">
+            <i className="bi bi-exclamation-triangle-fill text-brand-red flex-shrink-0" />
+            <p className="text-xs font-black text-brand-red uppercase tracking-widest">{errorStats}</p>
+          </div>
+        )}
 
         {/* ── Stats reales ── */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">

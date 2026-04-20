@@ -1,3 +1,12 @@
+/**
+ * geminiService.ts
+ *
+ * NOTA: El nombre "Gemini" es histórico. Este servicio se comunica con
+ * el backend propio (api/chat.js y api/generar-ruta.js), que internamente
+ * usa OpenRouter para acceder a modelos de IA (Gemini, Llama, etc.).
+ * No llama directamente a la API de Google Gemini desde el cliente.
+ */
+
 export interface MensajeChat {
     rol: 'usuario' | 'ia';
     texto: string;

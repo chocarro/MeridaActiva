@@ -1,64 +1,19 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { Link } from 'react-router-dom';
-import { supabase } from '../../supabaseClient';
 import { useAuth } from '../../context/AuthContext';
 import { useSeoMeta } from '../../hooks/useSeoMeta';
+import { useFavoritos } from '../../hooks/useFavoritos';
 
 const Favoritos: React.FC = () => {
   const { session } = useAuth();
-  const [favoritos, setFavoritos] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  // El hook centralizado gestiona carga, caché y tipado
+  const { favoritos, loading } = useFavoritos(session?.user?.id);
 
   // ── SEO ────────────────────────────────────────────────────────
   useSeoMeta({
     title: 'Mis Favoritos | Mérida Activa',
     description: 'Tus eventos y monumentos favoritos de Mérida guardados en un solo lugar. Organiza tu visita a la capital extremeña.',
   });
-
-  useEffect(() => {
-    if (session?.user?.id) {
-      fetchFavoritos();
-    } else {
-      setLoading(false);
-    }
-  }, [session]);
-
-  const fetchFavoritos = async () => {
-    setLoading(true);
-    try {
-      // 1. Consultar la tabla de favoritos
-      const { data: favsData, error: favsError } = await supabase
-        .from('favoritos')
-        .select('*')
-        .eq('usuario_id', session?.user?.id);
-
-      if (favsError) throw favsError;
-
-      if (favsData && favsData.length > 0) {
-        // 2. Traer los detalles de cada evento o lugar
-        const detallesPromesas = favsData.map(async (fav) => {
-          const tabla = fav.tipo_elemento === 'evento' ? 'eventos' : 'lugares';
-          const { data: detalle } = await supabase
-            .from(tabla)
-            .select('*')
-            .eq('id', fav.elemento_id)
-            .maybeSingle();
-          
-          return { ...fav, detalle };
-        });
-
-        const resultados = await Promise.all(detallesPromesas);
-        // Filtrar por si algún elemento fue borrado de la base de datos original
-        setFavoritos(resultados.filter(f => f.detalle));
-      } else {
-        setFavoritos([]);
-      }
-    } catch (error) {
-      console.error("Error al cargar favoritos:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   if (loading) {
     return (
@@ -109,18 +64,24 @@ const Favoritos: React.FC = () => {
         </header>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
-          {favoritos.map((fav) => (
-            <Link 
-              key={fav.id} 
-              to={fav.tipo_elemento === 'evento' ? `/eventos/${fav.elemento_id}` : `/lugares/${fav.elemento_id}`}
+          {favoritos.map((fav) => {
+            const titulo = fav.detalle?.titulo || fav.detalle?.nombre_es || fav.detalle?.nombre || 'Sin título';
+            const imagenUrl = fav.detalle?.imagen_url ?? '';
+            const ruta = fav.tipo_elemento === 'evento' ? `/eventos/${fav.elemento_id}` : `/lugares/${fav.elemento_id}`;
+            return (
+            <Link
+              key={fav.id}
+              to={ruta}
               className="group bg-white rounded-[3rem] overflow-hidden shadow-xl hover:shadow-2xl transition-all border border-slate-100 block relative"
             >
               <div className="relative h-72 overflow-hidden">
-                <img 
-                  src={fav.detalle.imagen_url} 
-                  alt={fav.detalle.titulo || fav.detalle.nombre_es}
-                  className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
-                />
+                {imagenUrl && (
+                  <img
+                    src={imagenUrl}
+                    alt={titulo}
+                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+                  />
+                )}
                 {/* Icono de Corazón Fijo */}
                 <div className="absolute top-6 right-6 bg-white shadow-lg w-12 h-12 rounded-2xl flex items-center justify-center text-brand-red text-xl">
                   <i className="bi bi-heart-fill"></i>
@@ -131,10 +92,10 @@ const Favoritos: React.FC = () => {
                   </span>
                 </div>
               </div>
-              
+
               <div className="p-10">
                 <h3 className="text-3xl font-[900] text-brand-dark uppercase italic leading-none mb-4 group-hover:text-brand-blue transition-colors">
-                  {fav.detalle.titulo || fav.detalle.nombre_es}
+                  {titulo}
                 </h3>
                 <div className="flex items-center gap-2 text-slate-400 font-bold uppercase tracking-widest text-[9px]">
                   <span>Explorar detalles</span>
@@ -142,7 +103,8 @@ const Favoritos: React.FC = () => {
                 </div>
               </div>
             </Link>
-          ))}
+            );
+          })}
         </div>
       </div>
     </div>

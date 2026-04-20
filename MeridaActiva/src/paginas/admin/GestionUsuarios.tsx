@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../../supabaseClient';
+import { getNombreRolUsuario } from '../../utils/perfilUsuario';
 
 type EstadoUsuario = 'Activo' | 'Suspendido';
 
@@ -182,11 +183,11 @@ const GestionUsuarios: React.FC = () => {
                     {/* Nivel de acceso */}
                     <td className="px-8 py-8">
                       <span className={`px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest border ${
-                        user.roles?.nombre === 'Administrador'
+                        getNombreRolUsuario(user) === 'Administrador'
                           ? 'bg-brand-gold text-brand-dark border-brand-gold'
                           : 'bg-white/5 text-white/60 border-white/10'
                       }`}>
-                        {user.roles?.nombre || 'Usuario'}
+                        {getNombreRolUsuario(user) || 'Usuario'}
                       </span>
                     </td>
 

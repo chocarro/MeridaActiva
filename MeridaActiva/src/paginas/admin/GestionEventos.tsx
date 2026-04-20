@@ -1,6 +1,7 @@
 import React, { useEffect, useState, lazy, Suspense } from 'react';
 import { supabase } from '../../supabaseClient';
 import 'react-quill/dist/quill.snow.css';
+import type { Evento } from '../../types';
 
 // Lazy import para no bloquear el bundle principal
 const ReactQuill = lazy(() => import('react-quill'));
@@ -23,6 +24,7 @@ const FORM_INICIAL = {
   titulo: '',
   descripcion: '',
   fecha: '',
+  hora: '',
   ubicacion: '',
   precio: '',
   imagen_url: '',
@@ -43,36 +45,52 @@ const extraerNombreArchivo = (url: string): string | null => {
 };
 
 const GestionEventos: React.FC = () => {
-  const [eventos, setEventos] = useState<any[]>([]);
+  const [eventos, setEventos] = useState<Evento[]>([]);
   const [totalEventos, setTotalEventos] = useState(0);
   const [paginaActual, setPaginaActual] = useState(0);
+  const [busqueda, setBusqueda] = useState('');
+  const [mensaje, setMensaje] = useState<string | null>(null);
 
   const [mostrarForm, setMostrarForm] = useState(false);
   const [editandoId, setEditandoId] = useState<string | null>(null);
   const [archivo, setArchivo] = useState<File | null>(null);
   const [subiendo, setSubiendo] = useState(false);
   const [eliminando, setEliminando] = useState<string | null>(null);
+  const [pendienteEliminar, setPendienteEliminar] = useState<string | null>(null);
 
   const [formData, setFormData] = useState(FORM_INICIAL);
 
   const totalPaginas = Math.ceil(totalEventos / POR_PAGINA);
 
   // ── Fetch paginado ──────────────────────────────────────────
-  const fetchEventos = async (pagina = paginaActual) => {
+  const fetchEventos = async (pagina = paginaActual, q = busqueda) => {
     const from = pagina * POR_PAGINA;
     const to = from + POR_PAGINA - 1;
 
-    const { data, count } = await supabase
+    let query = supabase
       .from('eventos')
-      .select('*', { count: 'exact' })
+      .select('id, titulo, fecha, hora, imagen_url, categoria, precio, ubicacion, enlace_externo, descripcion, animales_permitidos', { count: 'exact' })
       .order('created_at', { ascending: false })
       .range(from, to);
+
+    if (q.trim()) {
+      const safe = q.trim();
+      query = query.or(`titulo.ilike.%${safe}%,ubicacion.ilike.%${safe}%,categoria.ilike.%${safe}%`);
+    }
+
+    const { data, count, error } = await query;
+    if (error) {
+      setMensaje('No se pudieron cargar los eventos.');
+      return;
+    }
 
     if (data) setEventos(data);
     if (count !== null) setTotalEventos(count);
   };
 
-  useEffect(() => { fetchEventos(paginaActual); }, [paginaActual]);
+  useEffect(() => {
+    fetchEventos(paginaActual, busqueda);
+  }, [paginaActual, busqueda]);
 
   const cambiarPagina = (nueva: number) => {
     if (nueva < 0 || nueva >= totalPaginas) return;
@@ -116,15 +134,17 @@ const GestionEventos: React.FC = () => {
 
       if (editandoId) {
         await supabase.from('eventos').update(payload).eq('id', editandoId);
+        setMensaje('Evento actualizado correctamente.');
       } else {
         await supabase.from('eventos').insert([payload]);
+        setMensaje('Evento creado correctamente.');
       }
 
       cerrarFormulario();
-      fetchEventos(0);
+      fetchEventos(0, busqueda);
       setPaginaActual(0);
     } catch {
-      alert('Error al guardar el evento. Comprueba los datos e inténtalo de nuevo.');
+      setMensaje('Error al guardar el evento. Comprueba los datos e inténtalo de nuevo.');
     } finally {
       setSubiendo(false);
     }
@@ -137,13 +157,14 @@ const GestionEventos: React.FC = () => {
     setFormData(FORM_INICIAL);
   };
 
-  const prepararEdicion = (ev: any) => {
-    // Formatear el valor para que el select ('', 'true', 'false') lo entienda
+  const prepararEdicion = (ev: Evento) => {
     const formEvent = {
       ...ev,
+      hora: ev.hora ?? '',
+      precio: ev.precio?.toString() ?? '',
       animales_permitidos: ev.animales_permitidos === true ? 'true' : ev.animales_permitidos === false ? 'false' : ''
     };
-    setFormData(formEvent);
+    setFormData(formEvent as typeof FORM_INICIAL);
     setEditandoId(ev.id);
     setMostrarForm(true);
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -151,7 +172,7 @@ const GestionEventos: React.FC = () => {
 
   // ── Eliminar con limpieza de Storage ───────────────────────
   const eliminarEvento = async (id: string, imagen_url: string) => {
-    if (!window.confirm('¿Eliminar este evento permanentemente? Esta acción también borrará la imagen del servidor.')) return;
+    setPendienteEliminar(null);
     setEliminando(id);
     try {
       // 1. Borrar imagen del bucket si existe
@@ -163,9 +184,10 @@ const GestionEventos: React.FC = () => {
       }
       // 2. Borrar fila de BD
       await supabase.from('eventos').delete().eq('id', id);
-      fetchEventos(paginaActual);
+      fetchEventos(paginaActual, busqueda);
+      setMensaje('Evento eliminado correctamente.');
     } catch {
-      alert('Error al eliminar el evento.');
+      setMensaje('Error al eliminar el evento.');
     } finally {
       setEliminando(null);
     }
@@ -191,6 +213,31 @@ const GestionEventos: React.FC = () => {
             {mostrarForm ? 'Cerrar Formulario' : 'Crear Nuevo Evento'}
           </button>
         </header>
+
+        <div className="mb-8 flex flex-col md:flex-row gap-4 items-center justify-between">
+          <div className="relative w-full md:w-96">
+            <i className="bi bi-search absolute left-5 top-1/2 -translate-y-1/2 text-slate-400" />
+            <input
+              type="text"
+              value={busqueda}
+              onChange={(e) => { setPaginaActual(0); setBusqueda(e.target.value); }}
+              placeholder="Buscar por título, ubicación o categoría"
+              className="w-full bg-white border border-slate-100 rounded-2xl py-4 pl-12 pr-4 text-sm font-bold text-brand-dark outline-none focus:border-brand-blue transition-all"
+            />
+          </div>
+          <button
+            onClick={() => fetchEventos(paginaActual, busqueda)}
+            className="px-5 py-3 rounded-xl bg-brand-dark text-white text-[10px] font-black uppercase tracking-widest hover:bg-brand-blue transition-all"
+          >
+            <i className="bi bi-arrow-clockwise mr-2" />Recargar
+          </button>
+        </div>
+
+        {mensaje && (
+          <div className="mb-8 bg-brand-blue/10 border border-brand-blue/20 rounded-2xl px-5 py-3">
+            <p className="text-[11px] font-black uppercase tracking-widest text-brand-blue">{mensaje}</p>
+          </div>
+        )}
 
         {/* ── FORMULARIO BENTO ── */}
         {mostrarForm && (
@@ -231,8 +278,8 @@ const GestionEventos: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Fecha + Precio */}
-                <div className="grid grid-cols-2 gap-4">
+                {/* Fecha + Hora + Precio */}
+                <div className="grid grid-cols-3 gap-4">
                   <div>
                     <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 block">Fecha</label>
                     <input
@@ -240,6 +287,15 @@ const GestionEventos: React.FC = () => {
                       className="w-full bg-brand-bg border-none rounded-2xl px-6 py-4 font-bold text-brand-dark outline-none"
                       value={formData.fecha}
                       onChange={e => setFormData({ ...formData, fecha: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 block">Hora</label>
+                    <input
+                      type="time"
+                      className="w-full bg-brand-bg border-none rounded-2xl px-6 py-4 font-bold text-brand-dark outline-none"
+                      value={formData.hora}
+                      onChange={e => setFormData({ ...formData, hora: e.target.value })}
                     />
                   </div>
                   <div>
@@ -374,14 +430,30 @@ const GestionEventos: React.FC = () => {
                   <td className="px-8 py-6 font-black text-brand-dark">{ev.precio || '—'}</td>
                   <td className="px-12 py-6 text-right">
                     <button
-                      onClick={() => prepararEdicion(ev)}
+                      onClick={() => prepararEdicion(ev as Evento)}
                       className="w-10 h-10 rounded-xl bg-slate-50 text-slate-400 hover:bg-brand-blue hover:text-white transition-all mr-2"
                       title="Editar"
                     >
                       <i className="bi bi-pencil-square" />
                     </button>
+                    {pendienteEliminar === ev.id ? (
+                      <span className="inline-flex gap-1">
+                        <button
+                          onClick={() => eliminarEvento(ev.id, ev.imagen_url)}
+                          className="px-3 py-2 rounded-xl bg-brand-red text-white text-[9px] font-black uppercase tracking-widest hover:scale-105 transition-all"
+                        >
+                          Borrar
+                        </button>
+                        <button
+                          onClick={() => setPendienteEliminar(null)}
+                          className="px-3 py-2 rounded-xl bg-slate-100 text-slate-500 text-[9px] font-black uppercase tracking-widest hover:scale-105 transition-all"
+                        >
+                          No
+                        </button>
+                      </span>
+                    ) : (
                     <button
-                      onClick={() => eliminarEvento(ev.id, ev.imagen_url)}
+                      onClick={() => setPendienteEliminar(ev.id)}
                       disabled={eliminando === ev.id}
                       className="w-10 h-10 rounded-xl bg-slate-50 text-slate-400 hover:bg-brand-red hover:text-white transition-all disabled:opacity-40"
                       title="Eliminar"
@@ -390,6 +462,7 @@ const GestionEventos: React.FC = () => {
                         ? <svg className="animate-spin w-4 h-4 mx-auto" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" strokeOpacity="0.25" /><path d="M4 12a8 8 0 018-8" stroke="currentColor" strokeWidth="4" strokeLinecap="round" /></svg>
                         : <i className="bi bi-trash3" />}
                     </button>
+                    )}
                   </td>
                 </tr>
               ))}

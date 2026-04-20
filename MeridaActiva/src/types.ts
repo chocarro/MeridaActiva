@@ -12,18 +12,22 @@
 // ── Evento ───────────────────────────────────────────────────────
 // Corresponde a la tabla "eventos" de Supabase
 export interface Evento {
-  id: string;                    // uuid
+  id: string;                         // uuid
   titulo: string;
   descripcion: string;
-  fecha: string;                 // ISO 8601: "2025-06-15T20:00:00"
-  lugar: string;
+  fecha: string;                      // ISO 8601: "2025-06-15T20:00:00"
+  /** Campo canonical en BD (se usa también el alias "ubicacion" en algunas queries) */
+  lugar?: string;
+  /** Alias de "lugar" — usado en selects que piden la columna "ubicacion" */
+  ubicacion?: string;
   imagen_url: string;
-  categoria: CategoriaEvento;
-  precio: number | null;         // null = gratuito
-  latitud: number | null;        // para el mapa Leaflet
-  longitud: number | null;
-  animales_permitidos?: boolean | null; // null = no configurado
-  created_at: string;
+  categoria: string;                  // Permite strings libres además de CategoriaEvento
+  precio: number | string | null;     // null = gratuito; puede ser texto "10€" o número
+  hora?: string | null;               // hora del evento (HH:MM)
+  latitud?: number | null;            // para el mapa Leaflet
+  longitud?: number | null;
+  animales_permitidos?: boolean | null;
+  created_at?: string;
 }
 
 export type CategoriaEvento =
@@ -45,12 +49,13 @@ export interface Comentario {
   texto: string;
   puntuacion: number;            // 1–5
   created_at: string;
+  nombre_usuario?: string;       // desnormalizado para mostrar sin JOIN
   // join con profiles (opcional, para mostrar el nombre del autor)
   perfil?: Pick<Perfil, "nombre" | "avatar_url">;
 }
 
 // ── Perfil de usuario ────────────────────────────────────────────
-// Corresponde a la tabla "profiles" / "perfiles" de Supabase
+// Corresponde a la tabla "usuarios" de Supabase
 export interface Perfil {
   id: string;                    // mismo uuid que auth.users
   nombre: string;
@@ -58,6 +63,8 @@ export interface Perfil {
   avatar_url: string | null;
   bio: string | null;
   created_at: string;
+  // join con la tabla roles (opcional)
+  roles?: { nombre: string } | null;
 }
 
 // ── Favorito ─────────────────────────────────────────────────────
@@ -65,10 +72,37 @@ export interface Perfil {
 export interface Favorito {
   id: string;
   usuario_id: string;
-  evento_id: string;
+  /** ID del evento o lugar guardado */
+  elemento_id: string;
+  /** "evento" | "lugar" */
+  tipo_elemento: string;
   created_at: string;
-  // join con eventos (opcional, para mostrar la tarjeta directamente)
+  // join opcional con la tabla correspondiente
   evento?: Evento;
+  detalle?: Record<string, unknown>;
+}
+
+// ── Agenda Personal ───────────────────────────────────────────────
+// Corresponde a la tabla "agenda_personal" de Supabase
+export interface AgendaPersonal {
+  id: string;
+  usuario_id?: string;
+  titulo: string;
+  fecha: string;
+  nota?: string;
+  color: string;
+  hora?: string;
+}
+
+// ── Evento de Calendario ─────────────────────────────────────────
+// Tipo unificado para el componente Calendario (plataforma + personal)
+export interface EventoCalendario {
+  id: string;
+  titulo: string;
+  fecha: string;
+  color: string;
+  tipo: 'plataforma' | 'personal';
+  hora?: string;
 }
 
 // ── Respuestas de Supabase ────────────────────────────────────────

@@ -3,6 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useSeoMeta } from '../../hooks/useSeoMeta';
 
+// ─── Utilidad ─────────────────────────────────────────────────────
+const esEmailValido = (email: string) =>
+  /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email.trim());
+
 // ─── Tipos ───────────────────────────────────────────────────────
 type FormState = 'idle' | 'sending' | 'success' | 'error';
 
@@ -51,6 +55,7 @@ const Contacto: React.FC = () => {
     const navigate = useNavigate();
     const [form, setForm] = useState<FormData>({ nombre: '', email: '', asunto: '', mensaje: '' });
     const [estado, setEstado] = useState<FormState>('idle');
+    const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
     useSeoMeta({
         title: 'Contacto — Ponte en contacto con MeridaActiva',
@@ -63,15 +68,49 @@ const Contacto: React.FC = () => {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+
+        // Validaciones en el cliente
         if (!form.nombre.trim() || !form.email.trim() || !form.mensaje.trim()) {
             setEstado('error');
+            setErrorMsg('Por favor, completa todos los campos obligatorios.');
             return;
         }
+        if (!esEmailValido(form.email)) {
+            setEstado('error');
+            setErrorMsg('El formato del email no es válido. Ejemplo: usuario@dominio.com');
+            return;
+        }
+        if (form.mensaje.trim().length < 10) {
+            setEstado('error');
+            setErrorMsg('El mensaje debe tener al menos 10 caracteres.');
+            return;
+        }
+
         setEstado('sending');
-        await new Promise(r => setTimeout(r, 1500));
-        setEstado('success');
-        setForm({ nombre: '', email: '', asunto: '', mensaje: '' });
-        setTimeout(() => setEstado('idle'), 5000);
+        setErrorMsg(null);
+
+        try {
+            const res = await fetch('/api/contacto', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(form),
+            });
+
+            const data = await res.json();
+
+            if (!res.ok) {
+                setEstado('error');
+                setErrorMsg(data?.error ?? 'No se pudo enviar el mensaje. Inténtalo de nuevo.');
+                return;
+            }
+
+            setEstado('success');
+            setForm({ nombre: '', email: '', asunto: '', mensaje: '' });
+            setTimeout(() => setEstado('idle'), 6000);
+        } catch {
+            setEstado('error');
+            setErrorMsg('Error de conexión. Comprueba tu internet e inténtalo de nuevo.');
+        }
     };
 
     return (
@@ -246,7 +285,7 @@ const Contacto: React.FC = () => {
 
                                 {estado === 'error' && (
                                     <p className="text-brand-red text-[10px] font-black uppercase tracking-widest">
-                                        ⚠ Por favor, completa todos los campos obligatorios.
+                                        ⚠ {errorMsg}
                                     </p>
                                 )}
 

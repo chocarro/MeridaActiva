@@ -7,61 +7,93 @@ import { SkeletonDetalleEvento } from '../../componentes/Skeletons';
 import LazyImg from '../../componentes/LazyImg';
 import { useSeoMeta } from '../../hooks/useSeoMeta';
 import { toastError } from '../../utils/toast';
+import type { Evento } from '../../types';
 
+// ── Comentario con campos explícitos ─────────────────────────────
+interface Comentario {
+  id: string;
+  texto: string;
+  puntuacion: number;
+  created_at: string;
+  nombre_usuario: string | null;
+}
+
+// ── Colores por categoría (cubre las 7 del formulario admin) ─────
 const CATEGORY_COLORS: Record<string, string> = {
-  Cultural: '#032B43',
-  Música: '#3F88C5',
-  Teatro: '#D00000',
+  Cultural:    '#032B43',
+  Música:      '#3F88C5',
+  Teatro:      '#D00000',
+  Deportes:    '#136F63',
+  Infantil:    '#FFBA08',
+  Gastronomía: '#6B4226',
+  Patrimonio:  '#6B4FBB',
 };
+
+const COMENTARIOS_POR_PAGINA = 8;
 
 const DetalleEvento: React.FC = () => {
   const { id } = useParams();
-  const [evento, setEvento] = useState<any>(null);
+  const [evento, setEvento] = useState<Evento | null>(null);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState(false);
-  const [comentarios, setComentarios] = useState<any[]>([]);
+  const [comentarios, setComentarios] = useState<Comentario[]>([]);
+  const [totalComentarios, setTotalComentarios] = useState(0);
+  const [paginaComentarios, setPaginaComentarios] = useState(0);
+  const [cargandoMasComents, setCargandoMasComents] = useState(false);
 
-  // ── SEO dinámico (se actualiza cuando llegan los datos del evento) ──
+  // ── SEO dinámico — usa un título genérico hasta tener datos ──
   useSeoMeta({
-    title: evento ? evento.titulo : 'Cargando evento...',
+    title: evento?.titulo ?? 'Evento en Mérida — MeridaActiva',
     description: evento
-      ? `${evento.titulo} — ${(evento.descripcion || '').slice(0, 140)}...`
+      ? `${evento.titulo} — ${(evento.descripcion ?? '').replace(/<[^>]*>/g, '').slice(0, 140)}...`
       : 'Descubre este evento en Mérida.',
     image: evento?.imagen_url,
     type: 'article',
   });
 
-  const fetchEventoData = async () => {
-    setError(false);
-    setCargando(true);
+  const fetchEventoData = async (pagina = 0) => {
+    if (pagina === 0) { setError(false); setCargando(true); }
+    else setCargandoMasComents(true);
     try {
-      const { data: eventoData, error: eventoError } = await supabase
-        .from('eventos')
-        .select('*')
-        .eq('id', id)
-        .single();
+      if (pagina === 0) {
+        const { data: eventoData, error: eventoError } = await supabase
+          .from('eventos')
+          .select('id, titulo, descripcion, fecha, hora, ubicacion, imagen_url, categoria, precio, enlace_externo, animales_permitidos')
+          .eq('id', id)
+          .single();
 
-      if (eventoError) throw eventoError;
-      if (eventoData) setEvento(eventoData);
+        if (eventoError) throw eventoError;
+        if (eventoData) setEvento(eventoData as Evento);
+      }
 
-      const { data: comentariosData } = await supabase
+      const desde = pagina * COMENTARIOS_POR_PAGINA;
+      const hasta = desde + COMENTARIOS_POR_PAGINA - 1;
+
+      const { data: comentariosData, count } = await supabase
         .from('comentarios')
-        .select('*')
+        .select('id, texto, puntuacion, created_at, nombre_usuario', { count: 'exact' })
         .eq('evento_id', id)
         .order('created_at', { ascending: false })
-        .limit(20);
+        .range(desde, hasta);
 
-      if (comentariosData) setComentarios(comentariosData);
+      if (comentariosData) {
+        setComentarios(prev => pagina === 0 ? (comentariosData as Comentario[]) : [...prev, ...(comentariosData as Comentario[])]);
+      }
+      if (count !== null) setTotalComentarios(count);
+      setPaginaComentarios(pagina);
     } catch {
-      setError(true);
-      toastError('No se pudo cargar el evento. Inténtalo de nuevo.');
+      if (pagina === 0) {
+        setError(true);
+        toastError('No se pudo cargar el evento. Inténtalo de nuevo.');
+      }
     } finally {
       setCargando(false);
+      setCargandoMasComents(false);
     }
   };
 
   useEffect(() => {
-    fetchEventoData();
+    fetchEventoData(0);
   }, [id]);
 
   if (cargando) return <SkeletonDetalleEvento />;
@@ -105,6 +137,7 @@ const DetalleEvento: React.FC = () => {
   const avgPuntuacion = comentarios.length > 0
     ? (comentarios.reduce((s, c) => s + (c.puntuacion || 5), 0) / comentarios.length).toFixed(1)
     : null;
+  const hayMasComentarios = comentarios.length < totalComentarios;
 
   return (
     <div className="min-h-screen bg-brand-bg">
@@ -215,23 +248,14 @@ const DetalleEvento: React.FC = () => {
                 <span className="w-12 h-[2px] bg-brand-gold" />
                 Sobre el evento
               </h3>
-              <p className="text-brand-dark text-xl font-medium leading-relaxed opacity-80 whitespace-pre-line">
-                {evento.descripcion}
-              </p>
+              {/* Descripción — renderiza HTML de ReactQuill correctamente */}
+              <div
+                className="prose prose-slate max-w-none text-brand-dark opacity-80 text-base leading-relaxed"
+                dangerouslySetInnerHTML={{ __html: evento.descripcion ?? '' }}
+              />
 
-              {/* Extra info blocks */}
+              {/* Extra info blocks — sólo contenido real */}
               <div className="mt-10 grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="bg-brand-bg rounded-[2rem] p-8 border border-slate-100">
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="w-10 h-10 bg-brand-blue/10 rounded-2xl flex items-center justify-center">
-                      <i className="bi bi-universal-access text-brand-blue text-lg" />
-                    </div>
-                    <h4 className="font-black text-brand-dark text-[10px] uppercase tracking-widest">Accesibilidad</h4>
-                  </div>
-                  <p className="text-slate-500 text-sm font-medium leading-relaxed">
-                    El recinto dispone de acceso adaptado para personas con movilidad reducida. Si necesitas asistencia especial, contacta con el organizador con antelación.
-                  </p>
-                </div>
 
                 {/* Animales */}
                 <div className="bg-brand-bg rounded-[2rem] p-8 border border-slate-100">
@@ -273,39 +297,24 @@ const DetalleEvento: React.FC = () => {
                   )}
                 </div>
 
-                <div className="bg-brand-bg rounded-[2rem] p-8 border border-slate-100 md:col-span-2">
+                <div className="bg-brand-dark rounded-[2rem] p-8 text-white">
                   <div className="flex items-center gap-3 mb-4">
-                    <div className="w-10 h-10 bg-brand-gold/10 rounded-2xl flex items-center justify-center">
-                      <i className="bi bi-lightbulb-fill text-brand-gold text-lg" />
-                    </div>
-                    <h4 className="font-black text-brand-dark text-[10px] uppercase tracking-widest">Consejos prácticos</h4>
+                    <i className="bi bi-geo-alt-fill text-brand-gold text-xl" />
+                    <h4 className="font-black text-[10px] uppercase tracking-widest text-white/80">Cómo llegar</h4>
                   </div>
-                  <ul className="text-slate-500 text-sm font-medium leading-relaxed space-y-2">
-                    <li className="flex items-start gap-2"><i className="bi bi-check2 text-brand-green mt-0.5" /> Llega al menos 15 minutos antes para encontrar aparcamiento.</li>
-                    <li className="flex items-start gap-2"><i className="bi bi-check2 text-brand-green mt-0.5" /> Consulta si el evento requiere entradas o inscripción previa.</li>
-                    <li className="flex items-start gap-2"><i className="bi bi-check2 text-brand-green mt-0.5" /> El centro histórico es peatonal — ideal para llegar a pie o en bicicleta.</li>
-                  </ul>
+                  <p className="text-white/60 text-sm font-medium leading-relaxed">
+                    Mérida, Patrimonio de la Humanidad — UNESCO 1993. El recinto de este evento se encuentra en {evento.ubicacion}.
+                  </p>
+                  <a
+                    href={`https://www.google.com/maps/search/${encodeURIComponent(evento.ubicacion + ' Mérida, Extremadura')}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-2 mt-4 text-brand-gold font-black text-[10px] uppercase tracking-widest hover:text-white transition-colors"
+                  >
+                    <i className="bi bi-map" />
+                    Ver en Google Maps
+                  </a>
                 </div>
-              </div>
-
-              {/* Info about the venue */}
-              <div className="mt-6 bg-brand-dark rounded-[2rem] p-8 text-white">
-                <div className="flex items-center gap-3 mb-4">
-                  <i className="bi bi-geo-alt-fill text-brand-gold text-xl" />
-                  <h4 className="font-black text-[10px] uppercase tracking-widest text-white/80">Sobre el lugar: {evento.ubicacion}</h4>
-                </div>
-                <p className="text-white/60 text-sm font-medium leading-relaxed">
-                  Mérida, declarada Patrimonio de la Humanidad por la UNESCO en 1993, alberga uno de los conjuntos de monumentos romanos mejor conservados del mundo. Cada rincón de la ciudad respira historia y cultura, convirtiendo cada evento en una experiencia única e irrepetible.
-                </p>
-                <a
-                  href={`https://www.google.com/maps/search/${encodeURIComponent(evento.ubicacion + ' Mérida, Extremadura')}`}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="inline-flex items-center gap-2 mt-4 text-brand-gold font-black text-[10px] uppercase tracking-widest hover:text-white transition-colors"
-                >
-                  <i className="bi bi-map" />
-                  Ver en Google Maps
-                </a>
               </div>
             </div>
 
@@ -358,7 +367,7 @@ const DetalleEvento: React.FC = () => {
                 )}
               </div>
 
-              <FormularioReseña eventoId={id!} onPublicado={fetchEventoData} />
+              <FormularioReseña eventoId={id!} onPublicado={() => fetchEventoData(0)} />
 
               {comentarios.length > 0 ? (
                 <div className="grid gap-6 mt-8">
@@ -385,6 +394,21 @@ const DetalleEvento: React.FC = () => {
                       </p>
                     </div>
                   ))}
+
+                  {/* Paginación de comentarios */}
+                  {hayMasComentarios && (
+                    <div className="text-center mt-4">
+                      <button
+                        onClick={() => fetchEventoData(paginaComentarios + 1)}
+                        disabled={cargandoMasComents}
+                        className="bg-brand-bg border border-slate-200 text-brand-dark px-8 py-3 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-brand-dark hover:text-white transition-all disabled:opacity-50 flex items-center gap-2 mx-auto"
+                      >
+                        {cargandoMasComents
+                          ? <><i className="bi bi-arrow-repeat animate-spin" /> Cargando...</>
+                          : <>Cargar más opiniones ({totalComentarios - comentarios.length} restantes)</>}
+                      </button>
+                    </div>
+                  )}
                 </div>
               ) : (
                 <div className="mt-8 py-16 text-center bg-white rounded-[2rem] border-2 border-dashed border-slate-100">

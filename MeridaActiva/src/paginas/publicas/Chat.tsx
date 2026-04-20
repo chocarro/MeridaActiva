@@ -11,45 +11,7 @@ import { getGeminiService } from '../../utils/geminiService';
 import type { MensajeChat } from '../../utils/geminiService';
 import { useAuth } from '../../context/AuthContext';
 
-// ── Base de conocimiento local (fallback sin API key) ─────────────
-const RESPUESTAS_IA: Record<string, string> = {
-    historia: 'Mérida (Augusta Emerita) fue fundada en el año 25 a.C. por orden del emperador Augusto para asentar a los soldados eméritos de las legiones V Alaudae y X Gemina. Llegó a ser la capital de la provincia romana de Lusitania y es Patrimonio de la Humanidad desde 1993.',
-    fundacion: 'Augusta Emerita se fundó en el año 25 a.C., por orden de Augusto, para dar tierras a los veteranos licenciados que habían luchado en las Guerras Cántabras.',
-    capital: 'Mérida fue la flamante capital de la Lusitania, una de las tres provincias en las que Roma dividió la Península Ibérica, lo que explica su inmensa riqueza monumental.',
-    teatro: 'El **Teatro Romano de Mérida** es nuestra joya. Se inauguró hacia el año 16-15 a.C., patrocinado por el cónsul Marco Agripa. Con capacidad para unos 6.000 espectadores, hoy en día sigue vivo cada verano gracias al Festival de Teatro Clásico.',
-    anfiteatro: 'El **Anfiteatro Romano**, inaugurado en el 8 a.C., está situado junto al teatro. Tenía capacidad para unas 15.000 personas y era el escenario de luchas de gladiadores (munera) y combates con fieras (venationes).',
-    circo: 'El **Circo Romano** era el mayor recinto de espectáculos de la ciudad (unos 30.000 espectadores). Mide unos 400 metros de largo y se usaba para las emocionantes carreras de cuadrigas.',
-    acueducto: 'Mérida tiene restos de varios acueductos majestuosos, siendo el más famoso el de **Los Milagros**, que traía agua del embalse de Proserpina.',
-    diana: 'El **Templo de Diana** (en realidad dedicado al culto imperial) es el único templo religioso romano que se conserva en su sitio original en Mérida. Destaca por sus enormes columnas corintias.',
-    museo: 'El **Museo Nacional de Arte Romano** (MNAR) de Moneo es imprescindible. Alberga una de las mejores colecciones de esculturas, mosaicos y objetos cotidianos del Imperio Romano.',
-    romano: 'Mérida es la ciudad de España con más monumentos romanos bien conservados. Desde el Teatro, Anfiteatro y Circo, hasta el Acueducto de Los Milagros, el Puente Romano, el Foro y varias villas y casas romanas.',
-    comer: '¡La gastronomía extremeña no tiene rival! Te recomiendo probar las migas, la caldereta de cordero, el jamón ibérico de la dehesa o unos buenos quesos. En la sección **Lugares > Gastronomía** verás los mejores sitios.',
-    cenar: 'Para cenar en Mérida, el centro (alrededor de la Plaza de España y la calle John Lennon) está lleno de bares de tapas con terraza. Tienes varias recomendaciones en nuestra sección "Lugares".',
-    gastronomia: 'Filtra por "Gastronomía" en nuestra sección de lugares. ¡Encontrarás desde taperías modernas hasta restaurantes tradicionales con las famosas migas extremeñas o carnes ibéricas!',
-    restaurante: 'En la sección **Lugares** (filtrando por Gastronomía) verás los mejores restaurantes y bares de tapas de Mérida.',
-    evento: 'Para ver conciertos, teatros, fiestas o exposiciones, ve a la sección **Eventos**. Y si estás registrado, puedes presionar el botón ❤ en cada evento para guardarlo en tu agenda personal.',
-    agenda: '¿Quieres planificarte? Tienes **Mi Agenda** en el menú superior. Ahí aterrizan tus favoritos y además puedes crear tus propios eventos y recordatorios. ¡Todo en vista calendario!',
-    favorito: 'Cuando veas un evento o monumento que te guste, dale al botón de corazón ❤. Lo tendrás listo en la sección "Mi Agenda".',
-    precio: 'El Conjunto Monumental tiene una entrada conjunta muy recomendable. El primer domingo de cada mes es gratis para ciudadanos de la UE.',
-    gratis: 'Nuestra plataforma **MeridaActiva** es y siempre será 100% gratuita. Solo tienes que registrarte para exprimirla al máximo.',
-    registro: 'Puedes registrarte arriba a la derecha. Introduces tu email, una contraseña, confirmas en tu correo ¡y listo!',
-    rutas: '¡Tenemos un Generador de Rutas Inteligentes! Entra en "Mi Agenda" y verás una tarjeta para crearla. La IA armará el recorrido perfecto según tus preferencias.',
-    contacto: 'Si necesitas algo más específico, escríbenos a través del formulario de **Contacto** del menú principal.',
-};
-
-function responderIA(pregunta: string): string {
-    const p = pregunta.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-    const hallazgos: string[] = [];
-    for (const clave in RESPUESTAS_IA) {
-        if (p.includes(clave)) hallazgos.push(RESPUESTAS_IA[clave]);
-    }
-    if (hallazgos.length === 0 && p.match(/\b(hola|buenas|saludos|que tal|hey|hello)\b/)) {
-        return '¡Muy buenas! Soy la IA de MeridaActiva. Pregúntame sobre la historia romana de la ciudad, el teatro, los mejores sitios para comer tapas, o cómo usar la plataforma. ¡Soy todo oídos!';
-    }
-    if (hallazgos.length > 1) return hallazgos.join('\n\n*Y además:*\n');
-    if (hallazgos.length === 1) return hallazgos[0];
-    return '¡Vaya! Esa pregunta es muy específica. Pregúntame sobre el **teatro, anfiteatro, historia, gastronomía o las funciones de la web**. ¡Si es urgente ve a Contacto!';
-}
+const CHAT_STORAGE_KEY = 'meridaactiva_chat_historial';
 
 type MsgChat = MensajeChat;
 
@@ -74,15 +36,33 @@ const ChatPage: React.FC = () => {
 
     const { session } = useAuth();
     const [inputChat, setInputChat] = useState('');
-    const [mensajes, setMensajes] = useState<MsgChat[]>([
-        {
-            rol: 'ia',
-            texto: '¡Hola! Soy el asistente de MeridaActiva\n\nPuedo ayudarte con:\n- **Eventos** y agenda cultural de Mérida\n- **Monumentos** romanos y patrimonio\n- **Gastronomía** y restaurantes\n- **Rutas** personalizadas por la ciudad\n- Cualquier duda sobre la plataforma\n\n¿Qué quieres saber?',
-            ts: Date.now(),
-        },
-    ]);
+
+    // Restaurar historial desde sessionStorage al montar
+    const [mensajes, setMensajes] = useState<MsgChat[]>(() => {
+        try {
+            const guardado = sessionStorage.getItem(CHAT_STORAGE_KEY);
+            if (guardado) return JSON.parse(guardado) as MsgChat[];
+        } catch { /* sessionStorage bloqueado o datos corruptos */ }
+        return [
+            {
+                rol: 'ia',
+                texto: '¡Hola! Soy el asistente de MeridaActiva\n\nPuedo ayudarte con:\n- **Eventos** y agenda cultural de Mérida\n- **Monumentos** romanos y patrimonio\n- **Gastronomía** y restaurantes\n- **Rutas** personalizadas por la ciudad\n- Cualquier duda sobre la plataforma\n\n¿Qué quieres saber?',
+                ts: Date.now(),
+            },
+        ];
+    });
     const [pensando, setPensando] = useState(false);
     const chatContainerRef = useRef<HTMLDivElement>(null);
+
+    // Persistir historial en sessionStorage cuando cambie
+    useEffect(() => {
+        try {
+            // Solo guardar si hay más de 1 mensaje (el inicial no aporta)
+            if (mensajes.length > 1) {
+                sessionStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(mensajes));
+            }
+        } catch { /* sessionStorage lleno o bloqueado */ }
+    }, [mensajes]);
 
     useEffect(() => {
         if (chatContainerRef.current) {
@@ -198,6 +178,25 @@ const ChatPage: React.FC = () => {
                                     <span className="text-[9px] font-black text-white/50 uppercase tracking-widest">En línea · IA disponible</span>
                                 </div>
                             </div>
+                            {/* Botón limpiar historial */}
+                            {mensajes.length > 1 && (
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        try { sessionStorage.removeItem(CHAT_STORAGE_KEY); } catch { /* ok */ }
+                                        setMensajes([{
+                                            rol: 'ia',
+                                            texto: '¡Historial limpiado! ¿En qué puedo ayudarte?',
+                                            ts: Date.now(),
+                                        }]);
+                                    }}
+                                    title="Limpiar conversación"
+                                    className="ml-auto text-[9px] font-black uppercase tracking-widest bg-white/10 text-white/50 px-2.5 py-1.5 rounded-xl hover:bg-white/20 hover:text-white transition-all flex items-center gap-1"
+                                >
+                                    <i className="bi bi-trash3 text-xs" />
+                                    Limpiar
+                                </button>
+                            )}
                             {!session && (
                                 <Link
                                     to="/login"

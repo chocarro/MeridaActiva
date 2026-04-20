@@ -1,6 +1,8 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { supabase } from '../supabaseClient';
-import type { Session } from '@supabase/supabase-js';
+import type { AuthChangeEvent, Session } from '@supabase/supabase-js';
+import { normalizarPerfilDbRow } from '../utils/perfilUsuario';
+import type { Perfil } from '../types';
 
 // ─────────────────────────────────────────────
 // Helpers para detectar errores de storage/lock
@@ -30,10 +32,44 @@ const isInvalidTokenError = (msg?: string): boolean => {
 const AUTH_STORAGE_KEY_PREFIX = 'sb-';
 const SUPABASE_REF_KEY = 'meridaactiva_supabase_ref';
 
-const limpiarAuthStorage = () => {
-  Object.keys(localStorage)
-    .filter((k) => k.startsWith(AUTH_STORAGE_KEY_PREFIX))
-    .forEach((k) => localStorage.removeItem(k));
+/**
+ * Plan B: elimina cualquier clave de Supabase Auth en el navegador.
+ * Incluye `sb-<ref>-auth-token` y otras que el cliente pueda crear.
+ */
+export const limpiarAlmacenamientoSupabase = (): void => {
+  try {
+    Object.keys(localStorage)
+      .filter((k) => k.startsWith(AUTH_STORAGE_KEY_PREFIX))
+      .forEach((k) => localStorage.removeItem(k));
+  } catch (e) {
+    console.warn('[Auth] No se pudo limpiar localStorage (sb-):', e);
+  }
+  try {
+    Object.keys(sessionStorage)
+      .filter((k) => k.startsWith(AUTH_STORAGE_KEY_PREFIX))
+      .forEach((k) => sessionStorage.removeItem(k));
+  } catch (e) {
+    console.warn('[Auth] No se pudo limpiar sessionStorage (sb-):', e);
+  }
+};
+
+/** @deprecated usar limpiarAlmacenamientoSupabase */
+const limpiarAuthStorage = limpiarAlmacenamientoSupabase;
+
+/**
+ * Intenta cerrar sesión en Supabase (revoca refresh token en servidor si es posible)
+ * y siempre deja el cliente sin sesión en memoria.
+ *
+ * stopAutoRefresh evita que un tick de renovación vuelva a escribir `sb-*-auth-token`
+ * justo después de borrarlo (condición de carrera frecuente al cerrar sesión).
+ */
+export const cerrarSesionEnServidor = async (): Promise<void> => {
+  await supabase.auth.stopAutoRefresh().catch(() => {});
+  const { error: errGlobal } = await supabase.auth.signOut({ scope: 'global' });
+  if (errGlobal) {
+    await supabase.auth.signOut({ scope: 'local' }).catch(() => {});
+  }
+  await supabase.auth.startAutoRefresh().catch(() => {});
 };
 
 const obtenerSupabaseRefActual = (): string => {
@@ -51,13 +87,33 @@ const tokenCaducado = (session: Session | null): boolean => {
   return session.expires_at * 1000 <= Date.now();
 };
 
+const PROFILE_FETCH_MS = 10_000;
+const LOADING_SAFETY_MS = 18_000;
+const REVALIDATE_DEBOUNCE_MS = 1_200;
+
+async function withTimeout<T>(promiseLike: PromiseLike<T>, ms: number): Promise<T> {
+  let timer: ReturnType<typeof setTimeout>;
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new Error('__fetch_timeout__')), ms);
+  });
+  try {
+    return await Promise.race([Promise.resolve(promiseLike), timeout]);
+  } finally {
+    clearTimeout(timer!);
+  }
+}
+
 // ─────────────────────────────────────────────
 // Tipos y contexto
 // ─────────────────────────────────────────────
 interface AuthContextType {
   session: Session | null;
-  profile: any | null;
+  profile: Perfil | null;
   loading: boolean;
+  /** Cierre de sesión normal: servidor + localStorage/sessionStorage + estado React */
+  signOut: () => Promise<void>;
+  /** Vuelve a cargar `usuarios` + rol del usuario actual (útil tras login). */
+  refreshProfile: () => Promise<void>;
   forceNuclearLogout: () => Promise<void>;
 }
 
@@ -65,6 +121,8 @@ const AuthContext = createContext<AuthContextType>({
   session: null,
   profile: null,
   loading: true,
+  signOut: async () => {},
+  refreshProfile: async () => {},
   forceNuclearLogout: async () => {},
 });
 
@@ -74,11 +132,11 @@ const AuthContext = createContext<AuthContextType>({
 // ─────────────────────────────────────────────
 export const forceNuclearLogout = async (): Promise<void> => {
   try {
-    await supabase.auth.signOut();
+    await cerrarSesionEnServidor();
   } catch (e) {
     console.warn('[NuclearLogout] signOut falló (esperado si token corrupto):', e);
   } finally {
-    limpiarAuthStorage();
+    limpiarAlmacenamientoSupabase();
     window.location.href = '/';
   }
 };
@@ -89,11 +147,11 @@ export const forceNuclearLogout = async (): Promise<void> => {
 // ─────────────────────────────────────────────
 const limpiezaForzosa = async (): Promise<void> => {
   try {
-    await supabase.auth.signOut();
+    await cerrarSesionEnServidor();
   } catch (e) {
     console.warn('[AuthContext] limpiezaForzosa: signOut falló:', e);
   } finally {
-    limpiarAuthStorage();
+    limpiarAlmacenamientoSupabase();
     sessionStorage.clear();
     window.location.href = '/login';
   }
@@ -104,8 +162,79 @@ const limpiezaForzosa = async (): Promise<void> => {
 // ─────────────────────────────────────────────
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [session, setSession]   = useState<Session | null>(null);
-  const [profile, setProfile]   = useState<any>(null);
+  const [profile, setProfile]   = useState<Perfil | null>(null);
   const [loading, setLoading]   = useState(true);
+  const sessionRef = useRef<Session | null>(null);
+  sessionRef.current = session;
+
+  /**
+   * handleLogout de producción: revoca tokens en Supabase cuando puede,
+   * y siempre borra `sb-*` del almacenamiento (plan B si el SDK falla).
+   */
+  const signOut = useCallback(async () => {
+    try {
+      await cerrarSesionEnServidor();
+    } catch (e) {
+      console.warn('[AuthContext] signOut: error en servidor, aplicando limpieza local:', e);
+    } finally {
+      limpiarAlmacenamientoSupabase();
+      setSession(null);
+      setProfile(null);
+      setLoading(false);
+    }
+  }, []);
+
+  const fetchProfile = useCallback(
+    async (
+      userId: string,
+      isMounted: boolean = true,
+      safetyTimer?: ReturnType<typeof setTimeout>
+    ) => {
+      try {
+        const { data, error } = await withTimeout(
+          supabase
+            .from('usuarios')
+            .select('*, roles (nombre)')
+            .eq('id', userId)
+            .maybeSingle(),
+          PROFILE_FETCH_MS
+        );
+
+        if (error) {
+          console.warn('[AuthContext] Error leyendo perfil:', error.message);
+        }
+
+        if (isMounted) {
+          setProfile((normalizarPerfilDbRow((data ?? null) as Record<string, unknown> | null) as Perfil | null));
+        }
+      } catch (err: unknown) {
+        if (err instanceof Error && err.message === '__fetch_timeout__') {
+          console.warn('[AuthContext] Timeout leyendo perfil — continuando sin perfil.');
+        } else if (isLockOrStorageError(err)) {
+          console.warn('[AuthContext] Error de storage/lock en fetchProfile (silenciado):', err);
+        } else {
+          console.error('[AuthContext] Error inesperado en fetchProfile:', err);
+        }
+        if (isMounted) setProfile(null);
+      } finally {
+        if (isMounted) {
+          if (safetyTimer) clearTimeout(safetyTimer);
+          setLoading(false);
+        }
+      }
+    },
+    []
+  );
+
+  const refreshProfile = useCallback(async () => {
+    const {
+      data: { session: s },
+    } = await supabase.auth.getSession();
+    if (!s?.user?.id) return;
+    setSession(s);
+    setLoading(true);
+    await fetchProfile(s.user.id, true, undefined);
+  }, [fetchProfile]);
 
   useEffect(() => {
     let isMounted = true;
@@ -124,12 +253,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const safetyTimer = setTimeout(() => {
       if (isMounted) {
         console.warn(
-          '[AuthContext] Timeout de seguridad alcanzado (5s). ' +
+          '[AuthContext] Timeout de seguridad alcanzado. ' +
           'Forzando loading=false para desbloquear la aplicación.'
         );
         setLoading(false);
       }
-    }, 5000);
+    }, LOADING_SAFETY_MS);
 
     // ── INICIALIZACIÓN DE SESIÓN ──────────────────────────────────────────
     const initSession = async () => {
@@ -174,7 +303,22 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           return;
         }
 
-        // Caso 3: sesión obtenida correctamente
+        // Caso 3: sesión obtenida — comprobar con el servidor (evita JWT corrupto en caché)
+        if (session) {
+          const { data: { user: srvUser }, error: userErr } = await supabase.auth.getUser();
+          if (!isMounted) return;
+          if (userErr || !srvUser || srvUser.id !== session.user.id) {
+            console.warn('[AuthContext] getUser inválida al iniciar — limpiando almacenamiento auth.');
+            limpiarAuthStorage();
+            await supabase.auth.signOut().catch(() => {});
+            setSession(null);
+            setProfile(null);
+            clearTimeout(safetyTimer);
+            setLoading(false);
+            return;
+          }
+        }
+
         if (isMounted) {
           setSession(session);
           if (session) {
@@ -207,24 +351,61 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     initSession();
 
     // ── LISTENER DE CAMBIOS DE AUTENTICACIÓN ─────────────────────────────
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
+    const aplicarSesionInvalida = async (motivo: string) => {
+      console.warn(`[AuthContext] Sesión inválida (${motivo}) — limpiando almacenamiento.`);
+      limpiarAlmacenamientoSupabase();
+      await supabase.auth.signOut({ scope: 'local' }).catch(() => {});
+      if (!isMounted) return;
+      setSession(null);
+      setProfile(null);
+      clearTimeout(safetyTimer);
+      setLoading(false);
+    };
+
+    const onAuthStateChangeAsync = async (event: AuthChangeEvent, session: Session | null) => {
+      if (!isMounted) return;
+
+      // Token caducado o corrupto tras refresco / otra pestaña cerró sesión
+      if (session && tokenCaducado(session)) {
+        await aplicarSesionInvalida(`event=${event}, tokenCaducado`);
+        return;
+      }
+
+      if (session && session.user) {
+        const { data: { user: srvUser }, error: userErr } = await supabase.auth.getUser();
         if (!isMounted) return;
-        setSession(session);
-        if (session && session.user) {
-          await fetchProfile(session.user.id, isMounted, safetyTimer);
-        } else {
-          // SIGNED_OUT o usuario nulo → limpiar storages para evitar estados zombi
-          if (event === 'SIGNED_OUT' || !session) {
-            limpiarAuthStorage();
-            sessionStorage.clear();
-          }
-          setProfile(null);
-          clearTimeout(safetyTimer);
-          setLoading(false);
+        if (userErr || !srvUser || srvUser.id !== session.user.id) {
+          await aplicarSesionInvalida(`event=${event}, getUser falló`);
+          return;
         }
       }
-    );
+
+      setSession(session);
+
+      if (session && session.user) {
+        await fetchProfile(session.user.id, isMounted, safetyTimer);
+      } else {
+        // Cierre de sesión, refresh fallido, etc.: nunca dejar claves sb-* huérfanas
+        if (event === 'SIGNED_OUT' || !session) {
+          limpiarAlmacenamientoSupabase();
+          try {
+            sessionStorage.clear();
+          } catch {
+            /* ignore */
+          }
+        }
+        setProfile(null);
+        clearTimeout(safetyTimer);
+        setLoading(false);
+      }
+    };
+
+    // Callback síncrono: NO usar async aquí — el SDK toma un lock; await getUser() dentro del callback provoca deadlock.
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      setTimeout(() => {
+        void onAuthStateChangeAsync(event, session);
+      }, 0);
+    });
 
     // ── CLEANUP ───────────────────────────────────────────────────────────
     return () => {
@@ -232,45 +413,46 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       clearTimeout(safetyTimer); // evitar fugas de memoria
       subscription.unsubscribe();
     };
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [fetchProfile]);
 
-  // ── FETCH PERFIL ────────────────────────────────────────────────────────
-  const fetchProfile = async (
-    userId: string,
-    isMounted: boolean = true,
-    safetyTimer?: ReturnType<typeof setTimeout>
-  ) => {
-    try {
-      const { data, error } = await supabase
-        .from('usuarios')
-        .select('*, roles (nombre)')
-        .eq('id', userId)
-        .maybeSingle();
+  // Revalidar sesión al volver a la pestaña (caso típico: token caducado tras dormir el PC)
+  useEffect(() => {
+    let debounce: ReturnType<typeof setTimeout>;
 
-      if (error) {
-        console.warn('[AuthContext] Error leyendo perfil:', error.message);
-      }
+    const revalidar = async () => {
+      if (document.visibilityState !== 'visible') return;
+      const s = sessionRef.current;
+      if (!s?.user?.id) return;
 
-      if (isMounted) setProfile(data ?? null);
-
-    } catch (err: unknown) {
-      if (isLockOrStorageError(err)) {
-        console.warn('[AuthContext] Error de storage/lock en fetchProfile (silenciado):', err);
-      } else {
-        console.error('[AuthContext] Error inesperado en fetchProfile:', err);
-      }
-      if (isMounted) setProfile(null);
-
-    } finally {
-      if (isMounted) {
-        if (safetyTimer) clearTimeout(safetyTimer); // carga exitosa → cancelar timeout
+      const { data: { user: srvUser }, error } = await supabase.auth.getUser();
+      if (error || !srvUser || srvUser.id !== s.user.id) {
+        console.warn('[AuthContext] Revalidación al volver a la pestaña falló — cerrando sesión local.');
+        limpiarAuthStorage();
+        await supabase.auth.signOut().catch(() => {});
+        setSession(null);
+        setProfile(null);
         setLoading(false);
       }
-    }
-  };
+    };
+
+    const schedule = () => {
+      clearTimeout(debounce);
+      debounce = setTimeout(revalidar, REVALIDATE_DEBOUNCE_MS);
+    };
+
+    window.addEventListener('focus', schedule);
+    document.addEventListener('visibilitychange', schedule);
+    return () => {
+      window.removeEventListener('focus', schedule);
+      document.removeEventListener('visibilitychange', schedule);
+      clearTimeout(debounce);
+    };
+  }, []);
 
   return (
-    <AuthContext.Provider value={{ session, profile, loading, forceNuclearLogout }}>
+    <AuthContext.Provider
+      value={{ session, profile, loading, signOut, refreshProfile, forceNuclearLogout }}
+    >
       {children}
     </AuthContext.Provider>
   );

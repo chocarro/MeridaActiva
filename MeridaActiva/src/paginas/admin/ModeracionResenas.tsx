@@ -30,11 +30,14 @@ const ModeracionResenas: React.FC = () => {
   const [pagina, setPagina] = useState(0);
   const [loading, setLoading] = useState(true);
   const [eliminando, setEliminando] = useState<string | null>(null);
+  const [pendienteEliminar, setPendienteEliminar] = useState<string | null>(null);
+  const [mensaje, setMensaje] = useState<string | null>(null);
 
   const totalPaginas = Math.ceil(total / POR_PAGINA);
 
   const fetchResenas = async (p = pagina) => {
     setLoading(true);
+    setMensaje(null);
     try {
       const from = p * POR_PAGINA;
       const to = from + POR_PAGINA - 1;
@@ -50,6 +53,7 @@ const ModeracionResenas: React.FC = () => {
       if (count !== null) setTotal(count);
     } catch (e) {
       console.error('[ModeracionResenas]', e);
+      setMensaje('No se pudieron cargar las reseñas.');
     } finally {
       setLoading(false);
     }
@@ -63,13 +67,14 @@ const ModeracionResenas: React.FC = () => {
   };
 
   const eliminar = async (id: string) => {
-    if (!window.confirm('¿Eliminar esta reseña permanentemente?')) return;
+    setPendienteEliminar(null);
     setEliminando(id);
     try {
       await supabase.from('comentarios').delete().eq('id', id);
       fetchResenas(pagina);
+      setMensaje('Reseña eliminada correctamente.');
     } catch {
-      alert('Error al eliminar la reseña.');
+      setMensaje('Error al eliminar la reseña.');
     } finally {
       setEliminando(null);
     }
@@ -90,6 +95,21 @@ const ModeracionResenas: React.FC = () => {
             </p>
           </div>
         </header>
+
+        <div className="mb-8 flex justify-end">
+          <button
+            onClick={() => fetchResenas(pagina)}
+            className="px-5 py-3 rounded-xl bg-white/10 text-white text-[10px] font-black uppercase tracking-widest hover:bg-white/20 transition-all"
+          >
+            <i className="bi bi-arrow-clockwise mr-2" />Recargar
+          </button>
+        </div>
+
+        {mensaje && (
+          <div className="mb-8 bg-white/5 border border-white/10 rounded-2xl px-5 py-3">
+            <p className="text-[11px] font-black uppercase tracking-widest text-white/70">{mensaje}</p>
+          </div>
+        )}
 
         {/* Grid de tarjetas */}
         {loading ? (
@@ -125,9 +145,28 @@ const ModeracionResenas: React.FC = () => {
                       </p>
                     </div>
                   </div>
-                  {/* Botón eliminar */}
+                  {/* Botón eliminar con confirmación inline */}
+                  {pendienteEliminar === r.id ? (
+                    <div className="flex flex-col gap-1.5 items-end flex-shrink-0">
+                      <p className="text-[8px] font-black text-brand-red uppercase tracking-widest">¿Eliminar?</p>
+                      <div className="flex gap-1">
+                        <button
+                          onClick={() => eliminar(r.id)}
+                          className="px-2.5 py-1 rounded-lg bg-brand-red text-white text-[8px] font-black uppercase tracking-widest hover:scale-105 transition-all"
+                        >
+                          Sí
+                        </button>
+                        <button
+                          onClick={() => setPendienteEliminar(null)}
+                          className="px-2.5 py-1 rounded-lg bg-white/10 text-white/40 text-[8px] font-black uppercase tracking-widest hover:bg-white/20 transition-all"
+                        >
+                          No
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
                   <button
-                    onClick={() => eliminar(r.id)}
+                    onClick={() => setPendienteEliminar(r.id)}
                     disabled={eliminando === r.id}
                     title="Eliminar reseña"
                     className="w-9 h-9 rounded-xl bg-white/5 text-white/20 hover:bg-brand-red hover:text-white transition-all active:scale-90 disabled:opacity-40 flex-shrink-0 flex items-center justify-center"
@@ -141,6 +180,7 @@ const ModeracionResenas: React.FC = () => {
                       <i className="bi bi-trash3-fill text-sm" />
                     )}
                   </button>
+                  )}
                 </div>
 
                 {/* Evento */}

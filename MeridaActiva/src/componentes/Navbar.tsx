@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Link, useLocation } from 'react-router-dom';
-import { useAuth, forceNuclearLogout } from '../context/AuthContext';
-// supabase import removed — logout now handled by forceNuclearLogout
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import Logo from './Logo';
+import { getNombreRolUsuario } from '../utils/perfilUsuario';
 
 const Navbar: React.FC = () => {
-  const { session, profile } = useAuth();
+  const { session, profile, signOut } = useAuth();
+  const navigate = useNavigate();
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
@@ -35,7 +36,10 @@ const Navbar: React.FC = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const handleLogout = () => forceNuclearLogout();
+  const handleLogout = async () => {
+    await signOut();
+    navigate('/login', { replace: true });
+  };
 
   const navLinks = [
     { name: 'Eventos', path: '/eventos', icon: 'bi-calendar-event' },
@@ -50,7 +54,8 @@ const navLinksAuth = [
     { name: 'Chat IA', path: '/faq', icon: 'bi-robot' },
 ];
 
-  const esAdmin = profile?.roles?.nombre === 'Administrador' || profile?.roles?.nombre === 'Gestor (Editor)';
+  const nombreRol = getNombreRolUsuario(profile);
+  const esAdmin = nombreRol === 'Administrador' || nombreRol === 'Gestor (Editor)';
   const userInitial = profile?.nombre?.charAt(0).toUpperCase() || session?.user?.email?.charAt(0).toUpperCase() || 'U';
   const userName = profile?.nombre?.split(' ')[0] || 'Usuario';
 
@@ -210,8 +215,9 @@ const navLinksAuth = [
 
                       {/* Links */}
                       {[
-                        { to: '/perfil', icon: 'bi-person-circle', label: 'Mi Perfil', color: '#3F88C5' },
-                        { to: '/calendario', icon: 'bi-calendar-week', label: 'Mi Agenda', color: '#3F88C5' },
+                        { to: '/perfil',    icon: 'bi-person-circle',  label: 'Mi Perfil',    color: '#3F88C5' },
+                        { to: '/calendario', icon: 'bi-calendar-week', label: 'Mi Agenda',    color: '#3F88C5' },
+                        { to: '/favoritos', icon: 'bi-heart-fill',     label: 'Mis Favoritos', color: '#D00000' },
                       ].map(item => (
                         <Link
                           key={item.to}
@@ -360,6 +366,11 @@ const navLinksAuth = [
                   className="flex items-center gap-3 px-5 py-4 rounded-2xl text-sm font-black uppercase italic"
                   style={{ color: '#FAFAFA', backgroundColor: 'rgba(255,255,255,0.05)' }}>
                   <i className="bi bi-calendar-week text-brand-gold" /> Mi Agenda
+                </Link>
+                <Link to="/favoritos" onClick={() => setMobileMenuOpen(false)}
+                  className="flex items-center gap-3 px-5 py-4 rounded-2xl text-sm font-black uppercase italic"
+                  style={{ color: '#FAFAFA', backgroundColor: 'rgba(255,255,255,0.05)' }}>
+                  <i className="bi bi-heart-fill text-brand-red" /> Mis Favoritos
                 </Link>
                 {esAdmin && (
                   <Link to="/dashboard" onClick={() => setMobileMenuOpen(false)}
