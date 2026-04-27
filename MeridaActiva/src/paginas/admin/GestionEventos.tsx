@@ -29,7 +29,8 @@ const FORM_INICIAL = {
   imagen_url: '',
   enlace_externo: '',
   categoria: 'Cultural',
-  animales_permitidos: '', // '' = null (no configurado)
+  // animales_permitidos se excluye del payload: columna pendiente de añadir en Supabase
+  animales_permitidos: '',
 };
 
 // ── Extrae el nombre de archivo de una URL de Supabase Storage ──
@@ -135,12 +136,19 @@ const GestionEventos: React.FC = () => {
         url = await manejarSubidaImagen(archivo);
       }
 
-      // Convertir el string de animales_permitidos a booleano o null
-      let animalesFormat = null;
-      if (formData.animales_permitidos === 'true') animalesFormat = true;
-      if (formData.animales_permitidos === 'false') animalesFormat = false;
+      // Construir payload sin campos que no existen en la BD actual
+      // ⚠️ animales_permitidos: columna pendiente de añadir en Supabase
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { animales_permitidos: _omit, ...formSinAnimales } = formData;
 
-      const payload = { ...formData, imagen_url: url, animales_permitidos: animalesFormat };
+      const payload = {
+        ...formSinAnimales,
+        imagen_url: url,
+        // Convertir strings vacíos a null para campos opcionales
+        precio: formData.precio === '' ? null : Number(formData.precio) || null,
+        hora: formData.hora === '' ? null : formData.hora,
+        enlace_externo: formData.enlace_externo === '' ? null : formData.enlace_externo,
+      };
 
       if (editandoId) {
         await supabase.from('eventos').update(payload).eq('id', editandoId);

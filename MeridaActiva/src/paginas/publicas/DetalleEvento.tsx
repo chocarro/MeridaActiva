@@ -58,7 +58,7 @@ const DetalleEvento: React.FC = () => {
       if (pagina === 0) {
         const { data: eventoData, error: eventoError } = await supabase
           .from('eventos')
-          .select('id, titulo, descripcion, fecha, hora, ubicacion, imagen_url, categoria, precio, enlace_externo, animales_permitidos')
+          .select('*')
           .eq('id', id)
           .single();
 
