@@ -104,7 +104,7 @@ const ChatPage: React.FC = () => {
         const servicio = getGeminiService();
 
         try {
-            const idMensajeIA = Date.now();
+            const idMensajeIA = Date.now() + 1; // +1 evita colisión con el ts del mensaje de usuario
             setMensajes(prev => [...prev, { rol: 'ia', texto: '', ts: idMensajeIA }]);
             await servicio.enviarMensajeStream(texto, historialPrevio, (nuevoChunk) => {
                 setMensajes(prev => prev.map(m =>

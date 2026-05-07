@@ -60,6 +60,7 @@ const LugaresDetalle: React.FC = () => {
       .select('id')
       .eq('usuario_id', session.user.id)
       .eq('elemento_id', id)
+      .eq('tipo_elemento', 'lugar')
       .maybeSingle();
     if (data) setEsFavorito(true);
   };
@@ -71,12 +72,20 @@ const LugaresDetalle: React.FC = () => {
     }
     try {
       if (esFavorito) {
-        await supabase.from('favoritos_lugares').delete()
-          .eq('user_id', session.user.id).eq('lugar_id', id);
+        await supabase.from('favoritos')
+          .delete()
+          .eq('usuario_id', session.user.id)
+          .eq('elemento_id', id)
+          .eq('tipo_elemento', 'lugar');
         setEsFavorito(false);
         toastExito('Lugar eliminado de favoritos');
       } else {
-        await supabase.from('favoritos_lugares').insert([{ user_id: session.user.id, lugar_id: id }]);
+        const { error } = await supabase.from('favoritos').insert([{
+          usuario_id: session.user.id,
+          elemento_id: id,
+          tipo_elemento: 'lugar',
+        }]);
+        if (error) throw error;
         setEsFavorito(true);
         toastExito('Lugar guardado en favoritos. Disponible sin conexión');
         // Pre-cachear esta página y su imagen para modo offline

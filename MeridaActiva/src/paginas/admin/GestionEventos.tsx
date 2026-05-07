@@ -136,14 +136,15 @@ const GestionEventos: React.FC = () => {
         url = await manejarSubidaImagen(archivo);
       }
 
-      // Construir payload sin campos que no existen en la BD actual
-      // ⚠️ animales_permitidos: columna pendiente de añadir en Supabase
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const { animales_permitidos: _omit, ...formSinAnimales } = formData;
+      // Convertir el string de animales_permitidos a booleano o null
+      let animalesFormat: boolean | null = null;
+      if (formData.animales_permitidos === 'true') animalesFormat = true;
+      if (formData.animales_permitidos === 'false') animalesFormat = false;
 
       const payload = {
-        ...formSinAnimales,
+        ...formData,
         imagen_url: url,
+        animales_permitidos: animalesFormat,
         // Convertir strings vacíos a null para campos opcionales
         precio: formData.precio === '' ? null : Number(formData.precio) || null,
         hora: formData.hora === '' ? null : formData.hora,

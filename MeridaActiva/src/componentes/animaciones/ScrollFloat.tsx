@@ -19,19 +19,21 @@ const ScrollFloat: React.FC<ScrollFloatProps> = ({
     children,
     containerClassName = '',
     textClassName = '',
-    animationDuration = 1,
-    ease = 'back.inOut(2)',
-    scrollStart = 'center bottom+=50%',
-    scrollEnd = 'bottom bottom-=40%',
-    stagger = 0.03,
+    animationDuration = 0.7,
+    ease = 'power3.out',
+    scrollStart = 'top 85%',
+    scrollEnd = 'top 40%',
+    stagger = 0.025,
 }) => {
     const containerRef = useRef<HTMLHeadingElement>(null);
 
     const splitText = useMemo(() => {
         const text = typeof children === 'string' ? children : '';
         return text.split('').map((char, index) => (
-            <span className="inline-block split-char" key={index}>
-                {char === ' ' ? '\u00A0' : char}
+            <span className="inline-block split-char" key={index} style={{ overflow: 'hidden', verticalAlign: 'bottom' }}>
+                <span className="inline-block split-char-inner">
+                    {char === ' ' ? '\u00A0' : char}
+                </span>
             </span>
         ));
     }, [children]);
@@ -40,31 +42,26 @@ const ScrollFloat: React.FC<ScrollFloatProps> = ({
         const el = containerRef.current;
         if (!el) return;
 
-        const charElements = el.querySelectorAll('.split-char');
+        const charElements = el.querySelectorAll('.split-char-inner');
 
         const anim = gsap.fromTo(
             charElements,
             {
                 willChange: 'opacity, transform',
                 opacity: 0,
-                yPercent: 120,
-                scaleY: 2.3,
-                scaleX: 0.7,
-                transformOrigin: '50% 0%',
+                y: '110%',
             },
             {
                 duration: animationDuration,
                 ease,
                 opacity: 1,
-                yPercent: 0,
-                scaleY: 1,
-                scaleX: 1,
+                y: '0%',
                 stagger,
                 scrollTrigger: {
                     trigger: el,
                     start: scrollStart,
                     end: scrollEnd,
-                    scrub: true,
+                    toggleActions: 'play none none none',
                 },
             }
         );

@@ -24,9 +24,10 @@ const Login: React.FC = () => {
     if (error) {
       // Provide helpful Spanish error messages
       if (error.message.includes('Email not confirmed')) {
-        setErrorMsg('Debes confirmar tu email antes de iniciar sesión. Revisa tu bandeja de entrada.');
+        setErrorMsg('Debes confirmar tu email antes de iniciar sesión. Revisa tu bandeja de entrada (incluyendo spam).');
       } else if (error.message.includes('Invalid login credentials') || error.message.includes('invalid_credentials')) {
-        setErrorMsg('Email o contraseña incorrectos. Comprueba tus datos o recupera tu contraseña.');
+        // Supabase puede devolver invalid_credentials cuando el email no está confirmado
+        setErrorMsg('Email o contraseña incorrectos. Si acabas de registrarte, revisa tu bandeja de entrada para confirmar tu cuenta antes de iniciar sesión.');
       } else {
         setErrorMsg('Error al iniciar sesión. Inténtalo de nuevo.');
       }

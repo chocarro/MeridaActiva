@@ -390,18 +390,6 @@ const Calendario: React.FC = () => {
             </p>
           </div>
           <div className="flex gap-3 flex-wrap items-center">
-            <Link
-              to="/rutas"
-              className="flex items-center gap-2 bg-brand-dark text-brand-gold px-6 py-3 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-brand-blue hover:text-white transition-all shadow-lg"
-            >
-              <i className="bi bi-stars" /> Crea mi ruta ideal
-            </Link>
-            <button
-              onClick={() => abrirFormCrear(new Date().toISOString().slice(0, 10))}
-              className="flex items-center gap-2 bg-brand-gold text-brand-dark px-6 py-3 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-brand-blue hover:text-white transition-all shadow-lg"
-            >
-              <i className="bi bi-plus-lg" /> Añadir evento
-            </button>
             <div className="flex bg-white p-1.5 rounded-2xl border border-slate-100 shadow-sm">
               {(['mes', 'lista'] as const).map(v => (
                 <button
@@ -439,6 +427,28 @@ const Calendario: React.FC = () => {
               <div className="absolute -bottom-10 -right-10 w-40 h-40 bg-brand-blue/10 rounded-full blur-3xl" />
             </div>
 
+            {/* Acciones rápidas */}
+            <div className="space-y-2">
+              <Link
+                to="/rutas"
+                className="flex items-center gap-2 w-full bg-brand-dark text-brand-gold px-5 py-3.5 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-brand-blue hover:text-white transition-all shadow-lg"
+              >
+                <i className="bi bi-stars" /> Crea mi ruta ideal
+              </Link>
+              <Link
+                to="/favoritos"
+                className="flex items-center gap-2 w-full bg-white text-brand-red border border-red-100 px-5 py-3.5 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-brand-red hover:text-white transition-all shadow-lg"
+              >
+                <i className="bi bi-heart-fill" /> Mis Favoritos
+              </Link>
+              <button
+                onClick={() => abrirFormCrear(new Date().toISOString().slice(0, 10))}
+                className="flex items-center gap-2 w-full bg-brand-gold text-brand-dark px-5 py-3.5 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-brand-blue hover:text-white transition-all shadow-lg"
+              >
+                <i className="bi bi-plus-lg" /> Añadir evento
+              </button>
+            </div>
+
             {/* Próximos favoritos */}
             {eventosPlataforma.length > 0 && (
               <div className="bg-white rounded-[2rem] p-6 border border-slate-100 shadow-sm">
@@ -466,19 +476,7 @@ const Calendario: React.FC = () => {
               </div>
             )}
 
-            <div className="bg-white rounded-[2rem] p-6 border border-slate-100">
-              <h4 className="text-[10px] font-black uppercase tracking-widest text-brand-dark mb-4">Leyenda</h4>
-              <div className="space-y-3">
-                <div className="flex items-center gap-3">
-                  <span className="w-3 h-3 rounded-full bg-brand-blue" />
-                  <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Eventos favoritos</span>
-                </div>
-                <div className="flex items-center gap-3">
-                  <span className="w-3 h-3 rounded-full bg-brand-gold" />
-                  <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Mis eventos</span>
-                </div>
-              </div>
-            </div>
+
           </aside>
 
           {/* Contenido principal */}

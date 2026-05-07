@@ -59,7 +59,9 @@ export function useFavoritos(usuarioId: string | undefined) {
       });
 
       const resultados = await Promise.all(detallesPromesas);
-      setFavoritos(resultados.filter(f => f.detalle !== null));
+      // Incluimos todos los favoritos, incluso los que tienen detalle null
+      // (evento/lugar eliminado). No los filtramos para que el usuario pueda verlos.
+      setFavoritos(resultados);
     } catch {
       setFavoritos([]);
     } finally {

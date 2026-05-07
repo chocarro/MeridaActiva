@@ -3,7 +3,6 @@ import { useAuth, forceNuclearLogout } from '../../context/AuthContext';
 import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '../../supabaseClient';
 import { getNombreRolUsuario } from '../../utils/perfilUsuario';
-import { useFavoritos } from '../../hooks/useFavoritos';
 
 // Tipo para reseñas con join a eventos
 interface ReseñaConEvento {
@@ -18,7 +17,7 @@ interface ReseñaConEvento {
 const MiPerfil: React.FC = () => {
   const { profile, session, loading } = useAuth();
   const navigate = useNavigate();
-  const [seccion, setSeccion] = useState<'perfil' | 'seguridad' | 'favoritos' | 'reseñas'>('perfil');
+  const [seccion, setSeccion] = useState<'perfil' | 'seguridad' | 'reseñas'>('perfil');
   const tabsRef = useRef<HTMLDivElement>(null);
 
   // --- Estado formulario perfil ---
@@ -37,9 +36,6 @@ const MiPerfil: React.FC = () => {
   const [deletingAccount, setDeletingAccount] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState(false);
 
-  // --- Favoritos via hook centralizado ---
-  const { favoritos } = useFavoritos(session?.user?.id);
-
   // --- Reseñas ---
   const [reseñas, setReseñas] = useState<ReseñaConEvento[]>([]);
 
@@ -54,13 +50,25 @@ const MiPerfil: React.FC = () => {
 
   const fetchContenido = useCallback(async () => {
     if (!session?.user?.id) return;
-    // Solo cargar reseñas (los favoritos los gestiona useFavoritos)
-    const { data: comms } = await supabase
+    // Cargamos reseñas con join a eventos
+    const { data: comms, error } = await supabase
       .from('comentarios')
-      .select('id, texto, puntuacion, created_at, nombre_usuario, eventos(titulo, imagen_url)')
+      .select('id, texto, puntuacion, created_at, nombre_usuario, evento_id')
       .eq('usuario_id', session.user.id)
       .order('created_at', { ascending: false });
-    if (comms) setReseñas(comms as unknown as ReseñaConEvento[]);
+    if (error) { console.error('[MiPerfil] Error cargando reseñas:', error); return; }
+    if (!comms || comms.length === 0) { setReseñas([]); return; }
+    // Enriquecemos con datos del evento
+    const eventoIds = [...new Set(comms.map((c: any) => c.evento_id).filter(Boolean))];
+    let eventoMap: Record<string, { titulo: string; imagen_url?: string }> = {};
+    if (eventoIds.length > 0) {
+      const { data: evs } = await supabase
+        .from('eventos')
+        .select('id, titulo, imagen_url')
+        .in('id', eventoIds);
+      if (evs) evs.forEach((e: any) => { eventoMap[e.id] = { titulo: e.titulo, imagen_url: e.imagen_url }; });
+    }
+    setReseñas(comms.map((c: any) => ({ ...c, eventos: eventoMap[c.evento_id] || null })));
   }, [session?.user?.id]);
 
   useEffect(() => { fetchContenido(); }, [fetchContenido]);
@@ -200,10 +208,9 @@ const MiPerfil: React.FC = () => {
     </div>
   );
 
-  const menuItems: Array<{ id: 'perfil' | 'seguridad' | 'favoritos' | 'reseñas'; label: string; icon: string; color: string; accent: string }> = [
+  const menuItems: Array<{ id: 'perfil' | 'seguridad' | 'reseñas'; label: string; icon: string; color: string; accent: string }> = [
     { id: 'perfil',    label: 'Mi Perfil',   icon: 'bi-person-circle',    color: 'bg-brand-dark',  accent: 'border-brand-dark'  },
     { id: 'seguridad', label: 'Seguridad',   icon: 'bi-shield-lock',      color: 'bg-brand-red',   accent: 'border-brand-red'   },
-    { id: 'favoritos', label: 'Favoritos',   icon: 'bi-heart-fill',       color: 'bg-brand-blue',  accent: 'border-brand-blue'  },
     { id: 'reseñas',   label: 'Mis Reseñas', icon: 'bi-chat-left-quote',  color: 'bg-brand-green', accent: 'border-brand-green' },
   ];
 
@@ -431,64 +438,6 @@ const MiPerfil: React.FC = () => {
                   {deletingAccount ? 'Eliminando...' : 'Eliminar mi cuenta'}
                 </button>
               </div>
-            </div>
-          )}
-
-          {/* ── FAVORITOS ── */}
-          {seccion === 'favoritos' && (
-            <div className="bg-white rounded-[2rem] lg:rounded-[3rem] p-7 md:p-12 shadow-xl border border-slate-100">
-              <div className="flex items-center justify-between mb-8">
-                <h3 className="text-3xl lg:text-4xl font-black text-brand-dark italic uppercase tracking-tighter">
-                  Mis <span className="text-brand-blue">Favoritos</span>
-                </h3>
-                <Link
-                  to="/favoritos"
-                  className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-brand-blue hover:text-brand-dark transition-colors"
-                >
-                  Ver todos <i className="bi bi-arrow-right" />
-                </Link>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                {favoritos.slice(0, 4).length > 0 ? favoritos.slice(0, 4).map((fav) => {
-                  const titulo = fav.detalle?.titulo || fav.detalle?.nombre || fav.detalle?.nombre_es || 'Sin título';
-                  const imagenUrl = fav.detalle?.imagen_url;
-                  const ruta = fav.tipo_elemento === 'evento' ? `/eventos/${fav.elemento_id}` : `/lugares/${fav.elemento_id}`;
-                  return (
-                    <Link
-                      key={fav.id}
-                      to={ruta}
-                      className="group bg-brand-bg rounded-[2rem] overflow-hidden border border-slate-100 hover:shadow-xl hover:border-brand-blue/20 transition-all"
-                    >
-                      <div className="relative h-36 overflow-hidden">
-                        {imagenUrl && <img src={imagenUrl} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" alt="" />}
-                        <div className="absolute inset-0 bg-gradient-to-t from-brand-dark/50 to-transparent"></div>
-                        <span className="absolute bottom-3 left-3 bg-brand-dark/80 text-white text-[8px] font-black px-3 py-1 rounded-full uppercase tracking-widest backdrop-blur-sm">
-                          {fav.tipo_elemento}
-                        </span>
-                      </div>
-                      <div className="p-5">
-                        <h4 className="font-black text-brand-dark uppercase italic text-sm group-hover:text-brand-blue transition-colors">{titulo}</h4>
-                      </div>
-                    </Link>
-                  );
-                }) : (
-                  <div className="col-span-full py-16 text-center bg-brand-bg rounded-[2rem] border-2 border-dashed border-slate-200">
-                    <i className="bi bi-heart text-4xl text-slate-200 block mb-4"></i>
-                    <p className="text-slate-400 font-bold uppercase tracking-widest text-[10px]">No tienes favoritos guardados</p>
-                    <Link to="/eventos" className="text-brand-blue font-black uppercase text-[10px] tracking-widest mt-4 inline-block">Explorar Eventos →</Link>
-                  </div>
-                )}
-              </div>
-              {favoritos.length > 4 && (
-                <div className="mt-6 text-center">
-                  <Link
-                    to="/favoritos"
-                    className="inline-flex items-center gap-2 bg-brand-bg text-brand-dark border border-slate-200 px-6 py-3 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-brand-dark hover:text-white transition-all"
-                  >
-                    Ver todos los {favoritos.length} favoritos <i className="bi bi-arrow-right" />
-                  </Link>
-                </div>
-              )}
             </div>
           )}
 

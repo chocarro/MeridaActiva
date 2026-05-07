@@ -217,7 +217,6 @@ const navLinksAuth = [
                       {[
                         { to: '/perfil',    icon: 'bi-person-circle',  label: 'Mi Perfil',    color: '#3F88C5' },
                         { to: '/calendario', icon: 'bi-calendar-week', label: 'Mi Agenda',    color: '#3F88C5' },
-                        { to: '/favoritos', icon: 'bi-heart-fill',     label: 'Mis Favoritos', color: '#D00000' },
                       ].map(item => (
                         <Link
                           key={item.to}
@@ -366,11 +365,6 @@ const navLinksAuth = [
                   className="flex items-center gap-3 px-5 py-4 rounded-2xl text-sm font-black uppercase italic"
                   style={{ color: '#FAFAFA', backgroundColor: 'rgba(255,255,255,0.05)' }}>
                   <i className="bi bi-calendar-week text-brand-gold" /> Mi Agenda
-                </Link>
-                <Link to="/favoritos" onClick={() => setMobileMenuOpen(false)}
-                  className="flex items-center gap-3 px-5 py-4 rounded-2xl text-sm font-black uppercase italic"
-                  style={{ color: '#FAFAFA', backgroundColor: 'rgba(255,255,255,0.05)' }}>
-                  <i className="bi bi-heart-fill text-brand-red" /> Mis Favoritos
                 </Link>
                 {esAdmin && (
                   <Link to="/dashboard" onClick={() => setMobileMenuOpen(false)}

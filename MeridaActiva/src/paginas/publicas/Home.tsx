@@ -396,7 +396,7 @@ const Home: React.FC = () => {
               <i className="bi bi-stars mr-2" />
               Mérida Activa
             </span>
-            <ScrollFloat textClassName="text-5xl md:text-6xl font-black text-brand-dark italic uppercase tracking-tighter">
+            <ScrollFloat textClassName="text-4xl sm:text-5xl md:text-6xl font-black text-brand-dark italic uppercase tracking-tighter">
               Tu viaje, a tu medida
             </ScrollFloat>
             <p className="text-slate-500 font-medium text-lg max-w-2xl mx-auto mt-6">
@@ -546,7 +546,7 @@ const Home: React.FC = () => {
           >
             <div>
               <span className="text-brand-gold font-black uppercase tracking-[0.3em] text-[10px] mb-4 block">Explora por categoría</span>
-              <ScrollFloat textClassName="text-5xl md:text-6xl font-black text-brand-dark italic uppercase tracking-tighter">
+              <ScrollFloat textClassName="text-4xl sm:text-5xl md:text-6xl font-black text-brand-dark italic uppercase tracking-tighter">
                 ¿Qué te apetece hoy?
               </ScrollFloat>
             </div>
