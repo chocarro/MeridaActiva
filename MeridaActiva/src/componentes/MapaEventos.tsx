@@ -114,10 +114,10 @@ function crearIcono(categoria: string, tipo: 'evento' | 'lugar') {
   `;
   return L.divIcon({
     html: svg,
-    className: '',
+    className: 'leaflet-pin-mapa',   // clase sin estilos propios de Leaflet
     iconSize: [36, 44],
-    iconAnchor: [18, 44],
-    popupAnchor: [0, -44],
+    iconAnchor: [18, 44],   // centro-horizontal, base del pin
+    popupAnchor: [0, -44],  // exactamente la altura del pin hacia arriba
   });
 }
 
@@ -130,12 +130,8 @@ function MapCenter({ lat, lng }: { lat: number; lng: number }) {
   return null;
 }
 
-// ── Capas del mapa ────────────────────────────────────────────────
-const CAPAS = [
-  { id: 'light',  label: 'Claro',   url: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png' },
-  { id: 'dark',   label: 'Oscuro',  url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png' },
-  { id: 'osm',    label: 'Mapa',    url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png' },
-];
+// ── URL fija del mapa (modo claro CartoDB) ───────────────────────
+const CAPA_URL = 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
 
 // ── Categorías de eventos (alineadas con la BD) ───────────────────
 const CATS_EVENTOS = ['Todos', 'Cultural', 'Música', 'Teatro', 'Deporte', 'Infantil', 'Gastronomía', 'Patrimonio', 'Festividad', 'Exposición', 'Otro'];
@@ -217,7 +213,6 @@ const MapaEventos: React.FC = () => {
 
   const [categoriaActiva, setCategoriaActiva] = useState('Todos');
   const [busqueda, setBusqueda] = useState('');
-const [capaActiva, setCapaActiva] = useState('light');
 
   const [seleccionado, setSeleccionado] = useState<Evento | Lugar | null>(null);
   const [panelAbierto, setPanelAbierto] = useState(false);
@@ -262,7 +257,7 @@ const [capaActiva, setCapaActiva] = useState('light');
   const itemsFiltrados = tab === 'eventos' ? eventosFiltrados : lugaresFiltrados;
   const totalFiltrados = itemsFiltrados.length;
 
-  const capaUrl = CAPAS.find(c => c.id === capaActiva)?.url ?? CAPAS[0].url;
+  const capaUrl = CAPA_URL;
   const categorias = tab === 'eventos' ? CATS_EVENTOS : CATS_LUGARES;
 
   const handleClick = useCallback((item: Evento | Lugar) => {
@@ -386,37 +381,22 @@ const [capaActiva, setCapaActiva] = useState('light');
               )}
             </div>
 
-            {/* Filtros categoría */}
-            <div className="flex gap-2 flex-wrap justify-center flex-1">
-              {categorias.map(cat => (
-                <button
-                  key={cat}
-                  onClick={() => setCategoriaActiva(cat)}
-                  className={`px-4 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all capitalize ${
-                    categoriaActiva === cat
-                      ? 'bg-brand-dark text-brand-gold shadow-lg'
-                      : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
-                  }`}
-                >
-                  {cat}
-                </button>
-              ))}
+            {/* Filtro categoría — desplegable compacto */}
+            <div className="relative flex-shrink-0">
+              <i className="bi bi-funnel-fill absolute left-4 top-1/2 -translate-y-1/2 text-brand-blue pointer-events-none text-sm" />
+              <select
+                value={categoriaActiva}
+                onChange={e => setCategoriaActiva(e.target.value)}
+                className="pl-10 pr-8 py-3.5 rounded-2xl bg-slate-100 border-none outline-none focus:ring-2 focus:ring-brand-blue/20 text-[10px] font-black uppercase tracking-widest text-slate-600 appearance-none cursor-pointer hover:bg-slate-200 transition-colors"
+                aria-label="Filtrar por categoría"
+              >
+                {categorias.map(cat => (
+                  <option key={cat} value={cat}>{cat}</option>
+                ))}
+              </select>
+              <i className="bi bi-chevron-down absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none text-xs" />
             </div>
 
-          {/* Capas del mapa — selector compacto */}
-<div className="relative flex-shrink-0">
-  <i className="bi bi-layers-fill absolute left-4 top-1/2 -translate-y-1/2 text-brand-blue pointer-events-none text-sm" />
-  <select
-    value={capaActiva}
-    onChange={e => setCapaActiva(e.target.value)}
-    className="pl-10 pr-8 py-3.5 rounded-2xl bg-slate-100 border-none outline-none focus:ring-2 focus:ring-brand-blue/20 text-[10px] font-black uppercase tracking-widest text-slate-600 appearance-none cursor-pointer hover:bg-slate-200 transition-colors"
-  >
-    {CAPAS.map(capa => (
-      <option key={capa.id} value={capa.id}>{capa.label}</option>
-    ))}
-  </select>
-  <i className="bi bi-chevron-down absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none text-xs" />
-</div>
           </div>
         </div>
       </div>
@@ -790,6 +770,7 @@ const [capaActiva, setCapaActiva] = useState('light');
         .leaflet-container { font-family: inherit; }
         .leaflet-control-zoom { border-radius: 1rem !important; overflow: hidden; }
         .leaflet-control-attribution { display: none !important; }
+        .leaflet-pin-mapa { background: none !important; border: none !important; margin: 0 !important; padding: 0 !important; }
       `}</style>
     </div>
   );

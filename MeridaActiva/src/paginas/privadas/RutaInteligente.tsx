@@ -27,7 +27,13 @@ function crearIconoNumero(numero: number) {
       <circle cx="20" cy="18" r="11" fill="#FFBA08"/>
       <text x="20" y="23" text-anchor="middle" font-family="Arial Black, Arial" font-weight="900" font-size="12" fill="#032B43">${numero}</text>
     </svg>`;
-    return L.divIcon({ html: svg, className: '', iconSize: [40, 50], iconAnchor: [20, 50], popupAnchor: [0, -52] });
+    return L.divIcon({
+      html: svg,
+      className: 'leaflet-pin-custom',  // clase sin estilos propios de Leaflet
+      iconSize: [40, 50],
+      iconAnchor: [20, 50],    // centro-horizontal, base del pin
+      popupAnchor: [0, -50],   // exactamente la altura del pin hacia arriba
+    });
 }
 
 // ── Ajustar bounds del mapa ───────────────────────────────────────
@@ -156,7 +162,11 @@ function MapaRuta({ paradas }: { paradas: ParadaRuta[] }) {
                         </Marker>
                     ))}
                 </MapContainer>
-                <style>{`.leaflet-popup-content-wrapper{border-radius:1.25rem!important;padding:6px!important;box-shadow:0 20px 60px rgba(0,0,0,.12)!important;}.leaflet-popup-tip{display:none}`}</style>
+                <style>{`
+                  .leaflet-popup-content-wrapper{border-radius:1.25rem!important;padding:6px!important;box-shadow:0 20px 60px rgba(0,0,0,.12)!important;}
+                  .leaflet-popup-tip{display:none}
+                  .leaflet-pin-custom{background:none!important;border:none!important;margin:0!important;padding:0!important;}
+                `}</style>
             </div>
         </div>
     );

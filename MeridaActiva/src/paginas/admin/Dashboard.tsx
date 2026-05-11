@@ -177,29 +177,19 @@ const DashboardAdmin: React.FC = () => {
             <div className="absolute -bottom-20 -right-20 w-80 h-80 bg-brand-gold/5 rounded-full blur-[100px] group-hover:bg-brand-gold/10 transition-all" />
           </div>
 
-          {/* Acciones rápidas */}
-          <div className="bg-brand-bg rounded-[4rem] border border-slate-100 p-12 flex flex-col justify-between gap-5">
-            <div>
-              <h4 className="text-xl font-black text-brand-dark uppercase italic tracking-tight mb-2">Acciones rápidas</h4>
-              <p className="text-slate-400 text-[10px] font-black uppercase tracking-widest">Herramientas del panel</p>
+          {/* Botón recargar métricas */}
+          <div className="bg-brand-bg rounded-[4rem] border border-slate-100 p-12 flex flex-col justify-center items-center gap-4 text-center">
+            <div className="w-16 h-16 bg-white rounded-[1.5rem] flex items-center justify-center text-brand-dark text-2xl shadow-sm border border-slate-100">
+              <i className="bi bi-arrow-clockwise" />
             </div>
-            <div className="space-y-3">
-              <Link to="/admin/eventos" className="block bg-white border border-slate-200 rounded-2xl px-4 py-3 text-[10px] font-black uppercase tracking-widest text-brand-dark hover:border-brand-blue hover:text-brand-blue transition-all">
-                <i className="bi bi-calendar-check mr-2" />Eventos
-              </Link>
-              <Link to="/admin/resenas" className="block bg-white border border-slate-200 rounded-2xl px-4 py-3 text-[10px] font-black uppercase tracking-widest text-brand-dark hover:border-brand-gold hover:text-brand-gold transition-all">
-                <i className="bi bi-chat-left-text mr-2" />Reseñas
-              </Link>
-              {nombreRol === 'Administrador' && (
-                <Link to="/admin/usuarios" className="block bg-white border border-slate-200 rounded-2xl px-4 py-3 text-[10px] font-black uppercase tracking-widest text-brand-dark hover:border-brand-red hover:text-brand-red transition-all">
-                  <i className="bi bi-people mr-2" />Usuarios
-                </Link>
-              )}
+            <div>
+              <h4 className="text-lg font-black text-brand-dark uppercase italic tracking-tight mb-1">Métricas</h4>
+              <p className="text-slate-400 text-[10px] font-black uppercase tracking-widest">Datos en tiempo real</p>
             </div>
             <button
               onClick={fetchStats}
               disabled={loadingStats}
-              className="bg-brand-dark text-white rounded-2xl px-4 py-3 text-[10px] font-black uppercase tracking-widest hover:bg-brand-blue transition-all disabled:opacity-50"
+              className="bg-brand-dark text-white rounded-2xl px-6 py-3 text-[10px] font-black uppercase tracking-widest hover:bg-brand-blue transition-all disabled:opacity-50 w-full"
             >
               <i className={`bi ${loadingStats ? 'bi-arrow-repeat animate-spin' : 'bi-arrow-clockwise'} mr-2`} />
               Recargar métricas

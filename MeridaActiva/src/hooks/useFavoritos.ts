@@ -17,7 +17,8 @@ export interface FavoritoConDetalle extends Favorito {
  * Hook centralizado para cargar los favoritos de un usuario con el
  * detalle de cada item (evento o lugar).
  *
- * Se usa tanto en /favoritos como en /perfil para evitar duplicar lógica.
+ * Usa el mismo patrón de dos queries que Calendario.tsx para evitar
+ * problemas de RLS con joins de PostgREST.
  */
 export function useFavoritos(usuarioId: string | undefined) {
   const [favoritos, setFavoritos] = useState<FavoritoConDetalle[]>([]);
@@ -32,37 +33,82 @@ export function useFavoritos(usuarioId: string | undefined) {
 
     setLoading(true);
     try {
-      const { data: favsData } = await supabase
+      // Paso 1: obtener todos los favoritos del usuario
+      const { data: favsData, error: favErr } = await supabase
         .from('favoritos')
         .select('id, elemento_id, tipo_elemento, usuario_id, created_at')
         .eq('usuario_id', usuarioId);
+
+      if (favErr) {
+        console.error('[useFavoritos] Error cargando favoritos:', favErr.message);
+        setFavoritos([]);
+        return;
+      }
 
       if (!favsData || favsData.length === 0) {
         setFavoritos([]);
         return;
       }
 
-      // Cargamos detalles en paralelo para cada favorito
-      const detallesPromesas = favsData.map(async (fav) => {
-        const tabla = fav.tipo_elemento === 'evento' ? 'eventos' : 'lugares';
-        const campos = fav.tipo_elemento === 'evento'
-          ? 'id, titulo, imagen_url'
-          : 'id, nombre, nombre_es, imagen_url';
+      // Paso 2: separar por tipo y cargar detalles con queries independientes
+      const eventoIds = favsData
+        .filter((f: any) => f.tipo_elemento === 'evento')
+        .map((f: any) => f.elemento_id)
+        .filter(Boolean) as string[];
 
-        const { data: detalle } = await supabase
-          .from(tabla)
-          .select(campos)
-          .eq('id', fav.elemento_id)
-          .maybeSingle();
+      const lugarIds = favsData
+        .filter((f: any) => f.tipo_elemento === 'lugar')
+        .map((f: any) => f.elemento_id)
+        .filter(Boolean) as string[];
 
-        return { ...fav, detalle: detalle as FavoritoConDetalle['detalle'] };
+      const eventoMap: Record<string, { id: string; titulo?: string; imagen_url?: string }> = {};
+      const lugarMap: Record<string, { id: string; nombre?: string; nombre_es?: string; imagen_url?: string }> = {};
+
+      if (eventoIds.length > 0) {
+        const { data: evs, error: evErr } = await supabase
+          .from('eventos')
+          .select('id, titulo, imagen_url, fecha')
+          .in('id', eventoIds);
+        if (evErr) console.error('[useFavoritos] Error cargando eventos:', evErr.message);
+        if (evs) (evs as any[]).forEach(e => { eventoMap[e.id] = e; });
+      }
+
+      if (lugarIds.length > 0) {
+        const { data: lug, error: lugErr } = await supabase
+          .from('lugares')
+          .select('id, nombre, nombre_es, imagen_url')
+          .in('id', lugarIds);
+        if (lugErr) console.error('[useFavoritos] Error cargando lugares:', lugErr.message);
+        if (lug) (lug as any[]).forEach(l => { lugarMap[l.id] = l; });
+      }
+
+      // Filtrar eventos pasados: no mostrar en favoritos eventos cuya fecha ya ocurrió
+      const hoy = new Date();
+      hoy.setHours(0, 0, 0, 0);
+
+      const resultados: FavoritoConDetalle[] = (favsData as any[]).map(fav => {
+        const detalle =
+          fav.tipo_elemento === 'evento'
+            ? (eventoMap[fav.elemento_id] ?? null)
+            : (lugarMap[fav.elemento_id] ?? null);
+        return { ...fav, detalle } as FavoritoConDetalle;
+      }).filter(fav => {
+        // Los lugares siempre se muestran
+        if (fav.tipo_elemento !== 'evento') return true;
+        // Si el evento ya no existe en BD, lo quitamos también
+        if (!fav.detalle) return false;
+        // Si el evento tiene fecha y ya pasó, lo excluimos
+        const fechaEvento = (fav.detalle as any).fecha;
+        if (fechaEvento) {
+          const fechaDate = new Date(fechaEvento + 'T00:00:00');
+          return fechaDate >= hoy;
+        }
+        return true;
       });
 
-      const resultados = await Promise.all(detallesPromesas);
-      // Incluimos todos los favoritos, incluso los que tienen detalle null
-      // (evento/lugar eliminado). No los filtramos para que el usuario pueda verlos.
       setFavoritos(resultados);
-    } catch {
+    } catch (err) {
+      console.error('[useFavoritos] Error inesperado:', err);
       setFavoritos([]);
     } finally {
       setLoading(false);

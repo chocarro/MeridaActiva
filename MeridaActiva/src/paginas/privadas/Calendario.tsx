@@ -435,12 +435,6 @@ const Calendario: React.FC = () => {
               >
                 <i className="bi bi-stars" /> Crea mi ruta ideal
               </Link>
-              <Link
-                to="/favoritos"
-                className="flex items-center gap-2 w-full bg-white text-brand-red border border-red-100 px-5 py-3.5 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-brand-red hover:text-white transition-all shadow-lg"
-              >
-                <i className="bi bi-heart-fill" /> Mis Favoritos
-              </Link>
               <button
                 onClick={() => abrirFormCrear(new Date().toISOString().slice(0, 10))}
                 className="flex items-center gap-2 w-full bg-brand-gold text-brand-dark px-5 py-3.5 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-brand-blue hover:text-white transition-all shadow-lg"
@@ -449,13 +443,18 @@ const Calendario: React.FC = () => {
               </button>
             </div>
 
-            {/* Próximos favoritos */}
+            {/* Próximos favoritos — redirige a /favoritos al hacer clic */}
             {eventosPlataforma.length > 0 && (
-              <div className="bg-white rounded-[2rem] p-6 border border-slate-100 shadow-sm">
-                <h4 className="text-[10px] font-black uppercase tracking-widest text-brand-dark mb-4">Tus favoritos</h4>
+              <Link
+                to="/favoritos"
+                className="bg-white rounded-[2rem] p-6 border border-slate-100 shadow-sm block hover:border-brand-red/30 hover:shadow-md transition-all group"
+              >
+                <h4 className="text-[10px] font-black uppercase tracking-widest text-brand-dark mb-4 group-hover:text-brand-red transition-colors">
+                  Tus favoritos
+                </h4>
                 <div className="space-y-3">
                   {eventosPlataforma.slice(0, 4).map(ev => (
-                    <div key={ev.id} className="flex items-center gap-3 group">
+                    <div key={ev.id} className="flex items-center gap-3">
                       <div className="w-10 h-10 rounded-xl overflow-hidden flex-shrink-0 bg-slate-100">
                         <img src={ev.imagen_url} alt={ev.titulo} className="w-full h-full object-cover" loading="lazy" />
                       </div>
@@ -468,12 +467,12 @@ const Calendario: React.FC = () => {
                     </div>
                   ))}
                   {eventosPlataforma.length > 4 && (
-                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest text-center pt-1">
-                      +{eventosPlataforma.length - 4} más
+                    <p className="text-[9px] font-black text-brand-red uppercase tracking-widest text-center pt-1 group-hover:underline">
+                      +{eventosPlataforma.length - 4} más →
                     </p>
                   )}
                 </div>
-              </div>
+              </Link>
             )}
 
 

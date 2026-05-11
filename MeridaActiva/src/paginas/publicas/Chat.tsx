@@ -13,7 +13,7 @@ import { useAuth } from '../../context/AuthContext';
 
 const CHAT_STORAGE_KEY = 'meridaactiva_chat_historial';
 
-type MsgChat = MensajeChat;
+type MsgChat = MensajeChat & { _id?: symbol };
 
 // ── Sugerencias rápidas ──────────────────────────────────────────
 const SUGERENCIAS = [
@@ -104,11 +104,11 @@ const ChatPage: React.FC = () => {
         const servicio = getGeminiService();
 
         try {
-            const idMensajeIA = Date.now() + 1; // +1 evita colisión con el ts del mensaje de usuario
-            setMensajes(prev => [...prev, { rol: 'ia', texto: '', ts: idMensajeIA }]);
+            const idMensajeIA = Symbol('ia-msg'); // ID único garantizado, sin colisiones
+            setMensajes(prev => [...prev, { rol: 'ia', texto: '', ts: Date.now(), _id: idMensajeIA }]);
             await servicio.enviarMensajeStream(texto, historialPrevio, (nuevoChunk) => {
                 setMensajes(prev => prev.map(m =>
-                    m.ts === idMensajeIA ? { ...m, texto: m.texto + nuevoChunk } : m
+                    m._id === idMensajeIA ? { ...m, texto: m.texto + nuevoChunk } : m
                 ));
             });
         } catch (error) {

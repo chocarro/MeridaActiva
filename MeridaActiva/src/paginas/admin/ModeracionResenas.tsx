@@ -6,9 +6,10 @@ interface Resena {
   texto: string;
   puntuacion: number;
   created_at: string;
-  nombre_usuario: string | null;   // campo directo en la tabla
+  nombre_usuario: string | null;
+  usuario_id: string | null;
   evento_id: string | null;
-  eventos: { titulo: string } | null;  // join FK evento_id → eventos
+  tituloEvento?: string | null;   // enriquecido manualmente tras la query
 }
 
 const POR_PAGINA = 12;
@@ -42,14 +43,38 @@ const ModeracionResenas: React.FC = () => {
       const from = p * POR_PAGINA;
       const to = from + POR_PAGINA - 1;
 
+      // Paso 1: obtener comentarios sin join (evita problemas de RLS/FK en PostgREST)
       const { data, count, error } = await supabase
         .from('comentarios')
-        .select('id, texto, puntuacion, created_at, nombre_usuario, evento_id, eventos(titulo)', { count: 'exact' })
+        .select('id, texto, puntuacion, created_at, nombre_usuario, usuario_id, evento_id', { count: 'exact' })
         .order('created_at', { ascending: false })
         .range(from, to);
 
       if (error) throw error;
-      if (data) setResenas(data as unknown as Resena[]);
+
+      if (!data || data.length === 0) {
+        setResenas([]);
+        if (count !== null) setTotal(count);
+        return;
+      }
+
+      // Paso 2: enriquecer con título de evento en una query separada
+      const eventoIds = [...new Set(data.map((c: any) => c.evento_id).filter(Boolean))] as string[];
+      let tituloMap: Record<string, string> = {};
+      if (eventoIds.length > 0) {
+        const { data: evs } = await supabase
+          .from('eventos')
+          .select('id, titulo')
+          .in('id', eventoIds);
+        if (evs) evs.forEach((e: any) => { tituloMap[e.id] = e.titulo; });
+      }
+
+      const enriquecidas = data.map((c: any) => ({
+        ...c,
+        tituloEvento: tituloMap[c.evento_id] ?? null,
+      })) as Resena[];
+
+      setResenas(enriquecidas);
       if (count !== null) setTotal(count);
     } catch (e) {
       console.error('[ModeracionResenas]', e);
@@ -187,7 +212,7 @@ const ModeracionResenas: React.FC = () => {
                 <div className="flex items-center gap-2">
                   <i className="bi bi-calendar-event text-brand-blue text-xs flex-shrink-0" />
                   <p className="text-[10px] font-black text-brand-blue uppercase tracking-widest truncate">
-                    {r.eventos?.titulo ?? 'Evento eliminado'}
+                    {r.tituloEvento ?? 'Evento eliminado'}
                   </p>
                 </div>
 

@@ -1,23 +1,9 @@
-import React, { useEffect, useState, useCallback, useRef, lazy, Suspense } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { supabase } from '../../supabaseClient';
-import 'react-quill/dist/quill.snow.css';
 import type { Evento } from '../../types';
-
-// Lazy import para no bloquear el bundle principal
-const ReactQuill = lazy(() => import('react-quill'));
 
 const CATEGORIAS = ['Cultural', 'Teatro', 'Música', 'Deportes', 'Infantil', 'Gastronomía', 'Patrimonio'];
 
-const QUILL_MODULES = {
-  toolbar: [
-    [{ header: [2, 3, false] }],
-    ['bold', 'italic', 'underline'],
-    [{ list: 'ordered' }, { list: 'bullet' }],
-    ['link'],
-    ['clean'],
-  ],
-};
-const QUILL_FORMATS = ['header', 'bold', 'italic', 'underline', 'list', 'bullet', 'link'];
 
 const FORM_INICIAL = {
   titulo: '',
@@ -177,13 +163,19 @@ const GestionEventos: React.FC = () => {
   };
 
   const prepararEdicion = (ev: Evento) => {
-    const formEvent = {
-      ...ev,
+    // Solo mapeamos los campos que existen en FORM_INICIAL para no contaminar el payload
+    setFormData({
+      titulo: ev.titulo ?? '',
+      descripcion: ev.descripcion ?? '',
+      fecha: ev.fecha ?? '',
       hora: ev.hora ?? '',
+      ubicacion: ev.ubicacion ?? '',
       precio: ev.precio?.toString() ?? '',
-      animales_permitidos: ev.animales_permitidos === true ? 'true' : ev.animales_permitidos === false ? 'false' : ''
-    };
-    setFormData(formEvent as unknown as typeof FORM_INICIAL);
+      imagen_url: ev.imagen_url ?? '',
+      enlace_externo: ev.enlace_externo ?? '',
+      categoria: ev.categoria ?? 'Cultural',
+      animales_permitidos: ev.animales_permitidos === true ? 'true' : ev.animales_permitidos === false ? 'false' : '',
+    });
     setEditandoId(ev.id);
     setMostrarForm(true);
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -274,27 +266,18 @@ const GestionEventos: React.FC = () => {
                   />
                 </div>
 
-                {/* Descripción con editor enriquecido */}
+                {/* Descripción */}
                 <div>
                   <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 block">
-                    Descripción <span className="font-bold normal-case tracking-normal text-slate-300">(soporta negritas, listas y enlaces)</span>
+                    Descripción <span className="font-bold normal-case tracking-normal text-slate-300">(soporta HTML básico: negrita, listas, enlaces)</span>
                   </label>
-                  <div className="rounded-2xl overflow-hidden border border-slate-100 bg-white">
-                    <Suspense fallback={
-                      <div className="h-40 bg-brand-bg rounded-2xl flex items-center justify-center">
-                        <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest">Cargando editor…</span>
-                      </div>
-                    }>
-                      <ReactQuill
-                        theme="snow"
-                        value={formData.descripcion}
-                        onChange={(val) => setFormData({ ...formData, descripcion: val })}
-                        modules={QUILL_MODULES}
-                        formats={QUILL_FORMATS}
-                        style={{ fontFamily: 'inherit' }}
-                      />
-                    </Suspense>
-                  </div>
+                  <textarea
+                    rows={7}
+                    className="w-full bg-brand-bg border border-slate-200 rounded-2xl px-6 py-4 font-medium text-brand-dark focus:ring-2 focus:ring-brand-blue outline-none resize-y text-sm"
+                    value={formData.descripcion}
+                    onChange={e => setFormData({ ...formData, descripcion: e.target.value })}
+                    placeholder="Descripción del evento..."
+                  />
                 </div>
 
                 {/* Fecha + Hora + Precio */}
