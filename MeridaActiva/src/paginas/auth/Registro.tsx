@@ -72,7 +72,6 @@ export default function Registro() {
   const [showPass, setShowPass] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [enviando, setEnviando] = useState(false);
-  const [registrado, setRegistrado] = useState<string | null>(null); // email confirmación pendiente
 
   const fortaleza = calcularFortaleza(form.password);
   const sanitizar = (v: string) => v.replace(/[<>]/g, "");
@@ -140,65 +139,6 @@ export default function Registro() {
     }
   };
 
-  // ── Pantalla de confirmación pendiente ─────────────────────────────────
-  if (registrado) {
-    return (
-      <div className="min-h-screen flex items-center justify-center px-6" style={{ backgroundColor: '#F0F2F5' }}>
-        <div className="w-full max-w-md">
-          <div className="rounded-[2.5rem] p-10 md:p-12 shadow-2xl shadow-slate-200/60 text-center" style={{ backgroundColor: '#FAFAFA' }}>
-            {/* Icono */}
-            <div
-              className="w-20 h-20 rounded-[1.5rem] flex items-center justify-center mx-auto mb-6"
-              style={{ backgroundColor: 'rgba(63,136,197,0.12)' }}
-            >
-              <i className="bi bi-envelope-check-fill text-4xl" style={{ color: '#3F88C5' }} />
-            </div>
-
-            <h1 className="text-3xl font-black uppercase italic tracking-tighter mb-3" style={{ color: '#032B43' }}>
-              ¡Revisa tu <span style={{ color: '#3F88C5' }}>email!</span>
-            </h1>
-
-            <p className="text-sm font-medium mb-2" style={{ color: '#64748b' }}>
-              Hemos enviado un enlace de confirmación a:
-            </p>
-            <p className="text-sm font-black mb-6 px-4 py-2 rounded-xl inline-block" style={{ backgroundColor: '#F0F2F5', color: '#032B43' }}>
-              {registrado}
-            </p>
-
-            <div
-              className="rounded-2xl px-5 py-4 mb-6 text-left text-xs font-medium space-y-2"
-              style={{ backgroundColor: '#eff6ff', color: '#1e40af', border: '1px solid #bfdbfe' }}
-            >
-              <p className="flex items-start gap-2">
-                <i className="bi bi-1-circle-fill mt-0.5 flex-shrink-0" />
-                <span>Abre el email que acabas de recibir.</span>
-              </p>
-              <p className="flex items-start gap-2">
-                <i className="bi bi-2-circle-fill mt-0.5 flex-shrink-0" />
-                <span>Haz clic en el enlace <strong>"Confirmar email"</strong>.</span>
-              </p>
-              <p className="flex items-start gap-2">
-                <i className="bi bi-3-circle-fill mt-0.5 flex-shrink-0" />
-                <span>Después podrás iniciar sesión normalmente.</span>
-              </p>
-            </div>
-
-            <p className="text-[10px] font-bold mb-6" style={{ color: '#94a3b8' }}>
-              ¿No ves el email? Revisa también la carpeta de <strong>spam</strong>.
-            </p>
-
-            <button
-              onClick={() => navigate('/login')}
-              className="w-full py-4 rounded-2xl font-black text-xs uppercase tracking-widest transition-all shadow-lg hover:scale-[1.02] active:scale-[0.98]"
-              style={{ backgroundColor: '#032B43', color: '#FFBA08', boxShadow: '0 8px 32px rgba(3,43,67,0.2)' }}
-            >
-              Ir al inicio de sesión →
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen flex" style={{ backgroundColor: '#F0F2F5' }}>
