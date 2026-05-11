@@ -19,21 +19,22 @@ const ScrollFloat: React.FC<ScrollFloatProps> = ({
     children,
     containerClassName = '',
     textClassName = '',
-    animationDuration = 0.7,
-    ease = 'power3.out',
+    animationDuration = 0.6,
+    ease = 'power2.out',
     scrollStart = 'top 85%',
     scrollEnd = 'top 40%',
-    stagger = 0.025,
+    stagger = 0.02,
 }) => {
     const containerRef = useRef<HTMLHeadingElement>(null);
 
     const splitText = useMemo(() => {
         const text = typeof children === 'string' ? children : '';
         return text.split('').map((char, index) => (
-            <span className="inline-block split-char" key={index} style={{ overflow: 'hidden', verticalAlign: 'bottom' }}>
-                <span className="inline-block split-char-inner">
-                    {char === ' ' ? '\u00A0' : char}
-                </span>
+            <span
+                className="inline-block split-char"
+                key={index}
+            >
+                {char === ' ' ? '\u00A0' : char}
             </span>
         ));
     }, [children]);
@@ -42,20 +43,19 @@ const ScrollFloat: React.FC<ScrollFloatProps> = ({
         const el = containerRef.current;
         if (!el) return;
 
-        const charElements = el.querySelectorAll('.split-char-inner');
+        const charElements = el.querySelectorAll('.split-char');
 
         const anim = gsap.fromTo(
             charElements,
             {
-                willChange: 'opacity, transform',
                 opacity: 0,
-                y: '110%',
+                y: 30,
             },
             {
                 duration: animationDuration,
                 ease,
                 opacity: 1,
-                y: '0%',
+                y: 0,
                 stagger,
                 scrollTrigger: {
                     trigger: el,
@@ -74,7 +74,7 @@ const ScrollFloat: React.FC<ScrollFloatProps> = ({
 
     return (
         <h2 ref={containerRef} className={`overflow-visible pb-2 ${containerClassName}`}>
-            <span className={`inline-block pb-1 ${textClassName}`}>{splitText}</span>
+            <span className={`inline-block ${textClassName}`}>{splitText}</span>
         </h2>
     );
 };
