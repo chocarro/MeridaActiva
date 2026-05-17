@@ -51,15 +51,33 @@ const Eventos: React.FC = () => {
   // Recargar cuando cambia la categoría o la búsqueda debounced
   useEffect(() => { cargarEventos(1, true, categoriaActiva, busquedaDebounced); }, [categoriaActiva, busquedaDebounced]);
 
+  // Suscripción en tiempo real: recarga al detectar INSERT/UPDATE/DELETE en eventos
+  useEffect(() => {
+    const canal = supabase
+      .channel('eventos-lista-realtime')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'eventos' },
+        () => {
+          cargarEventos(1, true, categoriaActiva, busquedaDebounced);
+        }
+      )
+      .subscribe();
+    return () => { supabase.removeChannel(canal); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [categoriaActiva, busquedaDebounced]);
+
   const cargarEventos = async (nuevaPagina: number, reiniciar = false, categoria = categoriaActiva, textoBusqueda = busquedaDebounced) => {
     if (nuevaPagina === 1) setLoading(true);
     else setCargandoMas(true);
     try {
       const desde = (nuevaPagina - 1) * PAGE_SIZE;
       const hasta = desde + PAGE_SIZE - 1;
+      const hoy = new Date().toISOString().split('T')[0];
       let query = supabase
         .from('eventos')
         .select('id, titulo, descripcion, fecha, hora, ubicacion, imagen_url, categoria, precio')
+        .gte('fecha', hoy)           // ← Solo eventos presentes y futuros
         .order('fecha', { ascending: true })
         .range(desde, hasta);
 

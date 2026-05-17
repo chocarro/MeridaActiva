@@ -220,9 +220,10 @@ const MapaEventos: React.FC = () => {
 
   // ── Carga de datos (paginada para traer todos los registros) ────
   useEffect(() => {
+    const hoy = new Date().toISOString().split('T')[0];
+
     const loadEventos = async () => {
       setLoadingEventos(true);
-      const hoy = new Date().toISOString().split('T')[0];
       const data = await fetchTodosEventos(hoy);
       setEventos(data.filter(ev => ev.latitud != null && ev.longitud != null));
       setLoadingEventos(false);
@@ -237,6 +238,39 @@ const MapaEventos: React.FC = () => {
 
     loadEventos();
     loadLugares();
+
+    // ── Suscripción en tiempo real: eventos ─────────────────────
+    const canalEventos = supabase
+      .channel('mapa-eventos-realtime')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'eventos' },
+        async () => {
+          // Recarga siempre con la fecha actualizada para excluir pasados y borrados
+          const hoyActual = new Date().toISOString().split('T')[0];
+          const data = await fetchTodosEventos(hoyActual);
+          setEventos(data.filter(ev => ev.latitud != null && ev.longitud != null));
+        }
+      )
+      .subscribe();
+
+    // ── Suscripción en tiempo real: lugares ──────────────────────
+    const canalLugares = supabase
+      .channel('mapa-lugares-realtime')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'lugares' },
+        async () => {
+          const data = await fetchTodosLugares();
+          setLugares(data.filter(l => l.latitud != null && l.longitud != null));
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(canalEventos);
+      supabase.removeChannel(canalLugares);
+    };
   }, []);
 
   const loading = tab === 'eventos' ? loadingEventos : loadingLugares;

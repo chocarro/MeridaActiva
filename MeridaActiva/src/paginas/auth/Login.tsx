@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { supabase } from '../../supabaseClient';
 import Logo from '../../componentes/Logo';
-import { useAuth, forceNuclearLogout } from '../../context/AuthContext';
+import { useAuth } from '../../context/AuthContext';
 type Mode = 'login' | 'recovery';
 
 const Login: React.FC = () => {
@@ -59,11 +59,6 @@ const Login: React.FC = () => {
     setLoading(false);
   };
 
-  const handleResetSesionBloqueada = async () => {
-    setErrorMsg(null);
-    setSuccessMsg(null);
-    await forceNuclearLogout();
-  };
 
   return (
     <div className="min-h-screen flex" style={{ backgroundColor: '#F0F2F5' }}>
@@ -218,23 +213,7 @@ const Login: React.FC = () => {
                       Regístrate gratis
                     </Link>
                   </p>
-                  <div className="mt-6 flex flex-col items-center gap-1.5">
-                    <button
-                      type="button"
-                      onClick={handleResetSesionBloqueada}
-                      className="text-[9px] font-bold uppercase tracking-widest opacity-20 hover:opacity-60 transition-opacity"
-                      style={{ color: '#64748b' }}
-                    >
-                      Reiniciar sesión bloqueada
-                    </button>
-                    <Link
-                      to="/recuperar-sesion"
-                      className="text-[9px] font-bold uppercase tracking-widest opacity-20 hover:opacity-60 transition-opacity"
-                      style={{ color: '#64748b' }}
-                    >
-                      Página de recuperación
-                    </Link>
-                  </div>
+
                 </div>
               </>
             ) : (

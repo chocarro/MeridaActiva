@@ -62,12 +62,7 @@ const Footer: React.FC = () => {
               <li><Link to="/terminos" className="text-slate-400 hover:text-white transition-colors font-bold text-sm">Términos de Uso</Link></li>
               <li><Link to="/cookies" className="text-slate-400 hover:text-white transition-colors font-bold text-sm">Política de Cookies</Link></li>
               <li><Link to="/aviso-legal" className="text-slate-400 hover:text-white transition-colors font-bold text-sm">Aviso Legal</Link></li>
-              <li><Link to="/contacto" className="text-slate-400 hover:text-white transition-colors font-bold text-sm">Contacto</Link></li>
-              <li>
-                <Link to="/recuperar-sesion" className="text-slate-400 hover:text-white transition-colors font-bold text-sm">
-                  Problemas con la sesión
-                </Link>
-              </li>
+
             </ul>
             {['Administrador', 'Gestor (Editor)'].includes(getNombreRolUsuario(profile) || '') && (
               <Link to="/dashboard" className="mt-6 block text-center bg-brand-blue/20 text-brand-blue border border-brand-blue/30 py-3 rounded-2xl text-[9px] font-black uppercase tracking-widest hover:bg-brand-blue hover:text-white transition-all">
