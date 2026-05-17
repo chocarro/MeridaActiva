@@ -134,7 +134,7 @@ function MapCenter({ lat, lng }: { lat: number; lng: number }) {
 const CAPA_URL = 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
 
 // ── Categorías de eventos (alineadas con la BD) ───────────────────
-const CATS_EVENTOS = ['Todos', 'Cultural', 'Música', 'Teatro', 'Deporte', 'Infantil', 'Gastronomía', 'Patrimonio', 'Festividad', 'Exposición', 'Otro'];
+const CATS_EVENTOS = ['Todos', 'Cultural', 'Música', 'Teatro'];
 const CATS_LUGARES = ['Todos', 'Gastronomía', 'Actividades', 'Sobre la ciudad'];
 // ── Helper: formatear fecha ───────────────────────────────────────
 function formatFecha(fecha: string) {

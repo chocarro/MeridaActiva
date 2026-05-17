@@ -1,5 +1,5 @@
-import React, { useEffect, useState, Suspense, lazy } from 'react';
-import { Routes, Route, Navigate, Link } from 'react-router-dom';
+import React, { Suspense, lazy } from 'react';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
 import { getNombreRolUsuario } from './utils/perfilUsuario';
 
@@ -47,35 +47,14 @@ const LoadingSpinner = () => (
 // ── Componente de protección de rutas ─────────────────────────────
 const ProtectedRoute = ({ children, allowedRoles }: { children: React.ReactNode, allowedRoles?: string[] }) => {
   const { session, profile, loading } = useAuth();
-  const [cargaLenta, setCargaLenta] = useState(false);
-
-  useEffect(() => {
-    if (!loading) {
-      setCargaLenta(false);
-      return;
-    }
-    const t = setTimeout(() => setCargaLenta(true), 12_000);
-    return () => clearTimeout(t);
-  }, [loading]);
 
   if (loading) {
     return (
-      <div className="p-6 text-center max-w-lg mx-auto py-20">
-        <p className="text-slate-600 font-medium">Verificando acceso…</p>
-        {cargaLenta && (
-          <div className="mt-8 rounded-2xl border border-slate-200 bg-slate-50 px-6 py-5 text-sm text-slate-600">
-            <p className="mb-3">
-              Si esto no termina, la sesión del navegador puede estar corrupta. No hace falta abrir las herramientas de desarrollador.
-            </p>
-            <Link
-              to="/recuperar-sesion"
-              className="inline-flex items-center gap-2 font-black text-xs uppercase tracking-widest text-brand-blue hover:text-brand-dark"
-            >
-              <i className="bi bi-arrow-counterclockwise" />
-              Recuperar sesión
-            </Link>
-          </div>
-        )}
+      <div className="min-h-screen bg-brand-bg flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-10 h-10 border-2 border-brand-blue border-t-transparent rounded-full animate-spin" />
+          <p className="text-slate-400 font-black uppercase text-[10px] tracking-widest">Verificando acceso…</p>
+        </div>
       </div>
     );
   }
