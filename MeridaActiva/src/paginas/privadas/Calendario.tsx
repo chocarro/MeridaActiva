@@ -7,6 +7,16 @@ import { toastExito, toastError, toastAviso } from '../../utils/toast';
 import AnimatedList from '../../componentes/animaciones/AnimatedList';
 import type { Evento, AgendaPersonal, EventoCalendario } from '../../types';
 
+// ── Tipo para reseñas en el sidebar ──────────────────────────────
+interface ResenaConEvento {
+  id: string;
+  texto: string;
+  puntuacion: number;
+  created_at: string;
+  evento_id: string;
+  eventos?: { titulo: string; imagen_url?: string } | null;
+}
+
 // ── Constantes ───────────────────────────────────────────────────
 const COLORES = ['#FFBA08', '#3F88C5', '#136F63', '#D00000', '#032B43'];
 const DIAS_SEMANA = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
@@ -54,6 +64,7 @@ const Calendario: React.FC = () => {
   const [mesActual, setMesActual] = useState(new Date());
   const [eventosPlataforma, setEventosPlataforma] = useState<Evento[]>([]);
   const [agendaPersonal, setAgendaPersonal] = useState<AgendaPersonal[]>([]);
+  const [resenas, setResenas] = useState<ResenaConEvento[]>([]);
   const [loading, setLoading] = useState(true);
 
   // ── Modal FORMULARIO (crear / editar) ────────────────────────
@@ -112,6 +123,29 @@ const Calendario: React.FC = () => {
 
       if (agErr) throw agErr;
       if (ag) setAgendaPersonal(ag as AgendaPersonal[]);
+
+      // ── Cargar reseñas del usuario ──────────────────────────
+      const { data: comms } = await supabase
+        .from('comentarios')
+        .select('id, texto, puntuacion, created_at, evento_id')
+        .eq('usuario_id', session.user.id)
+        .order('created_at', { ascending: false })
+        .limit(10);
+
+      if (comms && comms.length > 0) {
+        const eventoIds = [...new Set(comms.map((c: any) => c.evento_id).filter(Boolean))];
+        let eventoMap: Record<string, { titulo: string; imagen_url?: string }> = {};
+        if (eventoIds.length > 0) {
+          const { data: evs } = await supabase
+            .from('eventos')
+            .select('id, titulo, imagen_url')
+            .in('id', eventoIds as string[]);
+          if (evs) evs.forEach((e: any) => { eventoMap[e.id] = { titulo: e.titulo, imagen_url: e.imagen_url }; });
+        }
+        setResenas(comms.map((c: any) => ({ ...c, eventos: eventoMap[c.evento_id] || null })));
+      } else {
+        setResenas([]);
+      }
 
     } catch (err) {
       console.error('[Calendario] Error cargando agenda:', err);
@@ -474,6 +508,51 @@ const Calendario: React.FC = () => {
                 </div>
               </Link>
             )}
+
+            {/* Mis Reseñas — widget en sidebar */}
+            <div className="bg-white rounded-[2rem] p-6 border border-slate-100 shadow-sm">
+              <h4 className="text-[10px] font-black uppercase tracking-widest text-brand-dark mb-4 flex items-center gap-2">
+                <i className="bi bi-chat-left-quote text-brand-green" />
+                Mis Reseñas
+              </h4>
+              {resenas.length > 0 ? (
+                <div className="space-y-3">
+                  {resenas.slice(0, 3).map(res => (
+                    <Link
+                      key={res.id}
+                      to={`/eventos/${res.evento_id}`}
+                      className="flex items-center gap-3 group hover:opacity-80 transition-opacity"
+                    >
+                      {res.eventos?.imagen_url ? (
+                        <img src={res.eventos.imagen_url} alt="" className="w-10 h-10 rounded-xl object-cover flex-shrink-0" loading="lazy" />
+                      ) : (
+                        <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center flex-shrink-0">
+                          <i className="bi bi-calendar-event text-slate-300 text-sm" />
+                        </div>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[10px] font-black text-brand-dark truncate group-hover:text-brand-green transition-colors">{res.eventos?.titulo || 'Evento'}</p>
+                        <div className="flex gap-0.5 mt-0.5">
+                          {[1,2,3,4,5].map(n => (
+                            <i key={n} className={`bi bi-star${n <= res.puntuacion ? '-fill text-brand-gold' : ' text-slate-200'} text-[8px]`} />
+                          ))}
+                        </div>
+                      </div>
+                    </Link>
+                  ))}
+                  {resenas.length > 3 && (
+                    <p className="text-[9px] font-black text-brand-green uppercase tracking-widest text-center pt-1">
+                      +{resenas.length - 3} más
+                    </p>
+                  )}
+                </div>
+              ) : (
+                <div className="py-6 text-center">
+                  <i className="bi bi-chat-left text-2xl text-slate-200 block mb-2" />
+                  <p className="text-[9px] text-slate-300 font-black uppercase tracking-widest">Sin reseñas aún</p>
+                </div>
+              )}
+            </div>
 
 
           </aside>

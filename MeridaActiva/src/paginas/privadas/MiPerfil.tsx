@@ -1,28 +1,16 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useAuth, forceNuclearLogout } from '../../context/AuthContext';
 import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '../../supabaseClient';
 import { getNombreRolUsuario } from '../../utils/perfilUsuario';
-import { useFavoritos } from '../../hooks/useFavoritos';
 
-// Tipo para reseñas con join a eventos
-interface ReseñaConEvento {
-  id: string;
-  texto: string;
-  puntuacion: number;
-  created_at: string;
-  nombre_usuario?: string;
-  eventos?: { titulo: string; imagen_url?: string } | null;
-}
 
 const MiPerfil: React.FC = () => {
   const { profile, session, loading } = useAuth();
   const navigate = useNavigate();
-  const [seccion, setSeccion] = useState<'perfil' | 'seguridad' | 'reseñas' | 'guardados'>('perfil');
+  const [seccion, setSeccion] = useState<'perfil' | 'seguridad'>('perfil');
   const tabsRef = useRef<HTMLDivElement>(null);
 
-  // Hook de favoritos
-  const { favoritos, loading: loadingFavs } = useFavoritos(session?.user?.id);
 
   // --- Estado formulario perfil ---
   const [nombre, setNombre] = useState('');
@@ -40,8 +28,6 @@ const MiPerfil: React.FC = () => {
   const [deletingAccount, setDeletingAccount] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState(false);
 
-  // --- Reseñas ---
-  const [reseñas, setReseñas] = useState<ReseñaConEvento[]>([]);
 
   // Sync perfil cuando carga
   useEffect(() => {
@@ -52,34 +38,6 @@ const MiPerfil: React.FC = () => {
     if (session?.user?.email) setNuevoEmail(session.user.email);
   }, [profile, session]);
 
-  const fetchContenido = useCallback(async () => {
-    if (!session?.user?.id) return;
-    // Cargamos reseñas con join a eventos
-    const { data: comms, error } = await supabase
-      .from('comentarios')
-      .select('id, texto, puntuacion, created_at, nombre_usuario, evento_id')
-      .eq('usuario_id', session.user.id)
-      .order('created_at', { ascending: false });
-    if (error) {
-      console.error('[MiPerfil] Error cargando reseñas:', error.message);
-      setReseñas([]);
-      return;
-    }
-    if (!comms || comms.length === 0) { setReseñas([]); return; }
-    // Enriquecemos con datos del evento
-    const eventoIds = [...new Set(comms.map((c: any) => c.evento_id).filter(Boolean))];
-    let eventoMap: Record<string, { titulo: string; imagen_url?: string }> = {};
-    if (eventoIds.length > 0) {
-      const { data: evs } = await supabase
-        .from('eventos')
-        .select('id, titulo, imagen_url')
-        .in('id', eventoIds as string[]);
-      if (evs) evs.forEach((e: any) => { eventoMap[e.id] = { titulo: e.titulo, imagen_url: e.imagen_url }; });
-    }
-    setReseñas(comms.map((c: any) => ({ ...c, eventos: eventoMap[c.evento_id] || null })));
-  }, [session?.user?.id]);
-
-  useEffect(() => { fetchContenido(); }, [fetchContenido]);
 
   // Scroll active tab into view on mobile
   useEffect(() => {
@@ -216,11 +174,9 @@ const MiPerfil: React.FC = () => {
     </div>
   );
 
-  const menuItems: Array<{ id: 'perfil' | 'seguridad' | 'reseñas' | 'guardados'; label: string; icon: string; color: string; accent: string }> = [
+  const menuItems: Array<{ id: 'perfil' | 'seguridad'; label: string; icon: string; color: string; accent: string }> = [
     { id: 'perfil',     label: 'Mi Perfil',   icon: 'bi-person-circle',    color: 'bg-brand-dark',  accent: 'border-brand-dark'  },
     { id: 'seguridad',  label: 'Seguridad',   icon: 'bi-shield-lock',      color: 'bg-brand-red',   accent: 'border-brand-red'   },
-    { id: 'reseñas',    label: 'Mis Reseñas', icon: 'bi-chat-left-quote',  color: 'bg-brand-green', accent: 'border-brand-green' },
-    { id: 'guardados',  label: 'Guardados',   icon: 'bi-heart-fill',       color: 'bg-brand-red',   accent: 'border-brand-red'   },
   ];
 
   return (
@@ -450,91 +406,6 @@ const MiPerfil: React.FC = () => {
             </div>
           )}
 
-          {/* ── RESEÑAS ── */}
-          {seccion === 'reseñas' && (
-            <div className="bg-white rounded-[2rem] lg:rounded-[3rem] p-7 md:p-12 shadow-xl border border-slate-100">
-              <h3 className="text-3xl lg:text-4xl font-black text-brand-dark italic uppercase tracking-tighter mb-8">
-                Mis <span className="text-brand-green">Reseñas</span>
-              </h3>
-              <div className="space-y-5">
-                {reseñas.length > 0 ? reseñas.map(res => (
-                  <div key={res.id} className="flex gap-4 p-5 bg-brand-bg rounded-[2rem] border border-slate-100">
-                    {res.eventos?.imagen_url && (
-                      <img src={res.eventos.imagen_url} className="w-16 h-16 rounded-2xl object-cover shadow flex-shrink-0" alt="" />
-                    )}
-                    <div className="flex-1 min-w-0">
-                      <p className="font-black text-brand-dark uppercase italic text-sm mb-1 truncate">{res.eventos?.titulo || 'Evento'}</p>
-                      <div className="flex gap-0.5 mb-2">
-                        {[1, 2, 3, 4, 5].map(n => (
-                          <i key={n} className={`bi bi-heart${n <= res.puntuacion ? '-fill text-brand-red' : ' text-slate-200'} text-xs`}></i>
-                        ))}
-                      </div>
-                      <p className="text-slate-500 text-sm font-medium italic line-clamp-2">"{res.texto}"</p>
-                      <div className="flex items-center gap-3 mt-2 flex-wrap">
-                        <p className="text-[9px] text-slate-300 font-bold uppercase tracking-widest">{new Date(res.created_at).toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
-                        {res.nombre_usuario && <p className="text-[9px] text-brand-blue font-bold uppercase tracking-widest">por {res.nombre_usuario}</p>}
-                      </div>
-                    </div>
-                  </div>
-                )) : (
-                  <div className="py-16 text-center bg-brand-bg rounded-[2rem] border-2 border-dashed border-slate-200">
-                    <i className="bi bi-chat-left-quote text-4xl text-slate-200 block mb-4"></i>
-                    <p className="text-slate-400 font-bold uppercase tracking-widest text-[10px]">Aún no has escrito ninguna reseña</p>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* ── GUARDADOS ── */}
-          {seccion === 'guardados' && (
-            <div className="bg-white rounded-[2rem] lg:rounded-[3rem] p-7 md:p-12 shadow-xl border border-slate-100">
-              <h3 className="text-3xl lg:text-4xl font-black text-brand-dark italic uppercase tracking-tighter mb-8">
-                Mis <span className="text-brand-red">Guardados</span>
-              </h3>
-              {loadingFavs ? (
-                <div className="flex justify-center py-16">
-                  <div className="w-10 h-10 border-4 border-brand-red border-t-transparent rounded-full animate-spin" />
-                </div>
-              ) : favoritos.length > 0 ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {favoritos.map(fav => {
-                    const titulo = fav.detalle?.titulo || fav.detalle?.nombre_es || fav.detalle?.nombre || 'Sin título';
-                    const imagen = fav.detalle?.imagen_url;
-                    const ruta = fav.tipo_elemento === 'evento' ? `/eventos/${fav.elemento_id}` : `/lugares/${fav.elemento_id}`;
-                    return (
-                      <Link
-                        key={fav.id}
-                        to={ruta}
-                        className="flex gap-4 p-4 bg-brand-bg rounded-[1.5rem] border border-slate-100 hover:border-brand-red/30 hover:shadow-md transition-all group"
-                      >
-                        {imagen ? (
-                          <img src={imagen} alt={titulo} className="w-16 h-16 rounded-xl object-cover flex-shrink-0" />
-                        ) : (
-                          <div className="w-16 h-16 rounded-xl bg-slate-200 flex items-center justify-center flex-shrink-0">
-                            <i className="bi bi-image text-slate-400" />
-                          </div>
-                        )}
-                        <div className="min-w-0 flex-1">
-                          <p className="font-black text-brand-dark uppercase italic text-sm truncate group-hover:text-brand-red transition-colors">{titulo}</p>
-                          <span className="text-[9px] font-black uppercase tracking-widest text-slate-400 bg-slate-200 px-2 py-0.5 rounded-full mt-1 inline-block">
-                            {fav.tipo_elemento}
-                          </span>
-                        </div>
-                        <i className="bi bi-heart-fill text-brand-red text-sm flex-shrink-0 mt-1" />
-                      </Link>
-                    );
-                  })}
-                </div>
-              ) : (
-                <div className="py-16 text-center bg-brand-bg rounded-[2rem] border-2 border-dashed border-slate-200">
-                  <i className="bi bi-heart text-4xl text-slate-200 block mb-4"></i>
-                  <p className="text-slate-400 font-bold uppercase tracking-widest text-[10px] mb-4">Aún no has guardado nada</p>
-                  <Link to="/eventos" className="text-brand-red font-black text-[10px] uppercase tracking-widest hover:underline">Explorar eventos →</Link>
-                </div>
-              )}
-            </div>
-          )}
 
         </div>
       </div>
