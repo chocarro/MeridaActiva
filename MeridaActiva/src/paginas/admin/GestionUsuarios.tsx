@@ -2,6 +2,28 @@ import React, { useEffect, useState } from 'react';
 import { supabase } from '../../supabaseClient';
 import { getNombreRolUsuario } from '../../utils/perfilUsuario';
 
+// ── Helper: llama a la API admin que usa service_role (bypasea RLS) ──
+async function callAdminApi(campo: string, targetId: string, valor: unknown): Promise<string | null> {
+  const { data: { session } } = await supabase.auth.getSession();
+  const token = session?.access_token;
+  if (!token) return 'No hay sesión activa.';
+
+  const res = await fetch('/api/admin-usuarios', {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`,
+    },
+    body: JSON.stringify({ targetId, campo, valor }),
+  });
+
+  if (!res.ok) {
+    const json = await res.json().catch(() => ({}));
+    return json.error ?? 'Error desconocido en el servidor.';
+  }
+  return null; // null = éxito
+}
+
 type EstadoUsuario = 'Activo' | 'Suspendido';
 
 interface Usuario {
@@ -84,8 +106,9 @@ const GestionUsuarios: React.FC = () => {
   // ── Cambiar rol ─────────────────────────────────────────────
   const cambiarRol = async (id: string, nuevoRolId: number) => {
     setCambiando(id);
-    const { error } = await supabase.from('usuarios').update({ rol_id: nuevoRolId }).eq('id', id);
-    if (error) setErrorMsg('No se pudo actualizar el rol.');
+    setErrorMsg(null);
+    const err = await callAdminApi('rol_id', id, nuevoRolId);
+    if (err) setErrorMsg(`No se pudo actualizar el rol: ${err}`);
     setCambiando(null);
     fetchUsuarios(paginaActual);
   };
@@ -95,17 +118,10 @@ const GestionUsuarios: React.FC = () => {
     const nuevoEstado: EstadoUsuario = user.estado === 'Suspendido' ? 'Activo' : 'Suspendido';
     setPendienteToggle(null);
     setCambiando(user.id);
-    try {
-      await supabase
-        .from('usuarios')
-        .update({ estado: nuevoEstado })
-        .eq('id', user.id);
-      fetchUsuarios(paginaActual, busqueda);
-    } catch {
-      setErrorMsg('No se pudo cambiar el estado del usuario.');
-    } finally {
-      setCambiando(null);
-    }
+    const err = await callAdminApi('estado', user.id, nuevoEstado);
+    if (err) setErrorMsg(`No se pudo cambiar el estado: ${err}`);
+    setCambiando(null);
+    fetchUsuarios(paginaActual, busqueda);
   };
 
   // ── Filtro local por búsqueda ───────────────────────────────
