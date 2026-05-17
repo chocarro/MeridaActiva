@@ -9,36 +9,12 @@ interface Props {
   tipo?: 'evento' | 'lugar';
 }
 
-// ── Helper: llama a la API de favoritos (service_role, bypasea RLS) ──
-async function callFavoritosApi(
-  method: 'POST' | 'DELETE',
-  elementoId: string,
-  tipoElemento: 'evento' | 'lugar',
-  token: string
-): Promise<string | null> {
-  const res = await fetch('/api/favoritos', {
-    method,
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`,
-    },
-    body: JSON.stringify({ elementoId, tipoElemento }),
-  });
-
-  if (!res.ok) {
-    const json = await res.json().catch(() => ({}));
-    return json.error ?? `Error HTTP ${res.status}`;
-  }
-  return null; // null = éxito
-}
-
 const BotonFavorito = ({ eventoId, lugarId, tipo = 'evento' }: Props) => {
   const { session } = useAuth();
   const [loading, setLoading] = useState(false);
   const [isFav, setIsFav] = useState(false);
   const [pulse, setPulse] = useState(false);
 
-  // Derivar el id del elemento según el tipo
   const elementoId = tipo === 'lugar' ? (lugarId ?? eventoId ?? '') : (eventoId ?? lugarId ?? '');
 
   useEffect(() => {
@@ -56,11 +32,7 @@ const BotonFavorito = ({ eventoId, lugarId, tipo = 'evento' }: Props) => {
         .eq('elemento_id', elementoId)
         .eq('tipo_elemento', tipo)
         .maybeSingle();
-
-      if (error) {
-        console.warn('[BotonFavorito] checkStatus error:', error.message);
-        return;
-      }
+      if (error) console.warn('[BotonFavorito] checkStatus:', error.message);
       setIsFav(!!data);
     } catch (err) {
       console.error('[BotonFavorito] checkStatus excepción:', err);
@@ -75,42 +47,46 @@ const BotonFavorito = ({ eventoId, lugarId, tipo = 'evento' }: Props) => {
       toast.error('¡Inicia sesión para guardar tus favoritos!');
       return;
     }
+    if (!elementoId) return;
 
-    if (!elementoId) {
-      toast.error('Error: ID del elemento no disponible.');
-      return;
-    }
-
-    const token = session.access_token;
     setLoading(true);
     setPulse(true);
     setTimeout(() => setPulse(false), 600);
 
     try {
       if (isFav) {
-        // ── ELIMINAR ──────────────────────────────────────────────
-        const err = await callFavoritosApi('DELETE', elementoId, tipo, token);
-        if (err) {
-          console.error('[BotonFavorito] delete error:', err);
+        const { error } = await supabase
+          .from('favoritos')
+          .delete()
+          .eq('usuario_id', session.user.id)
+          .eq('elemento_id', elementoId)
+          .eq('tipo_elemento', tipo);
+        if (error) {
+          console.error('[BotonFavorito] delete error:', error.message, error.code);
           toast.error('No se pudo eliminar de favoritos.');
         } else {
           setIsFav(false);
           toast.success('Eliminado de favoritos');
         }
       } else {
-        // ── INSERTAR ──────────────────────────────────────────────
-        const err = await callFavoritosApi('POST', elementoId, tipo, token);
-        if (err) {
-          console.error('[BotonFavorito] insert error:', err);
-          toast.error(`No se pudo guardar en favoritos: ${err}`);
+        const { error } = await supabase
+          .from('favoritos')
+          .insert({ usuario_id: session.user.id, elemento_id: elementoId, tipo_elemento: tipo });
+        if (error) {
+          console.error('[BotonFavorito] insert error:', error.message, error.code);
+          if (error.code === '23505') {
+            setIsFav(true);
+          } else {
+            toast.error(`No se pudo guardar: ${error.message}`);
+          }
         } else {
           setIsFav(true);
           toast.success('¡Añadido a favoritos! ❤️');
         }
       }
     } catch (err) {
-      console.error('[BotonFavorito] excepción inesperada:', err);
-      toast.error('Error inesperado al actualizar favorito.');
+      console.error('[BotonFavorito] excepción:', err);
+      toast.error('Error inesperado.');
     } finally {
       setLoading(false);
     }
@@ -122,8 +98,8 @@ const BotonFavorito = ({ eventoId, lugarId, tipo = 'evento' }: Props) => {
       disabled={loading}
       aria-label={isFav ? 'Quitar de favoritos' : 'Añadir a favoritos'}
       className={`
-        relative flex-shrink-0 w-12 h-12 aspect-square rounded-full flex items-center justify-center
-        transition-all duration-300 shadow-xl
+        relative flex-shrink-0 w-10 h-10 aspect-square rounded-full flex items-center justify-center
+        transition-all duration-300 shadow-lg
         ${isFav
           ? 'bg-brand-red text-white shadow-brand-red/40'
           : 'bg-white/20 backdrop-blur-md text-white hover:bg-white hover:text-brand-red hover:scale-105'
@@ -132,12 +108,7 @@ const BotonFavorito = ({ eventoId, lugarId, tipo = 'evento' }: Props) => {
         disabled:opacity-60
       `}
     >
-      <i
-        className={`
-          bi bi-heart${isFav ? '-fill' : ''}
-          text-xl transition-all duration-300
-        `}
-      />
+      <i className={`bi bi-heart${isFav ? '-fill' : ''} text-base transition-all duration-300`} />
     </button>
   );
 };

@@ -11,45 +11,29 @@ const FormularioReseña: React.FC<{ eventoId: string, onPublicado: () => void }>
 
   const enviarReseña = async (e: React.FormEvent) => {
     e.preventDefault();
-
     if (!session?.user?.id) {
       toast.error('Debes iniciar sesión para publicar una reseña');
       return;
     }
-
     setEnviando(true);
-
     try {
-      const { data: { session: sess } } = await supabase.auth.getSession();
-      const token = sess?.access_token;
-      if (!token) throw new Error('No hay sesión activa.');
-
-      const res = await fetch('/api/comentarios', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          eventoId: eventoId,
-          texto: comentario,
-          puntuacion: puntuacion,
-          nombreUsuario: profile?.nombre || session.user.user_metadata?.full_name || 'Explorador',
-        }),
-      });
-
-      if (!res.ok) {
-        const json = await res.json().catch(() => ({}));
-        throw new Error(json.error ?? `Error ${res.status}`);
+      const { error } = await supabase.from('comentarios').insert([{
+        evento_id: eventoId,
+        usuario_id: session.user.id,
+        texto: comentario,
+        puntuacion: puntuacion,
+        nombre_usuario: profile?.nombre || session.user.user_metadata?.full_name || 'Explorador',
+      }]);
+      if (error) {
+        console.error('[FormularioReseña] insert error:', error.message, error.code);
+        throw error;
       }
-
       setComentario('');
       setPuntuacion(5);
       onPublicado();
       toast.success('¡Reseña publicada!');
     } catch (error: any) {
-      console.error('Error al publicar:', error.message);
-      toast.error('Error: ' + error.message);
+      toast.error('Error al publicar: ' + (error.message || 'inténtalo de nuevo'));
     } finally {
       setEnviando(false);
     }

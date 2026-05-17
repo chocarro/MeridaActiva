@@ -16,9 +16,6 @@ export interface FavoritoConDetalle extends Favorito {
 /**
  * Hook centralizado para cargar los favoritos de un usuario con el
  * detalle de cada item (evento o lugar).
- *
- * Usa el mismo patrón de dos queries que Calendario.tsx para evitar
- * problemas de RLS con joins de PostgREST.
  */
 export function useFavoritos(usuarioId: string | undefined) {
   const [favoritos, setFavoritos] = useState<FavoritoConDetalle[]>([]);
@@ -36,11 +33,11 @@ export function useFavoritos(usuarioId: string | undefined) {
       // Paso 1: obtener todos los favoritos del usuario
       const { data: favsData, error: favErr } = await supabase
         .from('favoritos')
-        .select('id, elemento_id, tipo_elemento, usuario_id, created_at')
+        .select('*')
         .eq('usuario_id', usuarioId);
 
       if (favErr) {
-        console.error('[useFavoritos] Error cargando favoritos:', favErr.message);
+        console.error('[useFavoritos] Error cargando favoritos:', favErr.message, favErr.code);
         setFavoritos([]);
         return;
       }
@@ -61,7 +58,7 @@ export function useFavoritos(usuarioId: string | undefined) {
         .map((f: any) => f.elemento_id)
         .filter(Boolean) as string[];
 
-      const eventoMap: Record<string, { id: string; titulo?: string; imagen_url?: string }> = {};
+      const eventoMap: Record<string, { id: string; titulo?: string; imagen_url?: string; fecha?: string }> = {};
       const lugarMap: Record<string, { id: string; nombre?: string; nombre_es?: string; imagen_url?: string }> = {};
 
       if (eventoIds.length > 0) {
@@ -82,7 +79,7 @@ export function useFavoritos(usuarioId: string | undefined) {
         if (lug) (lug as any[]).forEach(l => { lugarMap[l.id] = l; });
       }
 
-      // Filtrar eventos pasados: no mostrar en favoritos eventos cuya fecha ya ocurrió
+      // Filtrar: quitar eventos borrados y pasados
       const hoy = new Date();
       hoy.setHours(0, 0, 0, 0);
 
@@ -95,7 +92,7 @@ export function useFavoritos(usuarioId: string | undefined) {
       }).filter(fav => {
         // Los lugares siempre se muestran
         if (fav.tipo_elemento !== 'evento') return true;
-        // Si el evento ya no existe en BD, lo quitamos también
+        // Si el evento ya no existe en BD, lo quitamos
         if (!fav.detalle) return false;
         // Si el evento tiene fecha y ya pasó, lo excluimos
         const fechaEvento = (fav.detalle as any).fecha;

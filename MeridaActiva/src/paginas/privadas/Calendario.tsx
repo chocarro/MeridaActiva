@@ -83,6 +83,7 @@ const Calendario: React.FC = () => {
 
   // Confirmación inline de borrado
   const [pendienteEliminar, setPendienteEliminar] = useState<string | null>(null);
+  const [mostrarMasPasados, setMostrarMasPasados] = useState(false);
 
   // Confirmación de conflicto de hora (substituye a window.confirm)
   const [conflictoHora, setConflictoHora] = useState<{ titulo: string; hora: string } | null>(null);
@@ -376,7 +377,16 @@ const Calendario: React.FC = () => {
               <p className="text-[9px] font-black uppercase tracking-[0.3em] text-slate-400 whitespace-nowrap"><i className="bi bi-clock-history mr-1" />Pasados ({pasados.length})</p>
               <div className="flex-1 h-px bg-slate-200" />
             </div>
-            {pasados.map(ev => renderItem(ev, true))}
+            {(mostrarMasPasados ? pasados : pasados.slice(0, 5)).map(ev => renderItem(ev, true))}
+            {pasados.length > 5 && (
+              <button
+                onClick={() => setMostrarMasPasados(v => !v)}
+                className="w-full mt-2 py-3 rounded-2xl bg-slate-100 text-slate-500 text-[9px] font-black uppercase tracking-widest hover:bg-slate-200 transition-all flex items-center justify-center gap-2"
+              >
+                <i className={`bi bi-chevron-${mostrarMasPasados ? 'up' : 'down'}`} />
+                {mostrarMasPasados ? 'Ver menos' : `Ver más (${pasados.length - 5} restantes)`}
+              </button>
+            )}
           </>
         )}
       </>

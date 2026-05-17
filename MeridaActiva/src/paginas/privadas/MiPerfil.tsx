@@ -61,6 +61,15 @@ const MiPerfil: React.FC = () => {
       if (upErr) throw upErr;
       const { data: { publicUrl } } = supabase.storage.from('avatares').getPublicUrl(path);
       setAvatarUrl(publicUrl);
+      // Auto-guardar el avatar_url en el perfil inmediatamente
+      const { data: { session: sess } } = await supabase.auth.getSession();
+      if (sess?.access_token) {
+        await fetch('/api/perfil', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${sess.access_token}` },
+          body: JSON.stringify({ avatarUrl: publicUrl }),
+        });
+      }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Error desconocido';
       setPerfilMsg({ tipo: 'err', texto: 'Error al subir imagen: ' + msg });
@@ -76,11 +85,20 @@ const MiPerfil: React.FC = () => {
     setSavingPerfil(true);
     setPerfilMsg(null);
     try {
-      const { error } = await supabase
-        .from('usuarios')
-        .update({ nombre, avatar_url: avatarUrl })
-        .eq('id', session.user.id);
-      if (error) throw error;
+      const { data: { session: sess } } = await supabase.auth.getSession();
+      const token = sess?.access_token;
+      if (!token) throw new Error('No hay sesión activa.');
+
+      const res = await fetch('/api/perfil', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ nombre, avatarUrl }),
+      });
+
+      if (!res.ok) {
+        const json = await res.json().catch(() => ({}));
+        throw new Error(json.error ?? `Error ${res.status}`);
+      }
       setPerfilMsg({ tipo: 'ok', texto: '¡Perfil actualizado correctamente!' });
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Error al guardar';
@@ -390,7 +408,7 @@ const MiPerfil: React.FC = () => {
 
               <div className="bg-brand-red/5 border-2 border-brand-red/20 rounded-[2rem] lg:rounded-[3rem] p-7 md:p-12">
                 <h3 className="text-xl lg:text-2xl font-black text-brand-red italic uppercase tracking-tighter mb-4">
-                  Zona de Peligro
+                  Eliminar Cuenta
                 </h3>
                 <p className="text-slate-500 text-sm font-medium mb-6 leading-relaxed">
                   Eliminar tu cuenta borrará permanentemente todos tus datos, favoritos y reseñas. Esta acción no se puede deshacer.
