@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../../supabaseClient';
-import { getNombreRolUsuario } from '../../utils/perfilUsuario';
+import { getNombreRolUsuario, normalizarPerfilDbRow } from '../../utils/perfilUsuario';
+import { toastExito, toastError } from '../../utils/toast';
 
 // ── Helper: llama a la API admin que usa service_role (bypasea RLS) ──
 async function callAdminApi(campo: string, targetId: string, valor: unknown): Promise<string | null> {
@@ -80,7 +81,11 @@ const GestionUsuarios: React.FC = () => {
       return;
     }
 
-    if (data) setUsuarios(data as Usuario[]);
+    if (data) {
+      setUsuarios(
+        (data as Usuario[]).map(u => normalizarPerfilDbRow(u as unknown as Record<string, unknown>) as unknown as Usuario)
+      );
+    }
     if (count !== null) setTotalUsuarios(count);
     setLoading(false);
   };
@@ -103,14 +108,44 @@ const GestionUsuarios: React.FC = () => {
     setPaginaActual(nueva);
   };
 
+  const contarAdministradoresActivos = async (rolAdminId: number) => {
+    const { count, error } = await supabase
+      .from('usuarios')
+      .select('id', { count: 'exact', head: true })
+      .eq('rol_id', rolAdminId)
+      .or('estado.is.null,estado.neq.Suspendido');
+    if (error) return 0;
+    return count ?? 0;
+  };
+
   // ── Cambiar rol ─────────────────────────────────────────────
-  const cambiarRol = async (id: string, nuevoRolId: number) => {
+  const cambiarRol = async (id: string, nuevoRolId: number, rolAnteriorId: number) => {
+    if (nuevoRolId === rolAnteriorId) return;
+
+    const rolAdmin = roles.find(r => r.nombre === 'Administrador');
+    const eraAdmin = rolAdmin ? rolAnteriorId === rolAdmin.id : false;
+    const seraAdmin = rolAdmin ? nuevoRolId === rolAdmin.id : false;
+
+    if (eraAdmin && !seraAdmin && rolAdmin) {
+      const totalAdmins = await contarAdministradoresActivos(rolAdmin.id);
+      if (totalAdmins <= 1) {
+        toastError('No puedes quitar el rol de administrador al último administrador activo.');
+        setErrorMsg('Debe permanecer al menos un administrador activo.');
+        return;
+      }
+    }
+
     setCambiando(id);
     setErrorMsg(null);
     const err = await callAdminApi('rol_id', id, nuevoRolId);
-    if (err) setErrorMsg(`No se pudo actualizar el rol: ${err}`);
+    if (err) {
+      setErrorMsg(`No se pudo actualizar el rol: ${err}`);
+      toastError(`No se pudo actualizar el rol: ${err}`);
+    } else {
+      toastExito('Rol actualizado correctamente.');
+    }
     setCambiando(null);
-    fetchUsuarios(paginaActual);
+    fetchUsuarios(paginaActual, busqueda);
   };
 
   // ── SOFT DELETE: Suspender / Reactivar ──────────────────────
@@ -119,7 +154,12 @@ const GestionUsuarios: React.FC = () => {
     setPendienteToggle(null);
     setCambiando(user.id);
     const err = await callAdminApi('estado', user.id, nuevoEstado);
-    if (err) setErrorMsg(`No se pudo cambiar el estado: ${err}`);
+    if (err) {
+      setErrorMsg(`No se pudo cambiar el estado: ${err}`);
+      toastError(`No se pudo cambiar el estado: ${err}`);
+    } else {
+      toastExito(nuevoEstado === 'Suspendido' ? 'Usuario suspendido.' : 'Usuario reactivado.');
+    }
     setCambiando(null);
     fetchUsuarios(paginaActual, busqueda);
   };
@@ -211,7 +251,7 @@ const GestionUsuarios: React.FC = () => {
                         className="bg-brand-dark border border-white/10 rounded-xl px-4 py-3 text-[10px] font-black text-white uppercase tracking-widest outline-none focus:border-brand-gold transition-all disabled:opacity-40"
                         value={user.rol_id}
                         disabled={suspendido || cambiando === user.id}
-                        onChange={e => cambiarRol(user.id, parseInt(e.target.value))}
+                        onChange={e => cambiarRol(user.id, parseInt(e.target.value, 10), user.rol_id)}
                       >
                         {roles.length > 0 ? (
                           roles.map((rol) => (

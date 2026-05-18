@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../../supabaseClient';
+import { eliminarResenaAdmin } from '../../utils/comentariosApi';
+import { toastExito, toastError } from '../../utils/toast';
 
 interface Resena {
   id: string;
@@ -94,12 +96,16 @@ const ModeracionResenas: React.FC = () => {
   const eliminar = async (id: string) => {
     setPendienteEliminar(null);
     setEliminando(id);
+    setMensaje(null);
     try {
-      await supabase.from('comentarios').delete().eq('id', id);
-      fetchResenas(pagina);
+      await eliminarResenaAdmin(id);
+      await fetchResenas(pagina);
       setMensaje('Reseña eliminada correctamente.');
-    } catch {
-      setMensaje('Error al eliminar la reseña.');
+      toastExito('Reseña eliminada.');
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : 'Error al eliminar la reseña.';
+      setMensaje(msg);
+      toastError(msg);
     } finally {
       setEliminando(null);
     }

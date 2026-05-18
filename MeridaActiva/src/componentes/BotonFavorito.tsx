@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
 import { useAuth } from '../context/AuthContext';
+import { toggleFavoritoApi } from '../utils/favoritosApi';
 import toast from 'react-hot-toast';
 
 interface Props {
@@ -54,35 +55,42 @@ const BotonFavorito = ({ eventoId, lugarId, tipo = 'evento' }: Props) => {
     setTimeout(() => setPulse(false), 600);
 
     try {
-      if (isFav) {
-        const { error } = await supabase
-          .from('favoritos')
-          .delete()
-          .eq('usuario_id', session.user.id)
-          .eq('elemento_id', elementoId)
-          .eq('tipo_elemento', tipo);
-        if (error) {
-          console.error('[BotonFavorito] delete error:', error.message, error.code);
-          toast.error('No se pudo eliminar de favoritos.');
-        } else {
-          setIsFav(false);
-          toast.success('Eliminado de favoritos');
+      const aplicarToggle = async (usarApi: boolean) => {
+        if (usarApi) {
+          await toggleFavoritoApi(elementoId, tipo, isFav);
+          return;
         }
-      } else {
-        const { error } = await supabase
-          .from('favoritos')
-          .insert({ usuario_id: session.user.id, elemento_id: elementoId, tipo_elemento: tipo });
-        if (error) {
-          console.error('[BotonFavorito] insert error:', error.message, error.code);
-          if (error.code === '23505') {
-            setIsFav(true);
-          } else {
-            toast.error(`No se pudo guardar: ${error.message}`);
+        if (isFav) {
+          const { error } = await supabase
+            .from('favoritos')
+            .delete()
+            .eq('usuario_id', session.user.id)
+            .eq('elemento_id', elementoId)
+            .eq('tipo_elemento', tipo);
+          if (error) throw error;
+        } else {
+          const { error } = await supabase
+            .from('favoritos')
+            .insert({ usuario_id: session.user.id, elemento_id: elementoId, tipo_elemento: tipo });
+          if (error) {
+            if (error.code === '23505') return;
+            throw error;
           }
-        } else {
-          setIsFav(true);
-          toast.success('¡Añadido a favoritos! ❤️');
         }
+      };
+
+      try {
+        await aplicarToggle(false);
+      } catch {
+        await aplicarToggle(true);
+      }
+
+      if (isFav) {
+        setIsFav(false);
+        toast.success('Eliminado de favoritos');
+      } else {
+        setIsFav(true);
+        toast.success('¡Añadido a favoritos! ❤️');
       }
     } catch (err) {
       console.error('[BotonFavorito] excepción:', err);

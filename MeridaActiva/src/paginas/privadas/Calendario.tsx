@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import { supabase } from '../../supabaseClient';
 import { useAuth } from '../../context/AuthContext';
 import { toastExito, toastError, toastAviso } from '../../utils/toast';
+import { actualizarResenaPropia, eliminarResenaPropia } from '../../utils/comentariosApi';
 import AnimatedList from '../../componentes/animaciones/AnimatedList';
 import type { Evento, AgendaPersonal, EventoCalendario } from '../../types';
 
@@ -89,6 +90,13 @@ const Calendario: React.FC = () => {
   const [conflictoHora, setConflictoHora] = useState<{ titulo: string; hora: string } | null>(null);
   const continuarConflictoRef = React.useRef<(() => void) | null>(null);
 
+  // ── Modal reseña (editar / borrar) ─────────────────────────────
+  const [resenaModal, setResenaModal] = useState<ResenaConEvento | null>(null);
+  const [resenaTexto, setResenaTexto] = useState('');
+  const [resenaPuntuacion, setResenaPuntuacion] = useState(5);
+  const [guardandoResena, setGuardandoResena] = useState(false);
+  const [pendienteBorrarResena, setPendienteBorrarResena] = useState(false);
+
   // ── Fetch ──────────────────────────────────────────────────────
   const fetchData = useCallback(async () => {
     if (!session?.user?.id) { setLoading(false); return; }
@@ -157,6 +165,52 @@ const Calendario: React.FC = () => {
   }, [session?.user?.id]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
+
+  const abrirModalResena = (res: ResenaConEvento) => {
+    setResenaModal(res);
+    setResenaTexto(res.texto);
+    setResenaPuntuacion(res.puntuacion);
+    setPendienteBorrarResena(false);
+  };
+
+  const cerrarModalResena = () => {
+    setResenaModal(null);
+    setResenaTexto('');
+    setResenaPuntuacion(5);
+    setPendienteBorrarResena(false);
+  };
+
+  const guardarResena = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!resenaModal || !resenaTexto.trim() || !session?.user?.id) return;
+    setGuardandoResena(true);
+    try {
+      await actualizarResenaPropia(resenaModal.id, session.user.id, resenaTexto.trim(), resenaPuntuacion);
+      toastExito('Reseña actualizada.');
+      cerrarModalResena();
+      fetchData();
+    } catch (err) {
+      toastError(err instanceof Error ? err.message : 'No se pudo guardar la reseña.');
+    } finally {
+      setGuardandoResena(false);
+    }
+  };
+
+  const borrarResena = async () => {
+    if (!resenaModal || !session?.user?.id) return;
+    setGuardandoResena(true);
+    try {
+      await eliminarResenaPropia(resenaModal.id, session.user.id);
+      toastExito('Reseña eliminada.');
+      cerrarModalResena();
+      fetchData();
+    } catch (err) {
+      toastError(err instanceof Error ? err.message : 'No se pudo eliminar la reseña.');
+    } finally {
+      setGuardandoResena(false);
+      setPendienteBorrarResena(false);
+    }
+  };
 
   // ── Abrir modal para CREAR (desde día clicado en grid) ─────────
   const abrirFormCrear = (fecha: string) => {
@@ -452,7 +506,7 @@ const Calendario: React.FC = () => {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
 
           {/* Sidebar stats */}
-          <aside className="lg:col-span-3 space-y-6">
+          <aside className="lg:col-span-3 flex flex-col gap-4">
             <div className="bg-brand-dark rounded-[2.5rem] p-8 text-white relative overflow-hidden shadow-2xl">
               <h3 className="text-brand-gold text-[10px] font-black uppercase tracking-[0.2em] mb-6">Resumen</h3>
               <div className="grid grid-cols-2 gap-6">
@@ -491,28 +545,28 @@ const Calendario: React.FC = () => {
             {eventosPlataforma.length > 0 && (
               <Link
                 to="/favoritos"
-                className="bg-white rounded-[2rem] p-6 border border-slate-100 shadow-sm block hover:border-brand-red/30 hover:shadow-md transition-all group"
+                className="bg-white rounded-[1.75rem] p-4 border border-slate-100 shadow-sm block hover:border-brand-red/30 hover:shadow-md transition-all group"
               >
-                <h4 className="text-[10px] font-black uppercase tracking-widest text-brand-dark mb-4 group-hover:text-brand-red transition-colors">
+                <h4 className="text-[10px] font-black uppercase tracking-widest text-brand-dark mb-2 group-hover:text-brand-red transition-colors">
                   Tus favoritos
                 </h4>
-                <div className="space-y-3">
-                  {eventosPlataforma.slice(0, 4).map(ev => (
-                    <div key={ev.id} className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-xl overflow-hidden flex-shrink-0 bg-slate-100">
+                <div className="space-y-2 max-h-[7.5rem] overflow-y-auto pr-1">
+                  {eventosPlataforma.slice(0, 2).map(ev => (
+                    <div key={ev.id} className="flex items-center gap-2.5">
+                      <div className="w-8 h-8 rounded-lg overflow-hidden flex-shrink-0 bg-slate-100">
                         <img src={ev.imagen_url} alt={ev.titulo} className="w-full h-full object-cover" loading="lazy" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-[10px] font-black text-brand-dark truncate">{ev.titulo}</p>
-                        <p className="text-[9px] text-slate-400 font-bold">
+                        <p className="text-[9px] font-black text-brand-dark truncate leading-tight">{ev.titulo}</p>
+                        <p className="text-[8px] text-slate-400 font-bold">
                           {ev.fecha ? new Date(ev.fecha).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' }) : 'Sin fecha'}
                         </p>
                       </div>
                     </div>
                   ))}
-                  {eventosPlataforma.length > 4 && (
-                    <p className="text-[9px] font-black text-brand-red uppercase tracking-widest text-center pt-1 group-hover:underline">
-                      +{eventosPlataforma.length - 4} más →
+                  {eventosPlataforma.length > 2 && (
+                    <p className="text-[8px] font-black text-brand-red uppercase tracking-widest text-center pt-2 group-hover:underline">
+                      +{eventosPlataforma.length - 2} más →
                     </p>
                   )}
                 </div>
@@ -520,46 +574,43 @@ const Calendario: React.FC = () => {
             )}
 
             {/* Mis Reseñas — widget en sidebar */}
-            <div className="bg-white rounded-[2rem] p-6 border border-slate-100 shadow-sm">
-              <h4 className="text-[10px] font-black uppercase tracking-widest text-brand-dark mb-4 flex items-center gap-2">
+            <div className="bg-white rounded-[1.75rem] p-4 border border-slate-100 shadow-sm">
+              <h4 className="text-[10px] font-black uppercase tracking-widest text-brand-dark mb-2 flex items-center gap-2">
                 <i className="bi bi-chat-left-quote text-brand-green" />
-                Mis Reseñas
+                Mis reseñas
               </h4>
               {resenas.length > 0 ? (
-                <div className="space-y-3">
-                  {resenas.slice(0, 3).map(res => (
-                    <Link
+                <div className="space-y-2 max-h-[9rem] overflow-y-auto pr-1">
+                  {resenas.slice(0, 4).map(res => (
+                    <button
                       key={res.id}
-                      to={`/eventos/${res.evento_id}`}
-                      className="flex items-center gap-3 group hover:opacity-80 transition-opacity"
+                      type="button"
+                      onClick={() => abrirModalResena(res)}
+                      className="flex items-center gap-2.5 w-full text-left group hover:bg-brand-bg rounded-xl p-1.5 -mx-1.5 transition-colors"
                     >
                       {res.eventos?.imagen_url ? (
-                        <img src={res.eventos.imagen_url} alt="" className="w-10 h-10 rounded-xl object-cover flex-shrink-0" loading="lazy" />
+                        <img src={res.eventos.imagen_url} alt="" className="w-8 h-8 rounded-lg object-cover flex-shrink-0" loading="lazy" />
                       ) : (
-                        <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center flex-shrink-0">
-                          <i className="bi bi-calendar-event text-slate-300 text-sm" />
+                        <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center flex-shrink-0">
+                          <i className="bi bi-calendar-event text-slate-300 text-xs" />
                         </div>
                       )}
                       <div className="flex-1 min-w-0">
-                        <p className="text-[10px] font-black text-brand-dark truncate group-hover:text-brand-green transition-colors">{res.eventos?.titulo || 'Evento'}</p>
+                        <p className="text-[9px] font-black text-brand-dark truncate group-hover:text-brand-green transition-colors">{res.eventos?.titulo || 'Evento'}</p>
                         <div className="flex gap-0.5 mt-0.5">
-                          {[1,2,3,4,5].map(n => (
-                            <i key={n} className={`bi bi-star${n <= res.puntuacion ? '-fill text-brand-gold' : ' text-slate-200'} text-[8px]`} />
+                          {[1, 2, 3, 4, 5].map(n => (
+                            <i key={n} className={`bi bi-star${n <= res.puntuacion ? '-fill text-brand-gold' : ' text-slate-200'} text-[7px]`} />
                           ))}
                         </div>
                       </div>
-                    </Link>
+                      <i className="bi bi-pencil text-slate-300 text-[10px] group-hover:text-brand-green flex-shrink-0" />
+                    </button>
                   ))}
-                  {resenas.length > 3 && (
-                    <p className="text-[9px] font-black text-brand-green uppercase tracking-widest text-center pt-1">
-                      +{resenas.length - 3} más
-                    </p>
-                  )}
                 </div>
               ) : (
-                <div className="py-6 text-center">
-                  <i className="bi bi-chat-left text-2xl text-slate-200 block mb-2" />
-                  <p className="text-[9px] text-slate-300 font-black uppercase tracking-widest">Sin reseñas aún</p>
+                <div className="py-4 text-center">
+                  <i className="bi bi-chat-left text-xl text-slate-200 block mb-1" />
+                  <p className="text-[8px] text-slate-300 font-black uppercase tracking-widest">Sin reseñas aún</p>
                 </div>
               )}
             </div>
@@ -768,6 +819,109 @@ const Calendario: React.FC = () => {
       {/* ══════════════════════════════════════════════════════════
           MODAL: FORMULARIO CREAR / EDITAR
       ══════════════════════════════════════════════════════════ */}
+      {/* Modal editar / borrar reseña */}
+      {resenaModal && (
+        <div
+          className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-brand-dark/60 backdrop-blur-sm"
+          onClick={(e) => { if (e.target === e.currentTarget) cerrarModalResena(); }}
+        >
+          <div className="bg-white rounded-[2.5rem] p-8 w-full max-w-md shadow-2xl relative">
+            <button
+              type="button"
+              onClick={cerrarModalResena}
+              className="absolute top-5 right-5 w-10 h-10 rounded-xl bg-brand-bg hover:bg-brand-red hover:text-white transition-all flex items-center justify-center text-slate-400"
+              aria-label="Cerrar"
+            >
+              <i className="bi bi-x-lg" />
+            </button>
+            <h3 className="text-xl font-black text-brand-dark italic uppercase tracking-tighter mb-1 pr-10">
+              Editar reseña
+            </h3>
+            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-6 truncate">
+              {resenaModal.eventos?.titulo || 'Evento'}
+            </p>
+
+            {pendienteBorrarResena ? (
+              <div className="space-y-4">
+                <p className="text-sm text-brand-dark font-medium">¿Eliminar esta reseña? No se puede deshacer.</p>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setPendienteBorrarResena(false)}
+                    className="flex-1 py-3 rounded-xl bg-slate-100 text-slate-600 font-black text-[10px] uppercase tracking-widest"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={borrarResena}
+                    disabled={guardandoResena}
+                    className="flex-1 py-3 rounded-xl bg-brand-red text-white font-black text-[10px] uppercase tracking-widest disabled:opacity-50"
+                  >
+                    {guardandoResena ? 'Eliminando…' : 'Sí, eliminar'}
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <form onSubmit={guardarResena} className="space-y-5">
+                <div>
+                  <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Puntuación</label>
+                  <div className="flex gap-2">
+                    {[1, 2, 3, 4, 5].map(n => (
+                      <button
+                        key={n}
+                        type="button"
+                        onClick={() => setResenaPuntuacion(n)}
+                        className="text-2xl transition-transform hover:scale-110"
+                        aria-label={`${n} estrellas`}
+                      >
+                        <i className={`bi bi-star${n <= resenaPuntuacion ? '-fill text-brand-gold' : ' text-slate-200'}`} />
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Tu reseña</label>
+                  <textarea
+                    value={resenaTexto}
+                    onChange={e => setResenaTexto(e.target.value)}
+                    rows={4}
+                    maxLength={500}
+                    required
+                    className="input-field resize-none"
+                    placeholder="Escribe tu experiencia…"
+                  />
+                </div>
+                <div className="flex flex-col gap-2">
+                  <button
+                    type="submit"
+                    disabled={guardandoResena || !resenaTexto.trim()}
+                    className="w-full bg-brand-dark text-white font-black uppercase tracking-widest text-[11px] py-4 rounded-2xl hover:bg-brand-blue transition-all disabled:opacity-50"
+                  >
+                    {guardandoResena ? 'Guardando…' : 'Guardar cambios'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPendienteBorrarResena(true)}
+                    className="w-full text-brand-red font-black uppercase tracking-widest text-[10px] py-2 hover:underline"
+                  >
+                    Eliminar reseña
+                  </button>
+                  {resenaModal.evento_id && (
+                    <Link
+                      to={`/eventos/${resenaModal.evento_id}`}
+                      className="block text-center text-[10px] font-black text-brand-blue uppercase tracking-widest py-2 hover:underline"
+                    >
+                      Ver evento →
+                    </Link>
+                  )}
+                </div>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
+
       {showFormModal && (
         <div
           className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-brand-dark/60 backdrop-blur-sm"

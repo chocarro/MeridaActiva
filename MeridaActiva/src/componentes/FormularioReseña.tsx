@@ -17,16 +17,26 @@ const FormularioReseña: React.FC<{ eventoId: string, onPublicado: () => void }>
     }
     setEnviando(true);
     try {
+      const nombreUsuario = profile?.nombre || session.user.user_metadata?.full_name || 'Explorador';
       const { error } = await supabase.from('comentarios').insert([{
         evento_id: eventoId,
         usuario_id: session.user.id,
         texto: comentario,
         puntuacion: puntuacion,
-        nombre_usuario: profile?.nombre || session.user.user_metadata?.full_name || 'Explorador',
+        nombre_usuario: nombreUsuario,
       }]);
       if (error) {
-        console.error('[FormularioReseña] insert error:', error.message, error.code);
-        throw error;
+        const token = (await supabase.auth.getSession()).data.session?.access_token;
+        if (!token) throw error;
+        const res = await fetch('/api/comentarios', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ eventoId, texto: comentario, puntuacion, nombreUsuario }),
+        });
+        if (!res.ok) {
+          const json = await res.json().catch(() => ({}));
+          throw new Error((json as { error?: string }).error ?? error.message);
+        }
       }
       setComentario('');
       setPuntuacion(5);

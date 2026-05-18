@@ -4,6 +4,15 @@ import type { Evento } from '../../types';
 
 const CATEGORIAS = ['Cultural', 'Teatro', 'Música', 'Deportes', 'Infantil', 'Gastronomía', 'Patrimonio'];
 
+const EVENTO_SELECT =
+  'id, titulo, fecha, hora, imagen_url, categoria, precio, ubicacion, enlace_externo, descripcion, animales_permitidos';
+const EVENTO_SELECT_SIN_ANIMALES =
+  'id, titulo, fecha, hora, imagen_url, categoria, precio, ubicacion, enlace_externo, descripcion';
+
+function sinColumnaAnimales(msg?: string): boolean {
+  return !!msg && /animales_permitidos/i.test(msg);
+}
+
 
 const FORM_INICIAL = {
   titulo: '',
@@ -64,24 +73,29 @@ const GestionEventos: React.FC = () => {
     const from = pagina * pp;
     const to = from + pp - 1;
 
-    let query = supabase
-      .from('eventos')
-      .select('id, titulo, fecha, hora, imagen_url, categoria, precio, ubicacion, enlace_externo, descripcion, animales_permitidos', { count: 'exact' })
-      .order('created_at', { ascending: false })
-      .range(from, to);
+    const buildQuery = (cols: string) => {
+      let query = supabase
+        .from('eventos')
+        .select(cols, { count: 'exact' })
+        .order('created_at', { ascending: false })
+        .range(from, to);
+      if (q.trim()) {
+        const safe = q.trim();
+        query = query.or(`titulo.ilike.%${safe}%,ubicacion.ilike.%${safe}%,categoria.ilike.%${safe}%`);
+      }
+      return query;
+    };
 
-    if (q.trim()) {
-      const safe = q.trim();
-      query = query.or(`titulo.ilike.%${safe}%,ubicacion.ilike.%${safe}%,categoria.ilike.%${safe}%`);
+    let { data, count, error } = await buildQuery(EVENTO_SELECT);
+    if (error && sinColumnaAnimales(error.message)) {
+      ({ data, count, error } = await buildQuery(EVENTO_SELECT_SIN_ANIMALES));
     }
-
-    const { data, count, error } = await query;
     if (error) {
       mostrarMensaje('No se pudieron cargar los eventos.');
       return;
     }
 
-    if (data) setEventos(data);
+    if (data) setEventos(data as unknown as Evento[]);
     if (count !== null) setTotalEventos(count);
   }, [paginaActual, busqueda, porPagina, mostrarMensaje]);
 
@@ -137,13 +151,21 @@ const GestionEventos: React.FC = () => {
         enlace_externo: formData.enlace_externo === '' ? null : formData.enlace_externo,
       };
 
-      if (editandoId) {
-        await supabase.from('eventos').update(payload).eq('id', editandoId);
-        mostrarMensaje('Evento actualizado correctamente.');
-      } else {
-        await supabase.from('eventos').insert([payload]);
-        mostrarMensaje('Evento creado correctamente.');
+      const guardarEnBd = async (data: Record<string, unknown>) => {
+        if (editandoId) {
+          return supabase.from('eventos').update(data).eq('id', editandoId);
+        }
+        return supabase.from('eventos').insert([data]);
+      };
+
+      let { error: saveErr } = await guardarEnBd(payload);
+      if (saveErr && sinColumnaAnimales(saveErr.message)) {
+        const { animales_permitidos: _a, ...sinAnimales } = payload;
+        ({ error: saveErr } = await guardarEnBd(sinAnimales));
       }
+      if (saveErr) throw saveErr;
+
+      mostrarMensaje(editandoId ? 'Evento actualizado correctamente.' : 'Evento creado correctamente.');
 
       cerrarFormulario();
       fetchEventos(0, busqueda);

@@ -4,7 +4,7 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "concurrently --kill-others --names \"api,vite\" --prefix-colors \"yellow,cyan\" \"node api-server.js\" \"vite\"",
     "api": "node api-server.js",
     "dev:full": "concurrently --kill-others --names \"api,vite\" --prefix-colors \"yellow,cyan\" \"node api-server.js\" \"vite\"",
     "build": "tsc -b && vite build",

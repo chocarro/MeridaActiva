@@ -85,6 +85,11 @@ const routes = {
   '/api/generar-ruta': () => import('./api/generar-ruta.js'),
   '/api/contacto': () => import('./api/contacto.js'),
   '/api/eliminar-cuenta': () => import('./api/eliminar-cuenta.js'),
+  '/api/admin-usuarios': () => import('./api/admin-usuarios.js'),
+  '/api/comentarios': () => import('./api/comentarios.js'),
+  '/api/perfil': () => import('./api/perfil.js'),
+  '/api/favoritos': () => import('./api/favoritos.js'),
+  '/api/admin-comentarios': () => import('./api/admin-comentarios.js'),
 };
 
 // ── Servidor HTTP ─────────────────────────────────────────────────
@@ -93,7 +98,7 @@ const server = createServer(async (req, res) => {
 
   // CORS para desarrollo local
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PATCH, PUT, DELETE, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
 
   if (req.method === 'OPTIONS') {
@@ -126,6 +131,6 @@ const server = createServer(async (req, res) => {
 server.listen(PORT, () => {
   console.log(`[api-server] ✅ Servidor API corriendo en http://localhost:${PORT}`);
   console.log(`[api-server] Rutas disponibles:`);
-  Object.keys(routes).forEach(r => console.log(`  POST ${r}`));
+  Object.keys(routes).forEach(r => console.log(`  → ${r}`));
   console.log(`[api-server] API_KEY_IA: ${process.env.API_KEY_IA ? '✅ configurada' : '❌ NO configurada'}`);
 });

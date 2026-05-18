@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { supabase } from '../../supabaseClient';
+import { useAuth } from '../../context/AuthContext';
 import FormularioReseña from '../../componentes/FormularioReseña';
+import ModalEditarResena, { type ResenaEditable } from '../../componentes/ModalEditarResena';
 import BotonFavorito from '../../componentes/BotonFavorito';
 import { SkeletonDetalleEvento } from '../../componentes/Skeletons';
 import LazyImg from '../../componentes/LazyImg';
@@ -16,7 +18,13 @@ interface Comentario {
   puntuacion: number;
   created_at: string;
   nombre_usuario: string | null;
+  usuario_id?: string | null;
 }
+
+const EVENTO_SELECT =
+  'id, titulo, descripcion, fecha, hora, ubicacion, imagen_url, categoria, precio, enlace_externo, animales_permitidos';
+const EVENTO_SELECT_SIN_ANIMALES =
+  'id, titulo, descripcion, fecha, hora, ubicacion, imagen_url, categoria, precio, enlace_externo';
 
 // ── Colores por categoría (cubre las 7 del formulario admin) ─────
 const CATEGORY_COLORS: Record<string, string> = {
@@ -33,7 +41,10 @@ const COMENTARIOS_POR_PAGINA = 8;
 
 const DetalleEvento: React.FC = () => {
   const { id } = useParams();
+  const { session } = useAuth();
   const [evento, setEvento] = useState<Evento | null>(null);
+  const [resenaEditando, setResenaEditando] = useState<ResenaEditable | null>(null);
+  const [miResenaId, setMiResenaId] = useState<string | null>(null);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState(false);
   const [comentarios, setComentarios] = useState<Comentario[]>([]);
@@ -56,14 +67,34 @@ const DetalleEvento: React.FC = () => {
     else setCargandoMasComents(true);
     try {
       if (pagina === 0) {
-        const { data: eventoData, error: eventoError } = await supabase
+        let eventoData = null;
+        let eventoError = null;
+        ({ data: eventoData, error: eventoError } = await supabase
           .from('eventos')
-          .select('id, titulo, descripcion, fecha, hora, ubicacion, imagen_url, categoria, precio, enlace_externo, animales_permitidos')
+          .select(EVENTO_SELECT)
           .eq('id', id)
-          .single();
-
+          .single());
+        if (eventoError?.message?.includes('animales_permitidos')) {
+          ({ data: eventoData, error: eventoError } = await supabase
+            .from('eventos')
+            .select(EVENTO_SELECT_SIN_ANIMALES)
+            .eq('id', id)
+            .single());
+        }
         if (eventoError) throw eventoError;
         if (eventoData) setEvento(eventoData as Evento);
+
+        if (session?.user?.id && id) {
+          const { data: miResena } = await supabase
+            .from('comentarios')
+            .select('id')
+            .eq('evento_id', id)
+            .eq('usuario_id', session.user.id)
+            .maybeSingle();
+          setMiResenaId(miResena?.id ?? null);
+        } else {
+          setMiResenaId(null);
+        }
       }
 
       const desde = pagina * COMENTARIOS_POR_PAGINA;
@@ -71,7 +102,7 @@ const DetalleEvento: React.FC = () => {
 
       const { data: comentariosData, count } = await supabase
         .from('comentarios')
-        .select('id, texto, puntuacion, created_at, nombre_usuario', { count: 'exact' })
+        .select('id, texto, puntuacion, created_at, nombre_usuario, usuario_id', { count: 'exact' })
         .eq('evento_id', id)
         .order('created_at', { ascending: false })
         .range(desde, hasta);
@@ -367,7 +398,47 @@ const DetalleEvento: React.FC = () => {
                 )}
               </div>
 
-              <FormularioReseña eventoId={id!} onPublicado={() => fetchEventoData(0)} />
+              {session && miResenaId ? (
+                <div className="bg-brand-green/5 border border-brand-green/20 rounded-[2rem] p-6 mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <p className="text-[11px] font-black uppercase tracking-widest text-brand-dark">
+                    Ya has publicado tu reseña de este evento
+                  </p>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      const mia = comentarios.find(c => c.id === miResenaId);
+                      if (mia) {
+                        setResenaEditando({
+                          id: mia.id,
+                          texto: mia.texto,
+                          puntuacion: mia.puntuacion,
+                          tituloEvento: evento.titulo,
+                        });
+                        return;
+                      }
+                      if (!miResenaId) return;
+                      const { data } = await supabase
+                        .from('comentarios')
+                        .select('id, texto, puntuacion')
+                        .eq('id', miResenaId)
+                        .single();
+                      if (data) {
+                        setResenaEditando({
+                          id: data.id,
+                          texto: data.texto,
+                          puntuacion: data.puntuacion,
+                          tituloEvento: evento.titulo,
+                        });
+                      }
+                    }}
+                    className="bg-brand-dark text-white px-5 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-brand-blue transition-all"
+                  >
+                    <i className="bi bi-pencil mr-2" />Editar mi reseña
+                  </button>
+                </div>
+              ) : (
+                <FormularioReseña eventoId={id!} onPublicado={() => fetchEventoData(0)} />
+              )}
 
               {comentarios.length > 0 ? (
                 <div className="grid gap-6 mt-8">
@@ -383,10 +454,27 @@ const DetalleEvento: React.FC = () => {
                             {new Date(c.created_at).toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })}
                           </p>
                         </div>
-                        <div className="flex gap-0.5">
-                          {[1, 2, 3, 4, 5].map(n => (
-                            <i key={n} className={`bi bi-heart${n <= (c.puntuacion || 5) ? '-fill text-brand-red' : ' text-slate-200'} text-sm`} />
-                          ))}
+                        <div className="flex items-center gap-2">
+                          <div className="flex gap-0.5">
+                            {[1, 2, 3, 4, 5].map(n => (
+                              <i key={n} className={`bi bi-heart${n <= (c.puntuacion || 5) ? '-fill text-brand-red' : ' text-slate-200'} text-sm`} />
+                            ))}
+                          </div>
+                          {session?.user?.id && c.usuario_id === session.user.id && (
+                            <button
+                              type="button"
+                              onClick={() => setResenaEditando({
+                                id: c.id,
+                                texto: c.texto,
+                                puntuacion: c.puntuacion,
+                                tituloEvento: evento.titulo,
+                              })}
+                              className="w-8 h-8 rounded-lg bg-brand-bg text-brand-blue hover:bg-brand-blue hover:text-white transition-all flex items-center justify-center text-sm"
+                              title="Editar mi reseña"
+                            >
+                              <i className="bi bi-pencil" />
+                            </button>
+                          )}
                         </div>
                       </div>
                       <p className="text-brand-dark opacity-70 font-medium italic text-lg leading-relaxed">
@@ -512,6 +600,15 @@ const DetalleEvento: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {resenaEditando && session?.user?.id && (
+        <ModalEditarResena
+          resena={resenaEditando}
+          usuarioId={session.user.id}
+          onCerrar={() => setResenaEditando(null)}
+          onActualizado={() => fetchEventoData(0)}
+        />
+      )}
     </div>
   );
 };

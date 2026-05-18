@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth, forceNuclearLogout } from '../../context/AuthContext';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../supabaseClient';
 import { getNombreRolUsuario } from '../../utils/perfilUsuario';
 
 
 const MiPerfil: React.FC = () => {
-  const { profile, session, loading } = useAuth();
+  const { profile, session, loading, refreshProfile } = useAuth();
   const navigate = useNavigate();
   const [seccion, setSeccion] = useState<'perfil' | 'seguridad'>('perfil');
   const tabsRef = useRef<HTMLDivElement>(null);
@@ -64,11 +64,12 @@ const MiPerfil: React.FC = () => {
       // Auto-guardar el avatar_url en el perfil inmediatamente
       const { data: { session: sess } } = await supabase.auth.getSession();
       if (sess?.access_token) {
-        await fetch('/api/perfil', {
+        const res = await fetch('/api/perfil', {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${sess.access_token}` },
           body: JSON.stringify({ avatarUrl: publicUrl }),
         });
+        if (res.ok) await refreshProfile();
       }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Error desconocido';
@@ -99,6 +100,7 @@ const MiPerfil: React.FC = () => {
         const json = await res.json().catch(() => ({}));
         throw new Error(json.error ?? `Error ${res.status}`);
       }
+      await refreshProfile();
       setPerfilMsg({ tipo: 'ok', texto: '¡Perfil actualizado correctamente!' });
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Error al guardar';
